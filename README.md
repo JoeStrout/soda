@@ -13,6 +13,7 @@ Soda is at the very earliest stage of development right now: defining requiremen
 * easy to install: ideally, a single prebuilt binary on most systems
 * easy to use: just `soda myGame.ms` to run
 * good performance: hardware acceleration, even on Raspberry Pi
+* supported platforms: at least Windows, Mac, Linux (PC), and Raspberry Pi
 * support for both text-based console games, and graphical games
 * support for keyboard, mouse, and gamepad input
 * support for audio in WAV or OGG format, with control over volume, pan, and speed
