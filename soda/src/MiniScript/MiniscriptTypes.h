@@ -275,6 +275,9 @@ namespace MiniScript {
 				if (data.ref == rhs.data.ref) return true;
 				if (!data.ref || !rhs.data.ref) return false;
 				return Equal((SeqElemStorage*)data.ref, (SeqElemStorage*)rhs.data.ref);
+			
+			case ValueType::Handle:
+				return (data.ref == rhs.data.ref);
 		}
 		return false;
 	}

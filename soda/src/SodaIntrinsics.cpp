@@ -33,6 +33,27 @@ static IntrinsicResult intrinsic_sprites(Context *context, IntrinsicResult parti
 	return IntrinsicResult(spriteList);
 }
 
+//--------------------------------------------------------------------------------
+// key module
+//--------------------------------------------------------------------------------
+static Intrinsic *i_key_pressed = NULL;
+
+static IntrinsicResult intrinsic_keyModule(Context *context, IntrinsicResult partialResult) {
+	static ValueDict keyModule;
+	
+	if (keyModule.Count() == 0) {
+		keyModule.SetValue("pressed", i_key_pressed->GetFunc());
+	}
+	
+	return IntrinsicResult(keyModule);
+}
+
+static IntrinsicResult intrinsic_key_pressed(Context *context, IntrinsicResult partialResult) {
+	Value keyName = context->GetVar("keyName");
+	if (keyName.IsNull()) return IntrinsicResult::Null;
+	return IntrinsicResult(SdlGlue::IsKeyPressed(keyName.ToString()));
+}
+
 
 void AddSodaIntrinsics() {
 	printf("Adding Soda intrinsics\n");
@@ -44,4 +65,10 @@ void AddSodaIntrinsics() {
 	f = Intrinsic::Create("sprites");
 	f->code = &intrinsic_sprites;
 
+	f = Intrinsic::Create("key");
+	f->code = &intrinsic_keyModule;
+
+	i_key_pressed = Intrinsic::Create("");
+	i_key_pressed->AddParam("keyName");
+	i_key_pressed->code = &intrinsic_key_pressed;
 }

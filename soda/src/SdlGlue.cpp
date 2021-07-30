@@ -11,7 +11,9 @@
 #include <stdlib.h>
 #include "SodaIntrinsics.h"
 
-typedef struct Color {
+using namespace MiniScript;
+
+struct Color {
 	Uint8 r;
 	Uint8 g;
 	Uint8 b;
@@ -24,17 +26,23 @@ namespace SdlGlue {
 bool quit;
 
 // private data
-SDL_Window *mainWindow;
-SDL_Renderer *mainRenderer;
-int windowWidth = 960;
-int windowHeight = 640;
-Color backgroundColor = {0, 0, 100, 255};
-
+static SDL_Window *mainWindow;
+static SDL_Renderer *mainRenderer;
+static int windowWidth = 960;
+static int windowHeight = 640;
+static Color backgroundColor = {0, 0, 100, 255};
+static Dictionary<String, Sint32, hashString> keyNameMap;	// maps Soda key names to SDL key codes
+static Dictionary<Sint32, bool, hashInt> keyDownMap;	// makes SDL key codes to whether they are currently down
 
 // forward declarations of private methods:
 bool CheckFail(int resultCode, const char *callName);
 bool CheckNotNull(void *ptr, const char *context);
 void DrawSprites();
+void SetupKeyNameMap();
+
+//--------------------------------------------------------------------------------
+// Public method implementations
+//--------------------------------------------------------------------------------
 
 // Initialize SDL and get everything ready to go.
 void Setup() {
@@ -56,6 +64,8 @@ void Setup() {
 	// Create renderer (hardware-accelerated and vsync'd) for the window
 	mainRenderer = SDL_CreateRenderer(mainWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	if (CheckNotNull(mainRenderer, "mainRenderer")) return;
+	
+	SetupKeyNameMap();
 }
 
 
@@ -74,6 +84,11 @@ void Service() {
 	SDL_Event e;
 	while (SDL_PollEvent(&e) != 0) {
 		if (e.type == SDL_QUIT) quit = true;
+		else if (e.type == SDL_KEYDOWN) {
+			keyDownMap.SetValue(e.key.keysym.sym, true);
+		} else if (e.type == SDL_KEYUP) {
+			keyDownMap.SetValue(e.key.keysym.sym, false);
+		}
 	}
 
 	// Update screen
@@ -81,6 +96,29 @@ void Service() {
 	SDL_RenderClear(mainRenderer);
 	DrawSprites();
 	SDL_RenderPresent(mainRenderer);
+}
+
+bool IsKeyPressed(MiniScript::String keyName) {
+	Sint32 keyCode = keyNameMap.Lookup(keyName, 0);
+	if (keyCode == 0) return false;
+	return keyDownMap.Lookup(keyCode, false);
+}
+
+//--------------------------------------------------------------------------------
+// Private method implementations
+//--------------------------------------------------------------------------------
+
+void SetupKeyNameMap() {
+	// most printable keys are the same in SDLK...
+	for (char c=' '; c < 'A'; c++) keyNameMap.SetValue(String(c), c);
+	for (char c='['; c <= '~'; c++) keyNameMap.SetValue(String(c), 0);
+	
+	// then we have all the special keys
+	keyNameMap.SetValue("left", SDLK_LEFT);
+	keyNameMap.SetValue("right", SDLK_RIGHT);
+	keyNameMap.SetValue("up", SDLK_UP);
+	keyNameMap.SetValue("down", SDLK_DOWN);
+	// (etc.)
 }
 
 void DoSdlTest() {
