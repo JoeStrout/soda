@@ -135,7 +135,7 @@ static int DoREPL() {
 static int CmdThread(void *interpreter) {
 	Interpreter *interp = (Interpreter*)interpreter;
 	
-	while (!interp->Done()) {
+	while (!interp->Done() && !SdlGlue::quit) {
 		try {
 			interp->RunUntilDone();
 		} catch (MiniscriptException mse) {

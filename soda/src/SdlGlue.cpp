@@ -50,7 +50,7 @@ void Setup() {
 		printf( "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError());
 	}
 
-	mainWindow = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN );
+	mainWindow = SDL_CreateWindow( "Soda", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN );
 	if (CheckNotNull(mainWindow, "mainWindow")) return;
 
 	// Create renderer (hardware-accelerated and vsync'd) for the window
