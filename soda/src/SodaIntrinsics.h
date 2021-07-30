@@ -14,5 +14,6 @@
 void AddSodaIntrinsics();
 
 extern MiniScript::Value spriteList;
+extern MiniScript::Value mouse;
 
 #endif /* SODAINTRINSICS_H */

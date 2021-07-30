@@ -19,6 +19,9 @@ void Shutdown();
 
 void DoSdlTest();
 bool IsKeyPressed(MiniScript::String keyName);
+bool IsMouseButtonPressed(int buttonNum);
+int GetMouseX();
+int GetMouseY();
 
 // flag set to true when the user tries to quit the app (by closing the window, cmd-Q, etc.)
 extern bool quit;

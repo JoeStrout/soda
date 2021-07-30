@@ -94,7 +94,7 @@ void Service() {
 			keyDownMap.SetValue(keyCode, false);
 		}
 	}
-
+	
 	// Update screen
 	SDL_SetRenderDrawColor(mainRenderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
 	SDL_RenderClear(mainRenderer);
@@ -103,9 +103,37 @@ void Service() {
 }
 
 bool IsKeyPressed(MiniScript::String keyName) {
+	if (keyName.StartsWith("mouse ")) {
+		int num = keyName.Substring(6).IntValue();
+		return IsMouseButtonPressed(num);
+	}
 	Sint32 keyCode = keyNameMap.Lookup(keyName, 0);
 	if (keyCode == 0) return false;
 	return keyDownMap.Lookup(keyCode, false);
+}
+
+bool IsMouseButtonPressed(int buttonNum) {
+	int buttons = SDL_GetMouseState(NULL, NULL);
+	switch (buttonNum) {
+		case 0: return (buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;
+		case 1: return (buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
+		case 2: return (buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
+		case 3: return (buttons & SDL_BUTTON(SDL_BUTTON_X1)) != 0;
+		case 4: return (buttons & SDL_BUTTON(SDL_BUTTON_X2)) != 0;
+	}
+	return false;
+}
+
+int GetMouseX() {
+	int x;
+	SDL_GetMouseState(&x, NULL);
+	return x;
+}
+
+int GetMouseY() {
+	int y;
+	SDL_GetMouseState(NULL, &y);
+	return windowHeight - y;
 }
 
 //--------------------------------------------------------------------------------

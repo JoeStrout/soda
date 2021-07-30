@@ -10,5 +10,7 @@ while true
 	if key.pressed("up") then sp.y = sp.y + speed
 	if key.pressed("left cmd") then sp.x = 0
 	if key.pressed("right cmd") then sp.x = 960
+	if key.pressed("mouse 0") then sp.y = 0
+	if key.pressed("mouse 1") then sp.y = 640
 	wait 0.01
 end while

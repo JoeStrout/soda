@@ -53,7 +53,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "tests/key.ms"
+            argument = "tests/mouse.ms"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
