@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include "MiniScript/String.h"
+#include "MiniScriptTypes.h"
 
 namespace SdlGlue {
 
@@ -22,6 +23,7 @@ bool IsKeyPressed(MiniScript::String keyName);
 bool IsMouseButtonPressed(int buttonNum);
 int GetMouseX();
 int GetMouseY();
+MiniScript::Value LoadImage(MiniScript::String path);
 
 // flag set to true when the user tries to quit the app (by closing the window, cmd-Q, etc.)
 extern bool quit;

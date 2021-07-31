@@ -35,10 +35,24 @@ static Dictionary<String, Sint32, hashString> keyNameMap;	// maps Soda key names
 static Dictionary<Sint32, bool, hashInt> keyDownMap;	// makes SDL key codes to whether they are currently down
 
 // forward declarations of private methods:
-bool CheckFail(int resultCode, const char *callName);
-bool CheckNotNull(void *ptr, const char *context);
-void DrawSprites();
-void SetupKeyNameMap();
+static bool CheckFail(int resultCode, const char *callName);
+static bool CheckNotNull(void *ptr, const char *context);
+static int RoundToInt(double d);
+static void DrawSprites();
+static void SetupKeyNameMap();
+static Color ToColor(String s);
+
+
+class TextureStorage : public RefCountedStorage {
+public:
+	TextureStorage(SDL_Texture *tex) : texture(tex) {}
+	
+	virtual ~TextureStorage() {
+		SDL_DestroyTexture(texture);	texture = NULL;
+	}
+	
+	SDL_Texture *texture;
+};
 
 //--------------------------------------------------------------------------------
 // Public method implementations
@@ -73,7 +87,7 @@ void Setup() {
 void Shutdown() {
 	SDL_DestroyRenderer(mainRenderer); mainRenderer = NULL;
 	SDL_DestroyWindow(mainWindow); mainWindow = NULL;
-//	IMG_Quit();
+	IMG_Quit();
 	SDL_Quit();
 }
 
@@ -134,6 +148,17 @@ int GetMouseY() {
 	int y;
 	SDL_GetMouseState(NULL, &y);
 	return windowHeight - y;
+}
+
+Value LoadImage(MiniScript::String path) {
+	SDL_Surface *surf = IMG_Load(path.c_str());
+	if (surf == NULL) return Value::null;
+	SDL_Texture *texture = SDL_CreateTextureFromSurface(mainRenderer, surf);
+	SDL_FreeSurface(surf); surf = NULL;
+	if (texture == NULL) return Value::null;
+	SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+	
+	return Value::NewHandle(new TextureStorage(texture));
 }
 
 //--------------------------------------------------------------------------------
@@ -214,18 +239,61 @@ void DoSdlTest() {
 	backgroundColor.b = (Uint8)(rand() & 0xFF);
 }
 
+int RoundToInt(double d) {
+	return (int)round(d);
+}
+
+Uint8 HexDigitVal(char c) {
+	if (c >= '0' && c <= '9') return c - '0';
+	if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+	if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+	return 0;
+}
+
+Uint8 HexDigitsToByte(String s, size_t indexB=0) {
+	if (s.LengthB() < indexB+1) return 0;
+	return (HexDigitVal(s[indexB]) << 4) | HexDigitVal(s[indexB+1]);
+}
+
+Color ToColor(String s) {
+	Color result;
+	if (s.LengthB() < 7 || s[0] != '#') return result;
+	result.r = HexDigitsToByte(s, 1);
+	result.g = HexDigitsToByte(s, 3);
+	result.b = HexDigitsToByte(s, 5);
+	if (s.LengthB() < 9) result.a = 255;
+	else result.a = HexDigitsToByte(s, 7);
+	return result;
+}
+
 void DrawSprites() {
 	MiniScript::ValueList sprites = spriteList.GetList();
 	for (int i=0; i<sprites.Count(); i++) {
-		MiniScript::Value spVal = sprites[i];
-		if (spVal.type != MiniScript::ValueType::Map) continue;
-		MiniScript::ValueDict spMap = spVal.GetDict();
-		int x = round(spMap.Lookup("x", MiniScript::Value::zero).DoubleValue());
-		int y = round(spMap.Lookup("y", MiniScript::Value::zero).DoubleValue());
+		MiniScript::Value sprite = sprites[i];
+		if (sprite.type != MiniScript::ValueType::Map) continue;
+		double x = round(sprite.Lookup("x").DoubleValue());
+		double y = round(sprite.Lookup("y").DoubleValue());
+		double scale = sprite.Lookup("scale").DoubleValue();
+		double rotation = sprite.Lookup("rotation").DoubleValue();
+		double w = 100*scale, h = 100*scale;
+		Color c = ToColor(sprite.Lookup("tint").ToString());
+		MiniScript::Value image = sprite.Lookup("image");
+		SDL_Texture *texture = NULL;
+		if (image.type == ValueType::Handle) {
+			// ToDo: how do we be sure the data is specifically a TextureStorage?
+			// Do we need to enable RTTI, or use some common base class?
+			texture = ((TextureStorage*)(image.data.ref))->texture;
+		}
 		
-		SDL_Rect fillRect = { x-50, windowHeight-y-50, 100, 100 };
-		SDL_SetRenderDrawColor(mainRenderer, 0xCC, 0xCC, 0x00, 0xFF);
-		SDL_RenderFillRect(mainRenderer, &fillRect);
+		SDL_Rect destRect = { RoundToInt(x-w/2), windowHeight-RoundToInt(y+h/2), RoundToInt(w), RoundToInt(h) };
+		if (texture) {
+			// ToDo: tint and alpha
+			SDL_RenderCopyEx(mainRenderer, texture, NULL, &destRect, rotation, NULL, SDL_FLIP_NONE);
+		} else {
+			// No texture; for now, just render a quad
+			SDL_SetRenderDrawColor(mainRenderer, c.r, c.g, c.b, c.a);
+			SDL_RenderFillRect(mainRenderer, &destRect);
+		}
 	}
 }
 

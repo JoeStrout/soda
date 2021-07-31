@@ -23,6 +23,7 @@
 using namespace MiniScript;
 
 Value spriteList = ValueList();
+Value white("#FFFFFF");
 
 static IntrinsicResult intrinsic_sdltest(Context *context, IntrinsicResult partialResult) {
 	SdlGlue::DoSdlTest();
@@ -33,8 +34,9 @@ static IntrinsicResult intrinsic_sprites(Context *context, IntrinsicResult parti
 	return IntrinsicResult(spriteList);
 }
 
-static IntrinsicResult intrinsic_mouse(Context *context, IntrinsicResult partialResult) {
-	return IntrinsicResult(mouse);
+static IntrinsicResult intrinsic_file_loadImage(Context *context, IntrinsicResult partialResult) {
+	Value path = context->GetVar("path");
+	return IntrinsicResult(SdlGlue::LoadImage(path.ToString()));
 }
 
 //--------------------------------------------------------------------------------
@@ -92,17 +94,44 @@ static IntrinsicResult intrinsic_mouse_y(Context *context, IntrinsicResult parti
 	return IntrinsicResult(SdlGlue::GetMouseY());
 }
 
+//--------------------------------------------------------------------------------
+// Sprite class
+//--------------------------------------------------------------------------------
+
+static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult partialResult) {
+	static ValueDict spriteClass;
+	
+	if (spriteClass.Count() == 0) {
+		spriteClass.SetValue("image", Value::null);
+		spriteClass.SetValue("x", Value::zero);
+		spriteClass.SetValue("y", Value::zero);
+		spriteClass.SetValue("scale", Value::one);
+		spriteClass.SetValue("rotation", Value::zero);
+		spriteClass.SetValue("tint", white);
+	}
+	
+	return IntrinsicResult(spriteClass);
+}
+
+
 
 //--------------------------------------------------------------------------------
 void AddSodaIntrinsics() {
 	printf("Adding Soda intrinsics\n");
 	Intrinsic *f;
 
-	f = Intrinsic::Create("sdltest");
+	f = Intrinsic::Create("sdltest");	// ToDo: remove this
 	f->code = &intrinsic_sdltest;
 
-	f = Intrinsic::Create("sprites");
+	f = Intrinsic::Create("sprites");	// ToDo: put this in a SpriteDisplay
 	f->code = &intrinsic_sprites;
+
+	f = Intrinsic::Create("loadImage");	// ToDo: put this in a file module
+	f->AddParam("path", Value::emptyString);
+	f->code = &intrinsic_file_loadImage;
+	
+	f = Intrinsic::Create("Sprite");
+	f->code = &intrinsic_spriteClass;
 
 	f = Intrinsic::Create("key");
 	f->code = &intrinsic_keyModule;

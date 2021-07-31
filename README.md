@@ -1,4 +1,5 @@
 # Welcome to Soda
+![Soda logo](soda/images/soda-128.png)
 
 The Soda Game Engine is an open-source cross-platform game engine built around the [MiniScript](https://miniscript.org) programming language.
 

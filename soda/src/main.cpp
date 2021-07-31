@@ -132,22 +132,6 @@ static int DoREPL() {
 	return exitResult;
 }
 
-static int CmdThread(void *interpreter) {
-	Interpreter *interp = (Interpreter*)interpreter;
-	
-	while (!interp->Done() && !SdlGlue::quit) {
-		try {
-			interp->RunUntilDone();
-		} catch (MiniscriptException mse) {
-			std::cerr << "Runtime Exception: " << mse.message << std::endl;
-			interp->vm->Stop();
-			exitResult = -1;
-			return exitResult;
-		}
-	}
-	return exitResult;
-}
-
 static int DoCommand(String cmd) {
 	Interpreter interp;
 	ConfigInterpreter(interp);
@@ -164,18 +148,20 @@ static int DoCommand(String cmd) {
 	}
 
 	SdlGlue::Setup();
-	SDL_Thread *thread = SDL_CreateThread(CmdThread, "CmdThread", (void*)(&interp));
-	while (!exitASAP) {
+
+	while (!interp.Done() && !SdlGlue::quit) {
 		SdlGlue::Service();
-		if (SdlGlue::quit) {
-			exitASAP = true;
-			SDL_DetachThread(thread);
-			thread = NULL;
+		try {
+			interp.RunUntilDone(0.01, true);
+		} catch (MiniscriptException mse) {
+			std::cerr << "Runtime Exception: " << mse.message << std::endl;
+			interp.vm->Stop();
+			exitResult = -1;
+			break;
 		}
 	}
+
 	SdlGlue::Shutdown();
-	int threadResult;
-	SDL_WaitThread(thread, &threadResult);
 	return exitResult;
 }
 
