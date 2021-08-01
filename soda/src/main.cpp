@@ -96,7 +96,7 @@ static int ReplThread(void *interpreter) {
 				}
 				interp.REPL(buf);
 			#endif
-		} catch (MiniscriptException mse) {
+		} catch (MiniscriptException& mse) {
 			std::cerr << "Runtime Exception: " << mse.message << std::endl;
 			interp->vm->Stop();
 		}
@@ -153,7 +153,7 @@ static int DoCommand(String cmd) {
 		SdlGlue::Service();
 		try {
 			interp.RunUntilDone(0.01, true);
-		} catch (MiniscriptException mse) {
+		} catch (MiniscriptException& mse) {
 			std::cerr << "Runtime Exception: " << mse.message << std::endl;
 			interp.vm->Stop();
 			exitResult = -1;
