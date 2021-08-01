@@ -5,7 +5,7 @@
 Subclass = new Sprite
 Subclass.scale = 0.5
 Subclass.tint = "#008800"
-Subclass.image = loadImage("images/soda-128.png")
+Subclass.image = file.loadImage("images/soda-128.png")
 
 sp = new Subclass
 sp.x = 150; sp.y = 200

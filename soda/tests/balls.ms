@@ -1,7 +1,7 @@
 // Bouncy-balls sprite demo.
 
 Ball = new Sprite
-Ball.image = loadImage("images/soda-128.png")
+Ball.image = file.loadImage("images/soda-128.png")
 Ball.scale = 0.5
 Ball.vx = 0
 Ball.vy = 0
@@ -21,6 +21,7 @@ for i in range(5)
 	b.y = 400 + 200*rnd
 	b.vx = 20 * (rnd - 0.5)
 	b.vrot = 30 * rnd
+	print "created ball at " + b.x + ", " + b.y
 	sprites.push b
 end for
 

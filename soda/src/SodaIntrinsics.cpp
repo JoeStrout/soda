@@ -34,11 +34,6 @@ static IntrinsicResult intrinsic_sprites(Context *context, IntrinsicResult parti
 	return IntrinsicResult(spriteList);
 }
 
-static IntrinsicResult intrinsic_file_loadImage(Context *context, IntrinsicResult partialResult) {
-	Value path = context->GetVar("path");
-	return IntrinsicResult(SdlGlue::LoadImage(path.ToString()));
-}
-
 //--------------------------------------------------------------------------------
 // key module
 //--------------------------------------------------------------------------------
@@ -113,6 +108,18 @@ static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult p
 	return IntrinsicResult(spriteClass);
 }
 
+//--------------------------------------------------------------------------------
+// file module additions
+//--------------------------------------------------------------------------------
+
+static Intrinsic *i_file_loadImage = NULL;
+static Intrinsic *i_file_loadSound = NULL;
+static Intrinsic *i_file_loadFont = NULL;
+
+static IntrinsicResult intrinsic_file_loadImage(Context *context, IntrinsicResult partialResult) {
+	Value path = context->GetVar("path");
+	return IntrinsicResult(SdlGlue::LoadImage(path.ToString()));
+}
 
 
 //--------------------------------------------------------------------------------
@@ -126,9 +133,18 @@ void AddSodaIntrinsics() {
 	f = Intrinsic::Create("sprites");	// ToDo: put this in a SpriteDisplay
 	f->code = &intrinsic_sprites;
 
-	f = Intrinsic::Create("loadImage");	// ToDo: put this in a file module
-	f->AddParam("path", Value::emptyString);
-	f->code = &intrinsic_file_loadImage;
+	Intrinsic *fileIntrinsic = Intrinsic::GetByName("file");
+	if (fileIntrinsic == NULL) {
+		printf("ERROR: fileModule not found.\nAddSodaIntrinsics must be called after AddShellIntrinsics.\n");
+	} else {
+		IntrinsicResult result;
+		ValueDict fileModule = fileIntrinsic->code(NULL, result).Result().GetDict();
+		
+		i_file_loadImage = Intrinsic::Create("");
+		i_file_loadImage->AddParam("path", Value::emptyString);
+		i_file_loadImage->code = &intrinsic_file_loadImage;
+		fileModule.SetValue("loadImage", i_file_loadImage->GetFunc());
+	}
 	
 	f = Intrinsic::Create("Sprite");
 	f->code = &intrinsic_spriteClass;
