@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8328CE2826B72E5300E32E12 /* SdlAudio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8328CE2626B72E5300E32E12 /* SdlAudio.cpp */; };
 		83D55DAC26B38E3E00C76F4E /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 83D55DAA26B38E3E00C76F4E /* SDL2.framework */; };
 		83D55DAD26B38E3E00C76F4E /* SDL2.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 83D55DAA26B38E3E00C76F4E /* SDL2.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		83D55DAE26B38E3E00C76F4E /* SDL2_image.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 83D55DAB26B38E3E00C76F4E /* SDL2_image.framework */; };
@@ -61,6 +62,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		8328CE2626B72E5300E32E12 /* SdlAudio.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SdlAudio.cpp; sourceTree = "<group>"; };
+		8328CE2726B72E5300E32E12 /* SdlAudio.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SdlAudio.h; sourceTree = "<group>"; };
 		83D55D9E26B38E1300C76F4E /* soda */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = soda; sourceTree = BUILT_PRODUCTS_DIR; };
 		83D55DAA26B38E3E00C76F4E /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SDL2.framework; sourceTree = "<group>"; };
 		83D55DAB26B38E3E00C76F4E /* SDL2_image.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SDL2_image.framework; sourceTree = "<group>"; };
@@ -164,10 +167,12 @@
 			children = (
 				83D55DE326B38F2F00C76F4E /* main.cpp */,
 				83D55DE226B38F2F00C76F4E /* OstreamSupport.cpp */,
+				8328CE2626B72E5300E32E12 /* SdlAudio.cpp */,
 				83D55E0026B391BC00C76F4E /* SdlGlue.cpp */,
 				83D55DB426B38F2F00C76F4E /* ShellIntrinsics.cpp */,
 				83D55DFD26B3907B00C76F4E /* SodaIntrinsics.cpp */,
 				83D55DE426B38F2F00C76F4E /* OstreamSupport.h */,
+				8328CE2726B72E5300E32E12 /* SdlAudio.h */,
 				83D55E0126B391BC00C76F4E /* SdlGlue.h */,
 				83D55DBF26B38F2F00C76F4E /* ShellIntrinsics.h */,
 				83D55DFE26B3907B00C76F4E /* SodaIntrinsics.h */,
@@ -299,6 +304,7 @@
 			files = (
 				83D55DE926B38F2F00C76F4E /* sysunix.c in Sources */,
 				83D55E0226B391BC00C76F4E /* SdlGlue.cpp in Sources */,
+				8328CE2826B72E5300E32E12 /* SdlAudio.cpp in Sources */,
 				83D55DEC26B38F2F00C76F4E /* MiniscriptIntrinsics.cpp in Sources */,
 				83D55DFF26B3907B00C76F4E /* SodaIntrinsics.cpp in Sources */,
 				83D55DF826B38F2F00C76F4E /* MiniscriptLexer.cpp in Sources */,

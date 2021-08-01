@@ -1,11 +1,14 @@
 //
 //  SdlGlue.cpp
-//  soda
+//	This module forms the interface between SDL and the rest of Soda.  It handles all
+//	the low-level SDL stuff (except for things complex enough to be split out into
+//	their own module, such as audio).
 //
 //  Created by Joe Strout on 7/29/21.
 //
 
 #include "SdlGlue.h"
+#include "SdlAudio.h"
 #include <SDL2/SDL.h>
 #include <SDL2_image/SDL_image.h>
 #include <stdlib.h>
@@ -60,7 +63,7 @@ public:
 
 // Initialize SDL and get everything ready to go.
 void Setup() {
-	if (CheckFail(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK), "SDL_Init")) return;
+	if (CheckFail(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_AUDIO), "SDL_Init")) return;
 	
 	if (!SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1")) {
 		printf( "Warning: Linear texture filtering not enabled!" );
@@ -80,6 +83,8 @@ void Setup() {
 	if (CheckNotNull(mainRenderer, "mainRenderer")) return;
 	
 	SetupKeyNameMap();
+	
+	SetupAudio();
 }
 
 
@@ -88,6 +93,7 @@ void Shutdown() {
 	SDL_DestroyRenderer(mainRenderer); mainRenderer = NULL;
 	SDL_DestroyWindow(mainWindow); mainWindow = NULL;
 	IMG_Quit();
+	ShutdownAudio();
 	SDL_Quit();
 }
 

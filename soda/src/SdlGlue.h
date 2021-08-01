@@ -1,6 +1,8 @@
 //
-//  SdlGlue.hpp
-//  soda
+//  SdlGlue.h
+//	This module forms the interface between SDL and the rest of Soda.  It handles all
+//	the low-level SDL stuff (except for things complex enough to be split out into
+//	their own module, such as audio).
 //
 //  Created by Joe Strout on 7/29/21.
 //
