@@ -7,7 +7,7 @@ Soda is intended to be _easy_ and _fun_, just like MiniScript itself.
 
 ### Status
 
-Soda is at the very earliest stage of development right now: defining requirements, and allocating development resources.
+Soda is in the "early prototype" stage.  It works, but building it requires a fair bit of expertise, and the functionality is still quite limited.
 
 ### Design Objectives
 
@@ -22,7 +22,7 @@ Soda is at the very earliest stage of development right now: defining requiremen
 
 ### Underlying Technologies
 
-We are probably going to build Soda on top of SDL, the same framework used in many commercial games.
+Soda is built on top of SDL, the same framework used in many commercial games.
 
 ### How to Help
 
