@@ -15,5 +15,6 @@ void AddSodaIntrinsics();
 
 extern MiniScript::Value spriteList;
 extern MiniScript::Value mouse;
+extern MiniScript::ValueDict soundClass;
 
 #endif /* SODAINTRINSICS_H */

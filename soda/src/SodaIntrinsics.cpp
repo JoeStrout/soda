@@ -9,6 +9,7 @@
 
 #include "SodaIntrinsics.h"
 #include "SdlGlue.h"
+#include "SdlAudio.h"
 #include "MiniScript/String.h"
 #include "MiniScript/UnicodeUtil.h"
 #include "MiniScript/UnitTest.h"
@@ -108,6 +109,27 @@ static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult p
 	return IntrinsicResult(spriteClass);
 }
 
+
+//--------------------------------------------------------------------------------
+// Sound class
+//--------------------------------------------------------------------------------
+ValueDict soundClass;
+static Intrinsic *i_sound_play = NULL;
+
+static IntrinsicResult intrinsic_soundClass(Context *context, IntrinsicResult partialResult) {
+	return IntrinsicResult(soundClass);
+}
+
+static IntrinsicResult intrinsic_sound_play(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	double volume = context->GetVar("volume").DoubleValue();
+	double pan = context->GetVar("pan").DoubleValue();
+	double speed = context->GetVar("speed").DoubleValue();
+	SdlGlue::PlaySound(self, volume, pan, speed);
+	return IntrinsicResult::Null;
+}
+
+
 //--------------------------------------------------------------------------------
 // file module additions
 //--------------------------------------------------------------------------------
@@ -119,6 +141,11 @@ static Intrinsic *i_file_loadFont = NULL;
 static IntrinsicResult intrinsic_file_loadImage(Context *context, IntrinsicResult partialResult) {
 	Value path = context->GetVar("path");
 	return IntrinsicResult(SdlGlue::LoadImage(path.ToString()));
+}
+
+static IntrinsicResult intrinsic_file_loadSound(Context *context, IntrinsicResult partialResult) {
+	Value path = context->GetVar("path");
+	return IntrinsicResult(SdlGlue::LoadSound(path.ToString()));
 }
 
 
@@ -144,10 +171,26 @@ void AddSodaIntrinsics() {
 		i_file_loadImage->AddParam("path", Value::emptyString);
 		i_file_loadImage->code = &intrinsic_file_loadImage;
 		fileModule.SetValue("loadImage", i_file_loadImage->GetFunc());
+		
+		i_file_loadSound = Intrinsic::Create("");
+		i_file_loadSound->AddParam("path", Value::emptyString);
+		i_file_loadSound->code = &intrinsic_file_loadSound;
+		fileModule.SetValue("loadSound", i_file_loadSound->GetFunc());
 	}
 	
 	f = Intrinsic::Create("Sprite");
 	f->code = &intrinsic_spriteClass;
+
+	i_sound_play = Intrinsic::Create("");
+	i_sound_play->AddParam("volume", Value::one);
+	i_sound_play->AddParam("pan", Value::zero);
+	i_sound_play->AddParam("speed", Value::one);
+	i_sound_play->code = &intrinsic_sound_play;
+
+	f = Intrinsic::Create("Sound");
+	f->code = &intrinsic_soundClass;
+	soundClass.SetValue("_handle", Value::null);
+	soundClass.SetValue("play", i_sound_play->GetFunc());
 
 	f = Intrinsic::Create("key");
 	f->code = &intrinsic_keyModule;

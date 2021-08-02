@@ -9,6 +9,9 @@
 #include "SdlAudio.h"
 #include <SDL2/SDL.h>
 #include <stdlib.h>
+#include "SodaIntrinsics.h"
+
+using namespace MiniScript;
 
 namespace SdlGlue {
 
@@ -31,28 +34,48 @@ public:
 	
 	bool isValid() { return data != NULL && dataLen > 0; }
 	
-	static AudioClip Load(const char *path);
+	static AudioClip* Load(const char *path);
+};
+
+// SoundStorage: wraps and reference-counts an AudioClip;
+// used as the _handle of a Sound object in MiniScript.
+class SoundStorage : public RefCountedStorage {
+public:
+	SoundStorage(AudioClip *clip) : clip(clip) {}
+	
+	virtual ~SoundStorage() {
+		if (clip) clip->ReleaseData();
+		delete clip;
+	}
+	
+	AudioClip *clip;
 };
 
 class AudioSource {
 public:
-	AudioClip *clip;
+	SoundStorage *sound;
 	float volume;		// 0 (silent) to 1 (full volume)
 	float pan;			// -1 (full left) to 0 (balanced) to 1 (full right)
 	double speed;		// 1 == normal speed; 0.5 == half speed; etc.
 	double time;		// how far (in seconds) we are into the sound
+	bool done;			// set to true when we're done playing
 	
-	AudioSource(AudioClip *clip, float volume=1, float pan=0) : clip(clip), volume(volume), pan(pan), time(0), speed(1) {}
+	AudioSource(SoundStorage *sound, float volume=1, float pan=0, double speed=1)
+	: sound(sound), volume(volume), pan(pan), time(0), speed(speed), done(false) {
+		if (sound != NULL) sound->retain();
+	}
+	
+	~AudioSource() { if (sound != NULL) sound->release(); }
 	
 	void SampleToBuffer(float *buffer, int frameCount);
 };
 
+
 // Private data
 static SDL_AudioDeviceID deviceId = 0;
 static SDL_AudioSpec audioSpec;
-static AudioClip testClip;
-static AudioSource testSource(NULL);
-static double sampledTime = 0;
+static Value magicHandle("_handle");
+SimpleVector<AudioSource*> playingSounds;
 
 // Forward declarations
 static void AudioCallback(void* userdata, Uint8* buffer, int bufferSize);
@@ -79,9 +102,6 @@ void SetupAudio() {
 		printf("Opened audio output with device ID %d\n", deviceId);
 		printf("freq: %d  channels: %d  samples: %d\n", audioSpec.freq, audioSpec.channels, audioSpec.samples);
 		
-		testClip = AudioClip::Load("sounds/pickup.WAV");
-		testSource = AudioSource(&testClip);
-		testSource.speed = 0.25f;
 		SDL_PauseAudioDevice(deviceId, 0);
 	}
 }
@@ -90,43 +110,52 @@ void ShutdownAudio() {
 	SDL_CloseAudioDevice(deviceId);
 }
 
+
+Value LoadSound(MiniScript::String path) {
+	AudioClip* clip = AudioClip::Load(path.c_str());
+	if (clip == NULL) return Value::null;
+	
+	ValueDict inst;
+	inst.SetValue(Value::magicIsA, soundClass);
+	inst.SetValue(magicHandle, Value::NewHandle(new SoundStorage(clip)));
+	inst.SetValue("duration", clip->length);
+	
+	return inst;
+}
+
+void PlaySound(MiniScript::Value sound, double volume, double pan, double speed) {
+	if (sound.IsNull() || sound.type != ValueType::Map) return;
+	ValueDict soundMap = sound.GetDict();
+	MiniScript::Value clipH = soundMap.Lookup(magicHandle, Value::null);
+	SoundStorage *clipStorage = NULL;
+	if (clipH.type == ValueType::Handle) {
+		// ToDo: how do we be sure the data is specifically a SoundStorage?
+		// Do we need to enable RTTI, or use some common base class?
+		clipStorage = ((SoundStorage*)(clipH.data.ref));
+	}
+	if (clipStorage == NULL || clipStorage->clip == NULL) return;
+	
+	AudioSource *src = new AudioSource(clipStorage, volume, pan, speed);
+	playingSounds.push_back(src);
+}
+
 //--------------------------------------------------------------------------------
 // Private method implementations
 //--------------------------------------------------------------------------------
 
-bool logged = false;
-
 static void AudioCallback(void* userdata, Uint8* buffer, int bufferSize) {
 	// Here we mix and generate some samples for the buffer!
-	if (!logged) {
-		printf("Got callback with bufferSize %d\n", bufferSize);
-		logged = true;
-	}
 	SDL_memset(buffer, 0, bufferSize);
 	float *samples = (float*)buffer;
-	int sampleCount = bufferSize / sizeof(float);
 	int frameCount = bufferSize / (sizeof(float) * audioSpec.channels);
 	
 	// Sample our currently playing audio sources.
-	testSource.SampleToBuffer(samples, frameCount);
-
-/*
- float *dstSample = samples;
-	int startFrame = sampledTime * audioSpec.freq;
-	float *srcSample = ((float*)testClip.data) + startFrame * audioSpec.channels;
-	float *srcSampleEnd = (float*)(testClip.data + testClip.dataLen);
-	for (int i=0; i<sampleCount; i++) {
-		if (srcSample >= srcSampleEnd) *dstSample++ = 0;
-		else *dstSample++ = *srcSample++;
-	}
-*/
-	sampledTime += (double)frameCount / audioSpec.freq;
-	if (sampledTime > 2) {		// HACK for testing -- start over every few seconds
-		testSource.time = 0;
-		//testSource.speed *= 2;
-		testSource.pan = (double)rand() / RAND_MAX * 2 - 1;
-		sampledTime = 0;
-		printf("Restarting sound with speed %lf and pan %f\n", testSource.speed, testSource.pan);
+	for (long i=playingSounds.size() - 1; i >= 0; i--) {
+		playingSounds[i]->SampleToBuffer(samples, frameCount);
+		if (playingSounds[i]->done) {
+			delete playingSounds[i];
+			playingSounds.deleteIdx(i);
+		}
 	}
 	
 	/*
@@ -148,39 +177,43 @@ static void AudioCallback(void* userdata, Uint8* buffer, int bufferSize) {
 	*/
 }
 
-AudioClip AudioClip::Load(const char *path) {
-	AudioClip result;
-	if (SDL_LoadWAV(path, &result.spec, &result.data, &result.dataLen) == NULL) {
+AudioClip* AudioClip::Load(const char *path) {
+	AudioClip* result = new AudioClip();
+	if (SDL_LoadWAV(path, &result->spec, &result->data, &result->dataLen) == NULL) {
 		printf("Unable to load WAV file %s: %s\n", path, SDL_GetError());
-		return result;
+		delete result;
+		return NULL;
 	}
 	printf("Loaded WAV with freq: %d  channels: %d  samples: %d  format: %d  bytes: %d\n",
-		   result.spec.freq, result.spec.channels, result.spec.samples, result.spec.format, result.dataLen);
+		   result->spec.freq, result->spec.channels, result->spec.samples, result->spec.format, result->dataLen);
 	// Now let's convert that to our mix format.
 	SDL_AudioCVT cvt;
-	SDL_BuildAudioCVT(&cvt, result.spec.format, result.spec.channels, result.spec.freq,
+	SDL_BuildAudioCVT(&cvt, result->spec.format, result->spec.channels, result->spec.freq,
 					  audioSpec.format, audioSpec.channels, audioSpec.freq);
 	if (cvt.needed) {
-		cvt.len = result.dataLen;
+		cvt.len = result->dataLen;
 		cvt.buf = (Uint8*)SDL_malloc(cvt.len * cvt.len_mult);
-		SDL_memcpy(cvt.buf, result.data, result.dataLen);
+		SDL_memcpy(cvt.buf, result->data, result->dataLen);
 		SDL_ConvertAudio(&cvt);
 		printf("After conversion, we have %d bytes in format %d with %d channels\n", cvt.len_cvt, cvt.dst_format, audioSpec.channels);
-		SDL_FreeWAV(result.data);
-		result.data = cvt.buf;
-		result.dataLen = cvt.len_cvt;
-		result.spec.format = cvt.dst_format;
-		result.spec.channels = audioSpec.channels;
-		result.spec.freq = audioSpec.freq;
+		SDL_FreeWAV(result->data);
+		result->data = cvt.buf;
+		result->dataLen = cvt.len_cvt;
+		result->spec.format = cvt.dst_format;
+		result->spec.channels = audioSpec.channels;
+		result->spec.freq = audioSpec.freq;
 	}
-	int bytesPerFrame = sizeof(float) * result.spec.channels;
-	result.frameCount = result.dataLen / bytesPerFrame;
-	result.length = (double)result.frameCount / result.spec.freq;
-	printf("Sound length: %lf seconds, or %d frames\n", result.length, result.frameCount);
+	int bytesPerFrame = sizeof(float) * result->spec.channels;
+	result->frameCount = result->dataLen / bytesPerFrame;
+	result->length = (double)result->frameCount / result->spec.freq;
+	printf("Sound length: %lf seconds, or %d frames\n", result->length, result->frameCount);
 	return result;
 }
 
+
 void AudioSource::SampleToBuffer(float *buffer, int frameCount) {
+	if (sound == NULL) return;
+	AudioClip *clip = sound->clip;
 	if (clip == NULL || time > clip->length) return;
 	double dt = speed / audioSpec.freq;
 	float *clipSamples = (float*)clip->data;
@@ -189,7 +222,10 @@ void AudioSource::SampleToBuffer(float *buffer, int frameCount) {
 		double frameIndex = clip->spec.freq * time;
 		time += dt;
 		long frameIndexBase = (long)frameIndex;
-		if (frameIndexBase >= clip->frameCount) break;
+		if (frameIndexBase >= clip->frameCount) {
+			done = true;		// ToDo: add looping support here
+			break;
+		}
 		double frac = frameIndex - frameIndexBase;
 		for (int channel=0; channel < audioSpec.channels; channel++) {
 			// first, sample our data at time t (which in general will mean interpolating
