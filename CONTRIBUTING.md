@@ -38,3 +38,5 @@ if (arg < 0)
 ```
 
 If the line is too long to comfortably fit it all on one line, then use curly braces and make it three lines.  Never, ever put the consequence on the next line without curly braces.  Ever.
+
+3. Indent with tabs, not spaces.  How wide these tabs appear in your code editor is up to you.

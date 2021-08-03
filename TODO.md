@@ -1,6 +1,6 @@
 Our current goal is to get Soda to a state where it can be used to create real 2D games, probably retro-style arcade games that rely entirely on sprites, as quickly as possible.  The High Priority features below will get us there.  The subsequent Medium and Low priority features are ones we want to have, but are less urgent.
 
-Note that **all APIs should mimic Mini Micro](https://miniscript.org/wiki/Mini_Micro)** wherever possible.
+Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_Micro)** wherever possible.
 
 # High Priority
 
