@@ -39,11 +39,20 @@ static IntrinsicResult intrinsic_sprites(Context *context, IntrinsicResult parti
 // Image class
 //--------------------------------------------------------------------------------
 ValueDict imageClass;
+static Intrinsic *i_image_getImage = NULL;
 
 static IntrinsicResult intrinsic_imageClass(Context *context, IntrinsicResult partialResult) {
 	return IntrinsicResult(imageClass);
 }
 
+static IntrinsicResult intrinsic_image_getImage(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	Value left = context->GetVar("left");
+	Value bottom = context->GetVar("bottom");
+	Value width = context->GetVar("width");
+	Value height = context->GetVar("height");
+	return IntrinsicResult(SdlGlue::GetSubImage(self, left.IntValue(), bottom.IntValue(), width.IntValue(), height.IntValue()));
+}
 
 //--------------------------------------------------------------------------------
 // key module
@@ -170,10 +179,18 @@ void AddSodaIntrinsics() {
 	f = Intrinsic::Create("sprites");	// ToDo: put this in a SpriteDisplay
 	f->code = &intrinsic_sprites;
 
+	i_image_getImage = Intrinsic::Create("");
+	i_image_getImage->AddParam("left", Value::zero);
+	i_image_getImage->AddParam("bottom", Value::zero);
+	i_image_getImage->AddParam("width", Value(-1));
+	i_image_getImage->AddParam("height", Value(-1));
+	i_image_getImage->code = &intrinsic_image_getImage;
+
 	f = Intrinsic::Create("Image");
 	f->code = &intrinsic_imageClass;
 	imageClass.SetValue("width", Value::zero);
 	imageClass.SetValue("height", Value::zero);
+	imageClass.SetValue("getImage", i_image_getImage->GetFunc());
 
 	Intrinsic *fileIntrinsic = Intrinsic::GetByName("file");
 	if (fileIntrinsic == NULL) {

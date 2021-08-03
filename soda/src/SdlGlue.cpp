@@ -178,6 +178,16 @@ Value LoadImage(MiniScript::String path) {
 	return inst;
 }
 
+Value GetSubImage(MiniScript::Value image, int left, int bottom, int width, int height) {
+	// Get an Image that represents a rectangular portion of a given image.
+	// This is a bit tricky in SDL.  And we need to decide whether we are going to
+	// actually copy the pixel data into a new texture, or just make our Image
+	// reference a specific rectangular portion of the original texture.  That,
+	// in turn, depends somewhat on whether our images are mutable (e.g. with an
+	// Image.setPixel method).  Tricky.
+	return Value::null;	// ToDo!
+}
+
 //--------------------------------------------------------------------------------
 // Private method implementations
 //--------------------------------------------------------------------------------

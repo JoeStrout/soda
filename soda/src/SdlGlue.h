@@ -26,6 +26,7 @@ bool IsMouseButtonPressed(int buttonNum);
 int GetMouseX();
 int GetMouseY();
 MiniScript::Value LoadImage(MiniScript::String path);
+MiniScript::Value GetSubImage(MiniScript::Value image, int left, int bottom, int width, int height);
 
 // flag set to true when the user tries to quit the app (by closing the window, cmd-Q, etc.)
 extern bool quit;
