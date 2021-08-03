@@ -10,18 +10,25 @@ Note that **all APIs should mimic Mini Micro](https://miniscript.org/wiki/Mini_M
 - ~~mouse.x, mouse.y, mouse.button~~
 - joystick/gamepad support
 - changing background color
-- make `file.loadImage` return an actual `Image` object
+- make file.loadImage return an actual `Image` object
 - Image.getImage (so you can carve up a sprite sheet)
 - Sound.playLooping, Sound.stop, Sound.stopAll
+- screen handling: fullscreen mode, screen dimensions
+- builds for Mac, Windows, Linux (PC), and Raspberry Pi
 
 # Medium Priority
 
-- `Display` class, `display(n)`,  Display.install
+- Display class, display(n),  Display.install
 - SolidColor display
 - Text display
-- `import`
+- TileDisplay
+- import
+- sound synthesis (Sound.init, Sound.mix, etc.)
+- clear/simple build system for all platforms
 
 # Low Priority
 
+- font class, with loading from truetype and bitmap font files
 - `http` class
 - loading a script from a URL
+- PixelDisplay
