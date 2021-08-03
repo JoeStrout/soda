@@ -13,7 +13,7 @@ Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_
 - make file.loadImage return an actual `Image` object
 - Image.getImage (so you can carve up a sprite sheet)
 - Sound.playLooping, Sound.stop, Sound.stopAll
-- screen handling: fullscreen mode, screen dimensions
+- screen handling: fullscreen mode, window/screen dimensions
 - builds for Mac, Windows, Linux (PC), and Raspberry Pi
 
 # Medium Priority
@@ -25,6 +25,7 @@ Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_
 - import
 - sound synthesis (Sound.init, Sound.mix, etc.)
 - clear/simple build system for all platforms
+- Linux (especially RPi) builds that work without X11
 
 # Low Priority
 
@@ -32,3 +33,4 @@ Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_
 - `http` class
 - loading a script from a URL
 - PixelDisplay
+- build for the web (see [this thread](https://discourse.libsdl.org/t/more-info-needed-on-converting-sdl2-to-web-encripten/28584/6) and [this write-up](http://main.lv/writeup/web_assembly_sdl_example.md))
