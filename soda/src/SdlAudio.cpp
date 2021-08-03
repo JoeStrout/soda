@@ -6,6 +6,7 @@
 //  Created by Joe Strout on 8/1/21.
 //
 
+#include "SdlGlue.h"
 #include "SdlAudio.h"
 #include <SDL2/SDL.h>
 #include <stdlib.h>
@@ -74,7 +75,6 @@ public:
 // Private data
 static SDL_AudioDeviceID deviceId = 0;
 static SDL_AudioSpec audioSpec;
-static Value magicHandle("_handle");
 SimpleVector<AudioSource*> playingSounds;
 
 // Forward declarations

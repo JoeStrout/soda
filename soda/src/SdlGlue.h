@@ -30,6 +30,8 @@ MiniScript::Value LoadImage(MiniScript::String path);
 // flag set to true when the user tries to quit the app (by closing the window, cmd-Q, etc.)
 extern bool quit;
 
+extern MiniScript::Value magicHandle;	// "_handle" (used for several intrinsic classes)
+
 }
 
 #endif /* SDLGLUE_H */

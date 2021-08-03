@@ -27,6 +27,8 @@ namespace SdlGlue {
 
 // public data
 bool quit;
+Value magicHandle("_handle");
+
 
 // private data
 static SDL_Window *mainWindow;
@@ -163,8 +165,17 @@ Value LoadImage(MiniScript::String path) {
 	SDL_FreeSurface(surf); surf = NULL;
 	if (texture == NULL) return Value::null;
 	SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+
+	int width, height;
+	SDL_QueryTexture(texture, NULL, NULL, &width, &height);
 	
-	return Value::NewHandle(new TextureStorage(texture));
+	ValueDict inst;
+	inst.SetValue(Value::magicIsA, imageClass);
+	inst.SetValue(magicHandle, Value::NewHandle(new TextureStorage(texture)));
+	inst.SetValue("width", width);
+	inst.SetValue("height", height);
+
+	return inst;
 }
 
 //--------------------------------------------------------------------------------
@@ -275,7 +286,7 @@ Color ToColor(String s) {
 void DrawSprites() {
 	MiniScript::ValueList sprites = spriteList.GetList();
 	for (int i=0; i<sprites.Count(); i++) {
-		MiniScript::Value sprite = sprites[i];
+		Value sprite = sprites[i];
 		if (sprite.type != MiniScript::ValueType::Map) continue;
 		double x = round(sprite.Lookup("x").DoubleValue());
 		double y = round(sprite.Lookup("y").DoubleValue());
@@ -285,10 +296,13 @@ void DrawSprites() {
 		Color c = ToColor(sprite.Lookup("tint").ToString());
 		MiniScript::Value image = sprite.Lookup("image");
 		SDL_Texture *texture = NULL;
-		if (image.type == ValueType::Handle) {
-			// ToDo: how do we be sure the data is specifically a TextureStorage?
-			// Do we need to enable RTTI, or use some common base class?
-			texture = ((TextureStorage*)(image.data.ref))->texture;
+		if (image.type == ValueType::Map) {
+			Value textureH = image.Lookup(magicHandle);
+			if (textureH.type == ValueType::Handle) {
+				// ToDo: how do we be sure the data is specifically a TextureStorage?
+				// Do we need to enable RTTI, or use some common base class?
+				texture = ((TextureStorage*)(textureH.data.ref))->texture;
+			}
 		}
 		
 		SDL_Rect destRect = { RoundToInt(x-w/2), windowHeight-RoundToInt(y+h/2), RoundToInt(w), RoundToInt(h) };

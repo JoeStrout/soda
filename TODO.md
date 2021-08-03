@@ -10,7 +10,7 @@ Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_
 - ~~mouse.x, mouse.y, mouse.button~~
 - joystick/gamepad support
 - changing background color
-- make file.loadImage return an actual `Image` object
+- ~~make file.loadImage return an actual `Image` object~~
 - Image.getImage (so you can carve up a sprite sheet)
 - Sound.playLooping, Sound.stop, Sound.stopAll
 - screen handling: fullscreen mode, window/screen dimensions

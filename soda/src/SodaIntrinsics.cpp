@@ -36,6 +36,16 @@ static IntrinsicResult intrinsic_sprites(Context *context, IntrinsicResult parti
 }
 
 //--------------------------------------------------------------------------------
+// Image class
+//--------------------------------------------------------------------------------
+ValueDict imageClass;
+
+static IntrinsicResult intrinsic_imageClass(Context *context, IntrinsicResult partialResult) {
+	return IntrinsicResult(imageClass);
+}
+
+
+//--------------------------------------------------------------------------------
 // key module
 //--------------------------------------------------------------------------------
 static Intrinsic *i_key_pressed = NULL;
@@ -91,6 +101,25 @@ static IntrinsicResult intrinsic_mouse_y(Context *context, IntrinsicResult parti
 }
 
 //--------------------------------------------------------------------------------
+// Sound class
+//--------------------------------------------------------------------------------
+ValueDict soundClass;
+static Intrinsic *i_sound_play = NULL;
+
+static IntrinsicResult intrinsic_soundClass(Context *context, IntrinsicResult partialResult) {
+	return IntrinsicResult(soundClass);
+}
+
+static IntrinsicResult intrinsic_sound_play(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	double volume = context->GetVar("volume").DoubleValue();
+	double pan = context->GetVar("pan").DoubleValue();
+	double speed = context->GetVar("speed").DoubleValue();
+	SdlGlue::PlaySound(self, volume, pan, speed);
+	return IntrinsicResult::Null;
+}
+
+//--------------------------------------------------------------------------------
 // Sprite class
 //--------------------------------------------------------------------------------
 
@@ -109,25 +138,6 @@ static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult p
 	return IntrinsicResult(spriteClass);
 }
 
-
-//--------------------------------------------------------------------------------
-// Sound class
-//--------------------------------------------------------------------------------
-ValueDict soundClass;
-static Intrinsic *i_sound_play = NULL;
-
-static IntrinsicResult intrinsic_soundClass(Context *context, IntrinsicResult partialResult) {
-	return IntrinsicResult(soundClass);
-}
-
-static IntrinsicResult intrinsic_sound_play(Context *context, IntrinsicResult partialResult) {
-	Value self = context->GetVar("self");
-	double volume = context->GetVar("volume").DoubleValue();
-	double pan = context->GetVar("pan").DoubleValue();
-	double speed = context->GetVar("speed").DoubleValue();
-	SdlGlue::PlaySound(self, volume, pan, speed);
-	return IntrinsicResult::Null;
-}
 
 
 //--------------------------------------------------------------------------------
@@ -159,6 +169,11 @@ void AddSodaIntrinsics() {
 
 	f = Intrinsic::Create("sprites");	// ToDo: put this in a SpriteDisplay
 	f->code = &intrinsic_sprites;
+
+	f = Intrinsic::Create("Image");
+	f->code = &intrinsic_imageClass;
+	imageClass.SetValue("width", Value::zero);
+	imageClass.SetValue("height", Value::zero);
 
 	Intrinsic *fileIntrinsic = Intrinsic::GetByName("file");
 	if (fileIntrinsic == NULL) {
