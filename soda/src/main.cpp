@@ -94,7 +94,7 @@ static int ReplThread(void *interpreter) {
 					std::cout << std::endl;
 					return 0;
 				}
-				interp.REPL(buf);
+				interp->REPL(buf);
 			#endif
 		} catch (MiniscriptException& mse) {
 			std::cerr << "Runtime Exception: " << mse.message << std::endl;
