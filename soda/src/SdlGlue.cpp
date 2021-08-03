@@ -46,17 +46,19 @@ static int RoundToInt(double d);
 static void DrawSprites();
 static void SetupKeyNameMap();
 static Color ToColor(String s);
-
+static Value NewImageFromSurface(SDL_Surface *surf);
 
 class TextureStorage : public RefCountedStorage {
 public:
-	TextureStorage(SDL_Texture *tex) : texture(tex) {}
+	TextureStorage(SDL_Surface *surf) : surface(surf), texture(nullptr) {}
 	
 	virtual ~TextureStorage() {
+		SDL_FreeSurface(surface);		surface = NULL;
 		SDL_DestroyTexture(texture);	texture = NULL;
 	}
 	
-	SDL_Texture *texture;
+	SDL_Surface *surface;		// pixel buffer -- always valid
+	SDL_Texture *texture;		// texture for rendering: may be null until we render
 };
 
 //--------------------------------------------------------------------------------
@@ -158,34 +160,52 @@ int GetMouseY() {
 	return windowHeight - y;
 }
 
-Value LoadImage(MiniScript::String path) {
-	SDL_Surface *surf = IMG_Load(path.c_str());
+Value NewImageFromSurface(SDL_Surface *surf) {
+	// Create and return a new Image object from the given pixel buffer.
 	if (surf == NULL) return Value::null;
-	SDL_Texture *texture = SDL_CreateTextureFromSurface(mainRenderer, surf);
-	SDL_FreeSurface(surf); surf = NULL;
-	if (texture == NULL) return Value::null;
-	SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-
-	int width, height;
-	SDL_QueryTexture(texture, NULL, NULL, &width, &height);
 	
 	ValueDict inst;
 	inst.SetValue(Value::magicIsA, imageClass);
-	inst.SetValue(magicHandle, Value::NewHandle(new TextureStorage(texture)));
-	inst.SetValue("width", width);
-	inst.SetValue("height", height);
+	inst.SetValue(magicHandle, Value::NewHandle(new TextureStorage(surf)));
+	inst.SetValue("width", surf->w);
+	inst.SetValue("height", surf->h);
 
 	return inst;
 }
 
+Value LoadImage(MiniScript::String path) {
+	return NewImageFromSurface(IMG_Load(path.c_str()));
+}
+
 Value GetSubImage(MiniScript::Value image, int left, int bottom, int width, int height) {
 	// Get an Image that represents a rectangular portion of a given image.
-	// This is a bit tricky in SDL.  And we need to decide whether we are going to
-	// actually copy the pixel data into a new texture, or just make our Image
-	// reference a specific rectangular portion of the original texture.  That,
-	// in turn, depends somewhat on whether our images are mutable (e.g. with an
-	// Image.setPixel method).  Tricky.
-	return Value::null;	// ToDo!
+
+	// First, get our image storage out of the handle in the MiniScript object.
+	if (image.type != ValueType::Map) return Value::null;
+	Value textureH = image.Lookup(magicHandle);
+	if (textureH.type != ValueType::Handle) return Value::null;
+	
+	// ToDo: how do we be sure the data is specifically a TextureStorage?
+	// Do we need to enable RTTI, or use some common base class?
+	TextureStorage *storage = ((TextureStorage*)(textureH.data.ref));
+	if (storage == nullptr) return Value::null;
+
+	// Start by creating a surface of the appropriate size.
+	SDL_Surface *newSurf = SDL_CreateRGBSurfaceWithFormat(0,
+		  width, height,
+		  SDL_BITSPERPIXEL(storage->surface->format->format),
+		  storage->surface->format->format);
+	if (newSurf == nullptr) {
+		printf("GetSubImage: couldn't create sub-surface: %s\n", SDL_GetError());
+		return Value::null;
+	}
+	
+	// Then, copy the pixel data out of this one into that one.
+	SDL_Rect srcRect = {left, storage->surface->h - bottom - height, width, height};
+	SDL_BlitSurface(storage->surface, &srcRect, newSurf, NULL);
+	
+	// Finally, return the new surface as an Image.
+	return NewImageFromSurface(newSurf);
 }
 
 //--------------------------------------------------------------------------------
@@ -302,28 +322,31 @@ void DrawSprites() {
 		double y = round(sprite.Lookup("y").DoubleValue());
 		double scale = sprite.Lookup("scale").DoubleValue();
 		double rotation = sprite.Lookup("rotation").DoubleValue();
-		double w = 100*scale, h = 100*scale;
 		Color c = ToColor(sprite.Lookup("tint").ToString());
+
 		MiniScript::Value image = sprite.Lookup("image");
-		SDL_Texture *texture = NULL;
+		TextureStorage *storage = NULL;
 		if (image.type == ValueType::Map) {
 			Value textureH = image.Lookup(magicHandle);
 			if (textureH.type == ValueType::Handle) {
 				// ToDo: how do we be sure the data is specifically a TextureStorage?
 				// Do we need to enable RTTI, or use some common base class?
-				texture = ((TextureStorage*)(textureH.data.ref))->texture;
+				storage = ((TextureStorage*)(textureH.data.ref));
 			}
 		}
+		if (storage == nullptr) continue;
+		
+		if (storage->texture == nullptr) {
+			storage->texture = SDL_CreateTextureFromSurface(mainRenderer, storage->surface);
+			if (storage->texture == nullptr) continue;
+			SDL_SetTextureBlendMode(storage->texture, SDL_BLENDMODE_BLEND);
+		}
+		double w = storage->surface->w*scale, h = storage->surface->h*scale;
 		
 		SDL_Rect destRect = { RoundToInt(x-w/2), windowHeight-RoundToInt(y+h/2), RoundToInt(w), RoundToInt(h) };
-		if (texture) {
-			// ToDo: tint and alpha
-			SDL_RenderCopyEx(mainRenderer, texture, NULL, &destRect, rotation, NULL, SDL_FLIP_NONE);
-		} else {
-			// No texture; for now, just render a quad
-			SDL_SetRenderDrawColor(mainRenderer, c.r, c.g, c.b, c.a);
-			SDL_RenderFillRect(mainRenderer, &destRect);
-		}
+
+		// ToDo: tint and alpha (based on c, above)
+		SDL_RenderCopyEx(mainRenderer, storage->texture, NULL, &destRect, rotation, NULL, SDL_FLIP_NONE);
 	}
 }
 
