@@ -114,6 +114,8 @@ static IntrinsicResult intrinsic_mouse_y(Context *context, IntrinsicResult parti
 //--------------------------------------------------------------------------------
 ValueDict soundClass;
 static Intrinsic *i_sound_play = NULL;
+static Intrinsic *i_sound_stop = NULL;
+static Intrinsic *i_sound_stopAll = NULL;
 
 static IntrinsicResult intrinsic_soundClass(Context *context, IntrinsicResult partialResult) {
 	return IntrinsicResult(soundClass);
@@ -125,6 +127,17 @@ static IntrinsicResult intrinsic_sound_play(Context *context, IntrinsicResult pa
 	double pan = context->GetVar("pan").DoubleValue();
 	double speed = context->GetVar("speed").DoubleValue();
 	SdlGlue::PlaySound(self, volume, pan, speed);
+	return IntrinsicResult::Null;
+}
+
+static IntrinsicResult intrinsic_sound_stop(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	SdlGlue::StopSound(self);
+	return IntrinsicResult::Null;
+}
+
+static IntrinsicResult intrinsic_sound_stopAll(Context *context, IntrinsicResult partialResult) {
+	SdlGlue::StopAllSounds();
 	return IntrinsicResult::Null;
 }
 
@@ -219,10 +232,19 @@ void AddSodaIntrinsics() {
 	i_sound_play->AddParam("speed", Value::one);
 	i_sound_play->code = &intrinsic_sound_play;
 
+	i_sound_stop = Intrinsic::Create("");
+	i_sound_stop->code = &intrinsic_sound_stop;
+
+	i_sound_stopAll = Intrinsic::Create("");
+	i_sound_stopAll->code = &intrinsic_sound_stopAll;
+
 	f = Intrinsic::Create("Sound");
 	f->code = &intrinsic_soundClass;
 	soundClass.SetValue("_handle", Value::null);
+	soundClass.SetValue("loop", Value::zero);
 	soundClass.SetValue("play", i_sound_play->GetFunc());
+	soundClass.SetValue("stop", i_sound_stop->GetFunc());
+	soundClass.SetValue("stopAll", i_sound_stopAll->GetFunc());
 
 	f = Intrinsic::Create("key");
 	f->code = &intrinsic_keyModule;

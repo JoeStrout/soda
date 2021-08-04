@@ -1,0 +1,19 @@
+// Testing the Image class and various operations you can do with it.
+
+print "Hello imageOps!"
+
+img = file.loadImage("images/soda-512.png")
+
+sp1 = new Sprite
+sp1.image = img
+sp1.x = 300; sp1.y = 320
+sprites.push sp1
+
+sp2 = new Sprite
+sp2.image = img.getImage(0, 256, 256, 256)
+sp2.x = 700; sp2.y = 320
+sprites.push sp2
+
+while not key.pressed("escape")
+	yield
+end while

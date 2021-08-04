@@ -18,6 +18,8 @@ void SetupAudio();
 
 MiniScript::Value LoadSound(MiniScript::String path);
 void PlaySound(MiniScript::Value sound, double volume, double pan, double speed);
+void StopSound(MiniScript::Value sound);
+void StopAllSounds();
 
 void ShutdownAudio();
 

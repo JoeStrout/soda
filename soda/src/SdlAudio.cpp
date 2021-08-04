@@ -58,6 +58,8 @@ public:
 	float volume;		// 0 (silent) to 1 (full volume)
 	float pan;			// -1 (full left) to 0 (balanced) to 1 (full right)
 	double speed;		// 1 == normal speed; 0.5 == half speed; etc.
+	bool looping;		// if true, repeat sound until stopped
+
 	double time;		// how far (in seconds) we are into the sound
 	bool done;			// set to true when we're done playing
 	
@@ -125,8 +127,7 @@ Value LoadSound(MiniScript::String path) {
 
 void PlaySound(MiniScript::Value sound, double volume, double pan, double speed) {
 	if (sound.IsNull() || sound.type != ValueType::Map) return;
-	ValueDict soundMap = sound.GetDict();
-	MiniScript::Value clipH = soundMap.Lookup(magicHandle, Value::null);
+	MiniScript::Value clipH = sound.Lookup(magicHandle);
 	SoundStorage *clipStorage = NULL;
 	if (clipH.type == ValueType::Handle) {
 		// ToDo: how do we be sure the data is specifically a SoundStorage?
@@ -136,7 +137,36 @@ void PlaySound(MiniScript::Value sound, double volume, double pan, double speed)
 	if (clipStorage == NULL || clipStorage->clip == NULL) return;
 	
 	AudioSource *src = new AudioSource(clipStorage, volume, pan, speed);
+	src->looping = sound.Lookup("loop").BoolValue() > 0;
 	playingSounds.push_back(src);
+}
+
+void StopSound(MiniScript::Value sound) {
+	// Stop the oldest sound we find using the same clip storage as the given sound.
+	if (sound.IsNull() || sound.type != ValueType::Map) return;
+	MiniScript::Value clipH = sound.Lookup(magicHandle);
+	SoundStorage *clipStorage = NULL;
+	if (clipH.type == ValueType::Handle) {
+		// ToDo: how do we be sure the data is specifically a SoundStorage?
+		// Do we need to enable RTTI, or use some common base class?
+		clipStorage = ((SoundStorage*)(clipH.data.ref));
+	}
+	if (clipStorage == NULL || clipStorage->clip == NULL) return;
+	for (long i=playingSounds.size() - 1; i >= 0; i--) {
+		if (playingSounds[i]->sound == clipStorage) {
+			delete playingSounds[i];
+			playingSounds.deleteIdx(i);
+			return;
+		}
+	}
+}
+
+void StopAllSounds() {
+	// Stop all playing sounds.
+	VecReverseIterate(i, playingSounds) {
+		delete playingSounds[i];
+	}
+	playingSounds.deleteAll();
 }
 
 //--------------------------------------------------------------------------------
@@ -150,7 +180,7 @@ static void AudioCallback(void* userdata, Uint8* buffer, int bufferSize) {
 	int frameCount = bufferSize / (sizeof(float) * audioSpec.channels);
 	
 	// Sample our currently playing audio sources.
-	for (long i=playingSounds.size() - 1; i >= 0; i--) {
+	VecReverseIterate(i, playingSounds) {
 		playingSounds[i]->SampleToBuffer(samples, frameCount);
 		if (playingSounds[i]->done) {
 			delete playingSounds[i];
@@ -187,21 +217,23 @@ AudioClip* AudioClip::Load(const char *path) {
 	printf("Loaded WAV with freq: %d  channels: %d  samples: %d  format: %d  bytes: %d\n",
 		   result->spec.freq, result->spec.channels, result->spec.samples, result->spec.format, result->dataLen);
 	// Now let's convert that to our mix format.
+	// For frequency, we'll use whichever is less of the original and our mix frequency.
+	double freq = (result->spec.freq < audioSpec.freq ? result->spec.freq : audioSpec.freq);
 	SDL_AudioCVT cvt;
 	SDL_BuildAudioCVT(&cvt, result->spec.format, result->spec.channels, result->spec.freq,
-					  audioSpec.format, audioSpec.channels, audioSpec.freq);
+					  audioSpec.format, audioSpec.channels, freq);
 	if (cvt.needed) {
 		cvt.len = result->dataLen;
 		cvt.buf = (Uint8*)SDL_malloc(cvt.len * cvt.len_mult);
 		SDL_memcpy(cvt.buf, result->data, result->dataLen);
 		SDL_ConvertAudio(&cvt);
-		printf("After conversion, we have %d bytes in format %d with %d channels\n", cvt.len_cvt, cvt.dst_format, audioSpec.channels);
+		printf("After conversion, we have %d bytes in format %d with %d channels, freq %lf\n", cvt.len_cvt, cvt.dst_format, audioSpec.channels, freq);
 		SDL_FreeWAV(result->data);
 		result->data = cvt.buf;
 		result->dataLen = cvt.len_cvt;
 		result->spec.format = cvt.dst_format;
 		result->spec.channels = audioSpec.channels;
-		result->spec.freq = audioSpec.freq;
+		result->spec.freq = freq;
 	}
 	int bytesPerFrame = sizeof(float) * result->spec.channels;
 	result->frameCount = result->dataLen / bytesPerFrame;
@@ -222,11 +254,16 @@ void AudioSource::SampleToBuffer(float *buffer, int frameCount) {
 		double frameIndex = clip->spec.freq * time;
 		time += dt;
 		long frameIndexBase = (long)frameIndex;
-		if (frameIndexBase >= clip->frameCount) {
-			done = true;		// ToDo: add looping support here
-			break;
-		}
 		double frac = frameIndex - frameIndexBase;
+		if (frameIndexBase >= clip->frameCount) {
+			if (looping) {
+				time -= clip->length;
+				frameIndexBase -= clip->frameCount;
+			} else {
+				done = true;
+				break;
+			}
+		}
 		for (int channel=0; channel < audioSpec.channels; channel++) {
 			// first, sample our data at time t (which in general will mean interpolating
 			// between two samples at nearby times).
