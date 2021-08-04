@@ -345,7 +345,8 @@ void DrawSprites() {
 		
 		SDL_Rect destRect = { RoundToInt(x-w/2), windowHeight-RoundToInt(y+h/2), RoundToInt(w), RoundToInt(h) };
 
-		// ToDo: tint and alpha (based on c, above)
+		SDL_SetTextureColorMod(storage->texture, c.r, c.g, c.b);
+		SDL_SetTextureAlphaMod(storage->texture, c.a);
 		SDL_RenderCopyEx(mainRenderer, storage->texture, NULL, &destRect, rotation, NULL, SDL_FLIP_NONE);
 	}
 }

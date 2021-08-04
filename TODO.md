@@ -12,7 +12,7 @@ Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_
 - changing background color
 - ~~make file.loadImage return an actual `Image` object~~
 - ~~Image.getImage (so you can carve up a sprite sheet)~~
-- full support for Sprite.tint including alpha
+- ~~full support for Sprite.tint including alpha~~
 - ~~Sound.loop, Sound.stop, Sound.stopAll~~
 - screen handling: fullscreen mode, window/screen dimensions
 - builds for Mac, Windows, Linux (PC), and Raspberry Pi

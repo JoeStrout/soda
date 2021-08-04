@@ -14,6 +14,19 @@ sp2.image = img.getImage(0, 256, 256, 256)
 sp2.x = 700; sp2.y = 320
 sprites.push sp2
 
+sp3 = new sp2
+sp3.tint = "#FFFF00FF"
+sp3.x = 800
+sp3.y = 400
+sprites.push sp3
+
+sp4 = new sp2
+sp4.tint = "#FFFF0044"
+sp4.x = 800
+sp4.y = 200
+sprites.push sp4
+
+
 while not key.pressed("escape")
 	yield
 end while
