@@ -10,7 +10,7 @@
 #define SDLAUDIO_H
 
 #include <stdio.h>
-#include "MiniscriptTypes.h"
+#include "MiniScript/MiniscriptTypes.h"
 
 namespace SdlGlue {
 

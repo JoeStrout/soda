@@ -9,7 +9,7 @@
 #define SODAINTRINSICS_H
 
 #include <stdio.h>
-#include "MiniscriptTypes.h"
+#include "MiniScript/MiniscriptTypes.h"
 
 void AddSodaIntrinsics();
 
