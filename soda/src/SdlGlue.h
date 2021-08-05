@@ -25,6 +25,7 @@ bool IsKeyPressed(MiniScript::String keyName);
 bool IsMouseButtonPressed(int buttonNum);
 int GetMouseX();
 int GetMouseY();
+double GetAxis(MiniScript::String axisName);
 MiniScript::Value LoadImage(MiniScript::String path);
 MiniScript::Value GetSubImage(MiniScript::Value image, int left, int bottom, int width, int height);
 

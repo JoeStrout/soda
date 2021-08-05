@@ -26,10 +26,14 @@
 *.a
 *.lib
 
-# Executables
+# Executables and build folder
 *.exe
 *.out
 *.app
+Build
+
 
 # Mac stuff
 .DS_Store
+SDL2_image.framework
+SDL2.framework

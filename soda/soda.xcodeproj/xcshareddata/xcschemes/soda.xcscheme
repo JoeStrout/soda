@@ -58,6 +58,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "tests/imageOps.ms"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "tests/axis.ms"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

@@ -11,6 +11,7 @@
 #include "SdlAudio.h"
 #include <SDL2/SDL.h>
 #include <SDL2_image/SDL_image.h>
+#include <SDL2/SDL_gamecontroller.h>
 #include <stdlib.h>
 #include "SodaIntrinsics.h"
 
@@ -38,6 +39,7 @@ static int windowHeight = 640;
 static Color backgroundColor = {0, 0, 100, 255};
 static Dictionary<String, Sint32, hashString> keyNameMap;	// maps Soda key names to SDL key codes
 static Dictionary<Sint32, bool, hashInt> keyDownMap;	// makes SDL key codes to whether they are currently down
+static SimpleVector<SDL_GameController*> gameControllers;
 
 // forward declarations of private methods:
 static bool CheckFail(int resultCode, const char *callName);
@@ -47,6 +49,7 @@ static void DrawSprites();
 static void SetupKeyNameMap();
 static Color ToColor(String s);
 static Value NewImageFromSurface(SDL_Surface *surf);
+static double GetControllerAxis(SDL_GameController* controller, SDL_GameControllerAxis axis);
 
 class TextureStorage : public RefCountedStorage {
 public:
@@ -67,7 +70,7 @@ public:
 
 // Initialize SDL and get everything ready to go.
 void Setup() {
-	if (CheckFail(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_AUDIO), "SDL_Init")) return;
+	if (CheckFail(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO), "SDL_Init")) return;
 	
 	if (!SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1")) {
 		printf( "Warning: Linear texture filtering not enabled!" );
@@ -87,6 +90,10 @@ void Setup() {
 	if (CheckNotNull(mainRenderer, "mainRenderer")) return;
 	
 	SetupKeyNameMap();
+	for (int i=0; i<SDL_NumJoysticks(); i++) {
+		gameControllers.push_back(SDL_GameControllerOpen(i));
+		if (gameControllers[i] != nullptr) printf("Opened controller %d\n", i);
+	}
 	
 	SetupAudio();
 }
@@ -98,6 +105,8 @@ void Shutdown() {
 	SDL_DestroyWindow(mainWindow); mainWindow = NULL;
 	IMG_Quit();
 	ShutdownAudio();
+	VecIterate(i, gameControllers) SDL_GameControllerClose(gameControllers[i]);
+	gameControllers.deleteAll();
 	SDL_Quit();
 }
 
@@ -126,7 +135,7 @@ void Service() {
 	SDL_RenderPresent(mainRenderer);
 }
 
-bool IsKeyPressed(MiniScript::String keyName) {
+bool IsKeyPressed(String keyName) {
 	if (keyName.StartsWith("mouse ")) {
 		int num = keyName.Substring(6).IntValue();
 		return IsMouseButtonPressed(num);
@@ -158,6 +167,67 @@ int GetMouseY() {
 	int y;
 	SDL_GetMouseState(NULL, &y);
 	return windowHeight - y;
+}
+
+double GetAxis(String axisName) {
+	if (axisName == "Horizontal") {
+		// Check arrow keys, then WASD, then all joysticks.
+		if (IsKeyPressed("left")) return -1;
+		if (IsKeyPressed("a")) return -1;
+		if (IsKeyPressed("right")) return 1;
+		if (IsKeyPressed("d")) return 1;
+		return GetAxis("JoyAxis1");
+	}
+	if (axisName == "Vertical") {
+		// Check arrow keys, then WASD, then all joysticks.
+		if (IsKeyPressed("down")) return -1;
+		if (IsKeyPressed("s")) return -1;
+		if (IsKeyPressed("up")) return 1;
+		if (IsKeyPressed("w")) return 1;
+		return GetAxis("JoyAxis2");
+	}
+	if (axisName.StartsWith("JoyAxis")) {
+		int axisNum = axisName.SubstringB(7).IntValue() - 1;
+		if (axisNum < 0 || axisNum >= (int)SDL_CONTROLLER_AXIS_MAX) return 0;
+		double result = 0;
+		VecIterate(i, gameControllers) {
+			double val = GetControllerAxis(gameControllers[i], (SDL_GameControllerAxis)axisNum);
+			if (abs(val) > abs(result)) result = val;
+		}
+		return result;
+	}
+	if (axisName.StartsWith("Joy") && axisName.Contains("Axis")) {
+		long p = axisName.IndexOfB("Axis");
+		int joyNum = axisName.SubstringB(3, p-3).IntValue() - 1;
+		if (joyNum < 0 || joyNum >= gameControllers.size()) return 0;
+		SDL_GameController* gc = gameControllers[joyNum];
+		if (gc == nullptr) return 0;
+
+		int axisNum = axisName.SubstringB(p+4).IntValue() - 1;
+		if (axisNum < 0 || axisNum >= (int)SDL_CONTROLLER_AXIS_MAX) return 0;
+
+		return GetControllerAxis(gc, (SDL_GameControllerAxis)axisNum);
+	}
+	return 0;
+}
+
+// Helper method to get a controller axis -- but checking the dpad for LEFTX and LEFTY
+// too, which SDL doesn't naturally do, and applying a small dead zone to analog axes.
+double GetControllerAxis(SDL_GameController* controller, SDL_GameControllerAxis axis) {
+	if (controller == nullptr) return 0;
+	if (axis == SDL_CONTROLLER_AXIS_LEFTX) {
+	   int dpad = SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_RIGHT)
+		        - SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_LEFT);
+	   if (dpad != 0) return dpad;
+   }
+   if (axis == SDL_CONTROLLER_AXIS_LEFTY) {
+	   int dpad = SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_UP)
+				- SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_DOWN);
+	   if (dpad != 0) return dpad;
+   }
+	Sint16 value = SDL_GameControllerGetAxis(controller, axis);
+	if (value > -300 && value < 300) value = 0;	// (minimal dead zone)
+	return value / 32767.0;
 }
 
 Value NewImageFromSurface(SDL_Surface *surf) {
@@ -215,7 +285,7 @@ Value GetSubImage(MiniScript::Value image, int left, int bottom, int width, int 
 void SetupKeyNameMap() {
 	// most printable keys are the same in SDLK...
 	for (char c=' '; c < 'A'; c++) keyNameMap.SetValue(String(c), c);
-	for (char c='['; c <= '~'; c++) keyNameMap.SetValue(String(c), 0);
+	for (char c='['; c <= '~'; c++) keyNameMap.SetValue(String(c), c);
 	
 	// then we have all the special keys
 	keyNameMap.SetValue("left", SDLK_LEFT);

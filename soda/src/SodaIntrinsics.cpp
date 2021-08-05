@@ -58,12 +58,14 @@ static IntrinsicResult intrinsic_image_getImage(Context *context, IntrinsicResul
 // key module
 //--------------------------------------------------------------------------------
 static Intrinsic *i_key_pressed = NULL;
+static Intrinsic *i_key_axis = NULL;
 
 static IntrinsicResult intrinsic_keyModule(Context *context, IntrinsicResult partialResult) {
 	static ValueDict keyModule;
 	
 	if (keyModule.Count() == 0) {
 		keyModule.SetValue("pressed", i_key_pressed->GetFunc());
+		keyModule.SetValue("axis", i_key_axis->GetFunc());
 	}
 	
 	return IntrinsicResult(keyModule);
@@ -73,6 +75,12 @@ static IntrinsicResult intrinsic_key_pressed(Context *context, IntrinsicResult p
 	Value keyName = context->GetVar("keyName");
 	if (keyName.IsNull()) return IntrinsicResult::Null;
 	return IntrinsicResult(SdlGlue::IsKeyPressed(keyName.ToString()));
+}
+
+static IntrinsicResult intrinsic_key_axis(Context *context, IntrinsicResult partialResult) {
+	Value keyName = context->GetVar("axisName");
+	if (keyName.IsNull()) return IntrinsicResult::Null;
+	return IntrinsicResult(SdlGlue::GetAxis(keyName.ToString()));
 }
 
 //--------------------------------------------------------------------------------
@@ -252,6 +260,10 @@ void AddSodaIntrinsics() {
 	i_key_pressed = Intrinsic::Create("");
 	i_key_pressed->AddParam("keyName");
 	i_key_pressed->code = &intrinsic_key_pressed;
+	
+	i_key_axis = Intrinsic::Create("");
+	i_key_axis->AddParam("axisName");
+	i_key_axis->code = &intrinsic_key_axis;
 	
 	f = Intrinsic::Create("mouse");
 	f->code = &intrinsic_mouseModule;
