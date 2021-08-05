@@ -8,7 +8,7 @@ Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_
 - ~~basic sound support~~
 - ~~key.pressed~~
 - ~~mouse.x, mouse.y, mouse.button~~
-- joystick/gamepad support, including ~~key.axis and~~ buttons
+- ~~joystick/gamepad support, including key.axis and buttons~~
 - changing background color
 - ~~make file.loadImage return an actual `Image` object~~
 - ~~Image.getImage (so you can carve up a sprite sheet)~~
