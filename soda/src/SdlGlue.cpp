@@ -140,6 +140,22 @@ bool IsKeyPressed(String keyName) {
 		int num = keyName.Substring(6).IntValue();
 		return IsMouseButtonPressed(num);
 	}
+	if (keyName.StartsWith("joystick ")) {
+		long pos = keyName.LastIndexOfB(" ");
+		int buttonNum = keyName.SubstringB(pos+1).IntValue();
+		if (buttonNum < 0 || buttonNum >= (int)SDL_CONTROLLER_BUTTON_MAX) return false;
+		if (keyName.StartsWith("joystick button ")) { // Check all game controllers!
+			VecIterate(i, gameControllers) {
+				if (SDL_GameControllerGetButton(gameControllers[i], (SDL_GameControllerButton)buttonNum)) return true;
+			}
+			return false;
+		}
+		int joyNum = keyName.SubstringB(9).IntValue() - 1;
+		if (joyNum < 0 || joyNum >= gameControllers.size()) return 0;
+		SDL_GameController* gc = gameControllers[joyNum];
+		if (gc == nullptr) return 0;
+		return SDL_GameControllerGetButton(gc, (SDL_GameControllerButton)buttonNum);
+	}
 	Sint32 keyCode = keyNameMap.Lookup(keyName, 0);
 	if (keyCode == 0) return false;
 	return keyDownMap.Lookup(keyCode, false);
