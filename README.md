@@ -22,7 +22,13 @@ You can build just about any 80s-style game with this feature set!  However it's
 * pixel-level drawing
 * networking
 
-### Design Objectives
+### Documentation
+
+Want to write your first Soda game?  That's great!  Be sure you have the [MiniScript Quick Reference](https://miniscript.org/files/MiniScript-QuickRef.pdf), and then see the [Soda category at the MiniScript wiki](https://miniscript.org/wiki/Category:Soda) for information about the additional functions used with Soda.
+
+Because Soda is so new, documentation is a bit thin.  So check out the community resources at [MiniScript.org](https://miniscript.org/) to find others who will be more than happy to help as you develop your game.
+
+### Soda Design Objectives
 
 * easy to install: ideally, a single prebuilt binary on most systems
 * easy to use: just `soda myGame.ms` to run
