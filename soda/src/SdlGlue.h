@@ -12,7 +12,7 @@
 
 #include <stdio.h>
 #include "MiniScript/String.h"
-#include "MiniScriptTypes.h"
+#include "MiniscriptTypes.h"
 
 namespace SdlGlue {
 
