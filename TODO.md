@@ -14,7 +14,7 @@ Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_
 - ~~Image.getImage (so you can carve up a sprite sheet)~~
 - ~~full support for Sprite.tint including alpha~~
 - ~~Sound.loop, Sound.stop, Sound.stopAll~~
-- screen handling: fullscreen mode, window/screen dimensions
+- ~~basic screen handling: fullscreen mode, window size, window.backColor~~
 - builds for Mac, Windows, Linux (PC), and Raspberry Pi
 
 # Medium Priority

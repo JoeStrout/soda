@@ -57,12 +57,16 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "tests/window.ms"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "tests/imageOps.ms"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "tests/axis.ms"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "tests/balls.ms"

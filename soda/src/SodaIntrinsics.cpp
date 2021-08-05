@@ -168,7 +168,44 @@ static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult p
 	return IntrinsicResult(spriteClass);
 }
 
+//--------------------------------------------------------------------------------
+// window module
+//--------------------------------------------------------------------------------
 
+static bool windowModuleAssignOverride(ValueDict& windowModule, Value key, Value value) {
+	String keystr = key.ToString();
+	if (keystr == "width") {
+		SdlGlue::SetWindowWidth((int)value.IntValue());
+	} else if (keystr == "height") {
+		SdlGlue::SetWindowHeight((int)value.IntValue());
+	} else if (keystr == "fullScreen") {
+		SdlGlue::SetFullScreen(value.BoolValue());
+	} else if (keystr == "backColor") {
+		SdlGlue::SetBackgroundColor(value.ToString());
+		windowModule.SetValue("backColor", SdlGlue::GetBackgroundColor());
+	} else {
+		return false;		// allow other assignments, why not?
+	}
+	windowModule.SetValue("width", SdlGlue::GetWindowWidth());
+	windowModule.SetValue("height", SdlGlue::GetWindowHeight());
+	windowModule.SetValue("fullScreen", SdlGlue::GetFullScreen());
+	return true;
+}
+
+static IntrinsicResult intrinsic_windowModule(Context *context, IntrinsicResult partialResult) {
+	static ValueDict windowModule;
+	
+	if (windowModule.Count() == 0) {
+		windowModule.SetValue("width", SdlGlue::GetWindowWidth());
+		windowModule.SetValue("height", SdlGlue::GetWindowHeight());
+		windowModule.SetValue("fullScreen", SdlGlue::GetFullScreen());
+		windowModule.SetValue("backColor", SdlGlue::GetBackgroundColor());
+	}
+	
+	windowModule.SetAssignOverride(windowModuleAssignOverride);
+	
+	return IntrinsicResult(windowModule);
+}
 
 //--------------------------------------------------------------------------------
 // file module additions
@@ -277,4 +314,9 @@ void AddSodaIntrinsics() {
 	
 	i_mouse_y = Intrinsic::Create("");
 	i_mouse_y->code = &intrinsic_mouse_y;
+	
+	f = Intrinsic::Create("window");
+	f->code = &intrinsic_windowModule;
+	
+
 }

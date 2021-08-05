@@ -22,7 +22,23 @@ struct Color {
 	Uint8 g;
 	Uint8 b;
 	Uint8 a;
+	
+	String ToString();
 };
+
+static char hexDigits[] = "0123456789ABCDEF";
+String Color::ToString() {
+	char result[] = "#00000000";
+	result[1] = hexDigits[r >> 4];
+	result[2] = hexDigits[r & 0xF];
+	result[3] = hexDigits[g >> 4];
+	result[4] = hexDigits[g & 0xF];
+	result[5] = hexDigits[b >> 4];
+	result[6] = hexDigits[b & 0xF];
+	result[7] = hexDigits[a >> 4];
+	result[8] = hexDigits[a & 0xF];
+	return result;
+}
 
 namespace SdlGlue {
 
@@ -36,6 +52,7 @@ static SDL_Window *mainWindow;
 static SDL_Renderer *mainRenderer;
 static int windowWidth = 960;
 static int windowHeight = 640;
+static bool isFullScreen = false;
 static Color backgroundColor = {0, 0, 100, 255};
 static Dictionary<String, Sint32, hashString> keyNameMap;	// maps Soda key names to SDL key codes
 static Dictionary<Sint32, bool, hashInt> keyDownMap;	// makes SDL key codes to whether they are currently down
@@ -244,6 +261,53 @@ double GetControllerAxis(SDL_GameController* controller, SDL_GameControllerAxis 
 	Sint16 value = SDL_GameControllerGetAxis(controller, axis);
 	if (value > -300 && value < 300) value = 0;	// (minimal dead zone)
 	return value / 32767.0;
+}
+
+int GetWindowWidth() {
+	int w;
+	SDL_GetWindowSize(mainWindow, &w, NULL);
+	return w;
+}
+
+int GetWindowHeight() {
+	int h;
+	SDL_GetWindowSize(mainWindow, NULL, &h);
+	return h;
+}
+
+void SetWindowWidth(int width) {
+	windowWidth = width;
+	SDL_SetWindowFullscreen(mainWindow, 0);
+	SDL_SetWindowSize(mainWindow, windowWidth, windowHeight);
+}
+
+void SetWindowHeight(int height) {
+	windowHeight = height;
+	SDL_SetWindowFullscreen(mainWindow, 0);
+	SDL_SetWindowSize(mainWindow, windowWidth, windowHeight);
+}
+
+bool GetFullScreen() {
+	return isFullScreen;
+}
+
+void SetFullScreen(bool fullScreen) {
+	if (fullScreen) {
+		SDL_SetWindowFullscreen(mainWindow, SDL_WINDOW_FULLSCREEN);
+	} else {
+		SDL_SetWindowFullscreen(mainWindow, 0);
+		SDL_SetWindowSize(mainWindow, windowWidth, windowHeight);
+	}
+	isFullScreen = fullScreen;
+	SDL_GetWindowSize(mainWindow, &windowWidth, &windowHeight);
+}
+
+String GetBackgroundColor() {
+	return backgroundColor.ToString();
+}
+
+void SetBackgroundColor(String colorStr) {
+	backgroundColor = ToColor(colorStr);
 }
 
 Value NewImageFromSurface(SDL_Surface *surf) {

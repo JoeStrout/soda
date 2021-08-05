@@ -25,6 +25,15 @@ bool IsKeyPressed(MiniScript::String keyName);
 bool IsMouseButtonPressed(int buttonNum);
 int GetMouseX();
 int GetMouseY();
+int GetWindowWidth();
+void SetWindowWidth(int width);
+int GetWindowHeight();
+void SetWindowHeight(int height);
+bool GetFullScreen();
+void SetFullScreen(bool fullScreen);
+MiniScript::String GetBackgroundColor();
+void SetBackgroundColor(MiniScript::String colorStr);
+
 double GetAxis(MiniScript::String axisName);
 MiniScript::Value LoadImage(MiniScript::String path);
 MiniScript::Value GetSubImage(MiniScript::Value image, int left, int bottom, int width, int height);

@@ -17,5 +17,6 @@ extern MiniScript::Value spriteList;
 extern MiniScript::Value mouse;
 extern MiniScript::ValueDict imageClass;
 extern MiniScript::ValueDict soundClass;
+extern MiniScript::ValueDict window;
 
 #endif /* SODAINTRINSICS_H */
