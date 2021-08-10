@@ -9,6 +9,7 @@
 
 #include "SdlGlue.h"
 #include "SdlAudio.h"
+#include "TextDisplay.h"
 #include <SDL2/SDL.h>
 #include <SDL2_image/SDL_image.h>
 #include <SDL2/SDL_gamecontroller.h>
@@ -113,6 +114,7 @@ void Setup() {
 	}
 	
 	SetupAudio();
+	SetupTextDisplay(mainRenderer);
 }
 
 
@@ -149,6 +151,7 @@ void Service() {
 	SDL_SetRenderDrawColor(mainRenderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
 	SDL_RenderClear(mainRenderer);
 	DrawSprites();
+	RenderTextDisplay();
 	SDL_RenderPresent(mainRenderer);
 }
 
