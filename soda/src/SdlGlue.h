@@ -11,6 +11,7 @@
 #define SDLGLUE_H
 
 #include <stdio.h>
+#include <SDL2/SDL.h>
 #include "MiniScript/String.h"
 #include "MiniScript/MiniscriptTypes.h"
 
@@ -37,6 +38,9 @@ void SetBackgroundColor(MiniScript::String colorStr);
 double GetAxis(MiniScript::String axisName);
 MiniScript::Value LoadImage(MiniScript::String path);
 MiniScript::Value GetSubImage(MiniScript::Value image, int left, int bottom, int width, int height);
+
+void Print(MiniScript::String s);
+void Clear();
 
 // flag set to true when the user tries to quit the app (by closing the window, cmd-Q, etc.)
 extern bool quit;

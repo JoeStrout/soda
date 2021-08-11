@@ -33,14 +33,16 @@ static bool dumpTAC = false;
 
 static void Print(String s) {
 	std::cout << s.c_str() << std::endl;
+	SdlGlue::Print(s);
 }
 
 static void PrintErr(String s) {
 	std::cerr << s.c_str() << std::endl;
+	SdlGlue::Print(s);
 }
 
 static int ReturnErr(String s, int errCode = -1) {
-	std::cerr << s.c_str() << std::endl;
+	PrintErr(s);
 	return errCode;
 }
 

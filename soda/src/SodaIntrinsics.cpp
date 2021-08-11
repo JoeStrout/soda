@@ -26,8 +26,8 @@ using namespace MiniScript;
 Value spriteList = ValueList();
 Value white("#FFFFFF");
 
-static IntrinsicResult intrinsic_sdltest(Context *context, IntrinsicResult partialResult) {
-	SdlGlue::DoSdlTest();
+static IntrinsicResult intrinsic_clear(Context *context, IntrinsicResult partialResult) {
+	SdlGlue::Clear();
 	return IntrinsicResult::Null;
 }
 
@@ -231,8 +231,8 @@ void AddSodaIntrinsics() {
 	printf("Adding Soda intrinsics\n");
 	Intrinsic *f;
 
-	f = Intrinsic::Create("sdltest");	// ToDo: remove this
-	f->code = &intrinsic_sdltest;
+	f = Intrinsic::Create("clear");
+	f->code = &intrinsic_clear;
 
 	f = Intrinsic::Create("sprites");	// ToDo: put this in a SpriteDisplay
 	f->code = &intrinsic_sprites;

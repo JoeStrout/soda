@@ -10,36 +10,14 @@
 #include "SdlGlue.h"
 #include "SdlAudio.h"
 #include "TextDisplay.h"
-#include <SDL2/SDL.h>
 #include <SDL2_image/SDL_image.h>
 #include <SDL2/SDL_gamecontroller.h>
 #include <stdlib.h>
 #include "SodaIntrinsics.h"
+#include "Color.h"
+#include "TextDisplay.h"
 
 using namespace MiniScript;
-
-struct Color {
-	Uint8 r;
-	Uint8 g;
-	Uint8 b;
-	Uint8 a;
-	
-	String ToString();
-};
-
-static char hexDigits[] = "0123456789ABCDEF";
-String Color::ToString() {
-	char result[] = "#00000000";
-	result[1] = hexDigits[r >> 4];
-	result[2] = hexDigits[r & 0xF];
-	result[3] = hexDigits[g >> 4];
-	result[4] = hexDigits[g & 0xF];
-	result[5] = hexDigits[b >> 4];
-	result[6] = hexDigits[b & 0xF];
-	result[7] = hexDigits[a >> 4];
-	result[8] = hexDigits[a & 0xF];
-	return result;
-}
 
 namespace SdlGlue {
 
@@ -124,6 +102,7 @@ void Shutdown() {
 	SDL_DestroyWindow(mainWindow); mainWindow = NULL;
 	IMG_Quit();
 	ShutdownAudio();
+	ShutdownTextDisplay();
 	VecIterate(i, gameControllers) SDL_GameControllerClose(gameControllers[i]);
 	gameControllers.deleteAll();
 	SDL_Quit();
@@ -359,6 +338,16 @@ Value GetSubImage(MiniScript::Value image, int left, int bottom, int width, int 
 	
 	// Finally, return the new surface as an Image.
 	return NewImageFromSurface(newSurf);
+}
+
+void Print(MiniScript::String s) {
+	if (mainTextDisplay) mainTextDisplay->Print(s);
+}
+
+void Clear() {
+	mainTextDisplay->Clear();
+	MiniScript::ValueList sprites = spriteList.GetList();
+	sprites.Clear();
 }
 
 //--------------------------------------------------------------------------------

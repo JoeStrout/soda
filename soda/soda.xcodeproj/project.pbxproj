@@ -10,6 +10,7 @@
 		8328CE2826B72E5300E32E12 /* SdlAudio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8328CE2626B72E5300E32E12 /* SdlAudio.cpp */; };
 		837C4C0426C3151D00D741B6 /* ScreenFont_png.c in Sources */ = {isa = PBXBuildFile; fileRef = 837C4C0326C3151D00D741B6 /* ScreenFont_png.c */; };
 		837C4C0826C315FF00D741B6 /* TextDisplay.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 837C4C0626C315FF00D741B6 /* TextDisplay.cpp */; };
+		837C4C0B26C474F100D741B6 /* Color.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 837C4C0926C474F100D741B6 /* Color.cpp */; };
 		83D55DAC26B38E3E00C76F4E /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 83D55DAA26B38E3E00C76F4E /* SDL2.framework */; };
 		83D55DAD26B38E3E00C76F4E /* SDL2.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 83D55DAA26B38E3E00C76F4E /* SDL2.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		83D55DAE26B38E3E00C76F4E /* SDL2_image.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 83D55DAB26B38E3E00C76F4E /* SDL2_image.framework */; };
@@ -70,6 +71,8 @@
 		837C4C0526C3154E00D741B6 /* ScreenFont_png.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ScreenFont_png.h; sourceTree = "<group>"; };
 		837C4C0626C315FF00D741B6 /* TextDisplay.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TextDisplay.cpp; sourceTree = "<group>"; };
 		837C4C0726C315FF00D741B6 /* TextDisplay.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TextDisplay.h; sourceTree = "<group>"; };
+		837C4C0926C474F100D741B6 /* Color.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Color.cpp; sourceTree = "<group>"; };
+		837C4C0A26C474F100D741B6 /* Color.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Color.h; sourceTree = "<group>"; };
 		83D55D9E26B38E1300C76F4E /* soda */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = soda; sourceTree = BUILT_PRODUCTS_DIR; };
 		83D55DAA26B38E3E00C76F4E /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SDL2.framework; sourceTree = "<group>"; };
 		83D55DAB26B38E3E00C76F4E /* SDL2_image.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SDL2_image.framework; sourceTree = "<group>"; };
@@ -183,6 +186,8 @@
 				83D55DE326B38F2F00C76F4E /* main.cpp */,
 				83D55DE226B38F2F00C76F4E /* OstreamSupport.cpp */,
 				8328CE2626B72E5300E32E12 /* SdlAudio.cpp */,
+				837C4C0926C474F100D741B6 /* Color.cpp */,
+				837C4C0A26C474F100D741B6 /* Color.h */,
 				83D55E0026B391BC00C76F4E /* SdlGlue.cpp */,
 				83D55DB426B38F2F00C76F4E /* ShellIntrinsics.cpp */,
 				83D55DFD26B3907B00C76F4E /* SodaIntrinsics.cpp */,
@@ -336,6 +341,7 @@
 				83D55DF026B38F2F00C76F4E /* UnicodeUtil.cpp in Sources */,
 				83D55DEA26B38F2F00C76F4E /* SplitJoin.cpp in Sources */,
 				83D55DEB26B38F2F00C76F4E /* MiniscriptInterpreter.cpp in Sources */,
+				837C4C0B26C474F100D741B6 /* Color.cpp in Sources */,
 				837C4C0426C3151D00D741B6 /* ScreenFont_png.c in Sources */,
 				83D55DF926B38F2F00C76F4E /* OstreamSupport.cpp in Sources */,
 				83D55DF326B38F2F00C76F4E /* List.cpp in Sources */,
