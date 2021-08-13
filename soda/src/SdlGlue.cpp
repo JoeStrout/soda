@@ -46,6 +46,7 @@ static void SetupKeyNameMap();
 static Color ToColor(String s);
 static Value NewImageFromSurface(SDL_Surface *surf);
 static double GetControllerAxis(SDL_GameController* controller, SDL_GameControllerAxis axis);
+void HandleWindowSizeChange(int newWidth, int newHeight);
 
 class TextureStorage : public RefCountedStorage {
 public:
@@ -123,6 +124,10 @@ void Service() {
 			Sint32 keyCode = e.key.keysym.sym;
 			if (keyCode == SDLK_KP_PERIOD) keyCode = SDLK_KP_DECIMAL;	// (normalize this inconsistency)
 			keyDownMap.SetValue(keyCode, false);
+		} else if (e.type == SDL_WINDOWEVENT) {
+			if (e.window.event == SDL_WINDOWEVENT_RESIZED || e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+				HandleWindowSizeChange(e.window.data1, e.window.data2);
+			}
 		}
 	}
 	
@@ -491,6 +496,10 @@ void DrawSprites() {
 		SDL_SetTextureAlphaMod(storage->texture, c.a);
 		SDL_RenderCopyEx(mainRenderer, storage->texture, NULL, &destRect, rotation, NULL, SDL_FLIP_NONE);
 	}
+}
+
+void HandleWindowSizeChange(int newWidth, int newHeight) {
+	mainTextDisplay->NoteWindowSizeChange(newWidth, newHeight);
 }
 
 bool CheckFail(int resultCode, const char *context) {

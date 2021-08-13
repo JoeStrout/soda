@@ -74,34 +74,48 @@ void ConfigInterpreter(Interpreter &interp) {
 	interp.implicitOutput = &Print;
 }
 
+static SimpleVector<String> userInput;
+static SDL_mutex* userInputMutex = nullptr;
+static bool interpreterBusy = false;
+
 static int ReplThread(void *interpreter) {
 	Interpreter *interp = (Interpreter*)interpreter;
 	
+	// Run a thread to process the terminal input.  But note that it's not safe
+	// to do many SDL things (like resizing the window) from a secondary thread.
+	// So, we'll just put the user input onto the given vector, and let the
+	// main thread pull it off and process it.  (We only need to be careful about
+	// locking that vector when we modify it.)
 	while (true) {
-		
-		const char *prompt = (interp->NeedMoreInput() ? ">>> " : "> ");
-		
-		try {
-			#if useEditline
-				char *buf;
-				buf = readline(prompt);
-				if (buf == NULL) return 0;
-				interp->REPL(buf);
-				free(buf);
-			#else
-				// Standard C++ I/O:
-				char buf[1024];
-				std::cout << prompt;
-				if (not std::cin.getline(buf, sizeof(buf))) {
-					std::cout << std::endl;
-					return 0;
-				}
-				interp->REPL(buf);
-			#endif
-		} catch (MiniscriptException& mse) {
-			std::cerr << "Runtime Exception: " << mse.message << std::endl;
-			interp->vm->Stop();
+		if (!interp->Done()) {
+			SDL_Delay(100);
+			continue;
 		}
+
+		const char *prompt = (interp->NeedMoreInput() ? ">>> " : "> ");
+		#if useEditline
+			char *buf;
+			buf = readline(prompt);
+			if (buf == NULL) return 0;
+			String input(buf);
+			SDL_LockMutex(userInputMutex);
+			userInput.push_back(input);
+			SDL_UnlockMutex(userInputMutex);
+			free(buf);
+			SDL_Delay(100);	// (gives main thread a chance to feed this to the REPL, so we can show the right prompt)
+		#else
+			// Standard C++ I/O:
+			char buf[1024];
+			std::cout << prompt;
+			if (not std::cin.getline(buf, sizeof(buf))) {
+				std::cout << std::endl;
+				return 0;
+			}
+			String input(buf);
+			SDL_LockMutex(userInputMutex);
+			userInput.push_back(input);
+			SDL_UnlockMutex(userInputMutex);
+		#endif
 		
 		if (exitASAP) {
 			SdlGlue::Shutdown();
@@ -118,19 +132,52 @@ static int DoREPL() {
 	Interpreter interp;
 	ConfigInterpreter(interp);
 	
-	SDL_Thread *thread = SDL_CreateThread(ReplThread, "ReplThread", (void*)(&interp));
+	userInputMutex = SDL_CreateMutex();
+	SDL_Thread* thread = SDL_CreateThread(ReplThread, "ReplThread", (void*)(&interp));
 	
 	while (!exitASAP) {
+		// Service SDL
 		SdlGlue::Service();
 		if (SdlGlue::quit) {
 			exitASAP = true;
 			SDL_DetachThread(thread);
 			thread = NULL;
 		}
+		
+		if (!interp.Done()) {
+			// Still processing some previous input.  Keep working!
+			try {
+				interp.RunUntilDone(0.1);
+			} catch (MiniscriptException& mse) {
+				std::cerr << "Runtime Exception: " << mse.message << std::endl;
+				interp.vm->Stop();
+			}
+		} else {
+			// Grab input from the user, if any....
+			String inp;
+			SDL_LockMutex(userInputMutex);
+			if (userInput.size() > 0) {
+				inp = userInput[0];
+				userInput.deleteIdx(0);
+			}
+				SDL_UnlockMutex(userInputMutex);
+			// and feed it to the REPL
+			if (!inp.empty()) {
+				interpreterBusy = true;
+				try {
+					interp.REPL(inp, 0.1);
+				} catch (MiniscriptException& mse) {
+					std::cerr << "Runtime Exception: " << mse.message << std::endl;
+					interp.vm->Stop();
+				}
+				interpreterBusy = false;
+			}
+		}
 	}
 	SdlGlue::Shutdown();
 	int threadResult;
 	SDL_WaitThread(thread, &threadResult);
+	SDL_DestroyMutex(userInputMutex); userInputMutex = nullptr;
 	return exitResult;
 }
 

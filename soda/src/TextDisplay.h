@@ -42,6 +42,8 @@ public:
 	void Print(MiniScript::String s);
 	void Render();
 	
+	void NoteWindowSizeChange(int newWidth, int newHeight);
+	
 	int rows;
 	int cols;
 	Color textColor;

@@ -223,6 +223,7 @@ namespace MiniScript {
 		static bool Equal(ListStorage<Value> *lhs, ListStorage<Value> *rhs);
 		static bool Equal(DictionaryStorage<Value, Value> *lhs, DictionaryStorage<Value, Value> *rhs);
 		static bool Equal(SeqElemStorage *lhs, SeqElemStorage *rhs);
+		static bool RefEqual(const Value& lhs, const Value& rhs);
 	};
 	
 	class FuncParam {

@@ -9,6 +9,7 @@
 
 #include "SodaIntrinsics.h"
 #include "SdlGlue.h"
+#include "TextDisplay.h"
 #include "SdlAudio.h"
 #include "MiniScript/String.h"
 #include "MiniScript/UnicodeUtil.h"
@@ -39,7 +40,7 @@ static IntrinsicResult intrinsic_sprites(Context *context, IntrinsicResult parti
 // Image class
 //--------------------------------------------------------------------------------
 ValueDict imageClass;
-static Intrinsic *i_image_getImage = NULL;
+static Intrinsic *i_image_getImage = nullptr;
 
 static IntrinsicResult intrinsic_imageClass(Context *context, IntrinsicResult partialResult) {
 	return IntrinsicResult(imageClass);
@@ -57,8 +58,8 @@ static IntrinsicResult intrinsic_image_getImage(Context *context, IntrinsicResul
 //--------------------------------------------------------------------------------
 // key module
 //--------------------------------------------------------------------------------
-static Intrinsic *i_key_pressed = NULL;
-static Intrinsic *i_key_axis = NULL;
+static Intrinsic *i_key_pressed = nullptr;
+static Intrinsic *i_key_axis = nullptr;
 
 static IntrinsicResult intrinsic_keyModule(Context *context, IntrinsicResult partialResult) {
 	static ValueDict keyModule;
@@ -87,9 +88,9 @@ static IntrinsicResult intrinsic_key_axis(Context *context, IntrinsicResult part
 // mouse module
 //--------------------------------------------------------------------------------
 
-static Intrinsic *i_mouse_button = NULL;
-static Intrinsic *i_mouse_x = NULL;
-static Intrinsic *i_mouse_y = NULL;
+static Intrinsic *i_mouse_button = nullptr;
+static Intrinsic *i_mouse_x = nullptr;
+static Intrinsic *i_mouse_y = nullptr;
 
 static IntrinsicResult intrinsic_mouseModule(Context *context, IntrinsicResult partialResult) {
 	static ValueDict mouseModule;
@@ -121,9 +122,9 @@ static IntrinsicResult intrinsic_mouse_y(Context *context, IntrinsicResult parti
 // Sound class
 //--------------------------------------------------------------------------------
 ValueDict soundClass;
-static Intrinsic *i_sound_play = NULL;
-static Intrinsic *i_sound_stop = NULL;
-static Intrinsic *i_sound_stopAll = NULL;
+static Intrinsic *i_sound_play = nullptr;
+static Intrinsic *i_sound_stop = nullptr;
+static Intrinsic *i_sound_stopAll = nullptr;
 
 static IntrinsicResult intrinsic_soundClass(Context *context, IntrinsicResult partialResult) {
 	return IntrinsicResult(soundClass);
@@ -169,6 +170,35 @@ static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult p
 }
 
 //--------------------------------------------------------------------------------
+// TextDisplay class
+//--------------------------------------------------------------------------------
+ValueDict textDisplayClassMap;
+Value textDisplayClass(textDisplayClassMap);
+static Intrinsic *i_textDisplay_clear = nullptr;
+
+static IntrinsicResult intrinsic_textDisplayClass(Context *context, IntrinsicResult partialResult) {
+	return IntrinsicResult(textDisplayClass);
+}
+
+static IntrinsicResult intrinsic_textDisplay_clear(Context *context, IntrinsicResult partialResult) {
+	//Value self = context->GetVar("self");
+	// Note: for now, we'll just always access the main text display.
+	// When we support multiple text displays, we'll need to be more discriminating.
+	SdlGlue::mainTextDisplay->Clear();
+	return IntrinsicResult::Null;
+}
+
+Value textDisplayInstance;
+static IntrinsicResult intrinsic_textDisplayInstance(Context *context, IntrinsicResult partialResult) {
+	if (textDisplayInstance.type != ValueType::Map) {
+		ValueDict text;
+		text.SetValue(Value::magicIsA, textDisplayClass);
+		textDisplayInstance = text;
+	}
+	return IntrinsicResult(textDisplayInstance);
+}
+
+//--------------------------------------------------------------------------------
 // window module
 //--------------------------------------------------------------------------------
 
@@ -211,9 +241,9 @@ static IntrinsicResult intrinsic_windowModule(Context *context, IntrinsicResult 
 // file module additions
 //--------------------------------------------------------------------------------
 
-static Intrinsic *i_file_loadImage = NULL;
-static Intrinsic *i_file_loadSound = NULL;
-static Intrinsic *i_file_loadFont = NULL;
+static Intrinsic *i_file_loadImage = nullptr;
+static Intrinsic *i_file_loadSound = nullptr;
+static Intrinsic *i_file_loadFont = nullptr;
 
 static IntrinsicResult intrinsic_file_loadImage(Context *context, IntrinsicResult partialResult) {
 	Value path = context->GetVar("path");
@@ -251,11 +281,11 @@ void AddSodaIntrinsics() {
 	imageClass.SetValue("getImage", i_image_getImage->GetFunc());
 
 	Intrinsic *fileIntrinsic = Intrinsic::GetByName("file");
-	if (fileIntrinsic == NULL) {
+	if (fileIntrinsic == nullptr) {
 		printf("ERROR: fileModule not found.\nAddSodaIntrinsics must be called after AddShellIntrinsics.\n");
 	} else {
 		IntrinsicResult result;
-		ValueDict fileModule = fileIntrinsic->code(NULL, result).Result().GetDict();
+		ValueDict fileModule = fileIntrinsic->code(nullptr, result).Result().GetDict();
 		
 		i_file_loadImage = Intrinsic::Create("");
 		i_file_loadImage->AddParam("path", Value::emptyString);
@@ -276,21 +306,34 @@ void AddSodaIntrinsics() {
 	i_sound_play->AddParam("pan", Value::zero);
 	i_sound_play->AddParam("speed", Value::one);
 	i_sound_play->code = &intrinsic_sound_play;
+	soundClass.SetValue("play", i_sound_play->GetFunc());
 
 	i_sound_stop = Intrinsic::Create("");
 	i_sound_stop->code = &intrinsic_sound_stop;
+	soundClass.SetValue("stop", i_sound_stop->GetFunc());
 
 	i_sound_stopAll = Intrinsic::Create("");
 	i_sound_stopAll->code = &intrinsic_sound_stopAll;
+	soundClass.SetValue("stopAll", i_sound_stopAll->GetFunc());
 
 	f = Intrinsic::Create("Sound");
 	f->code = &intrinsic_soundClass;
 	soundClass.SetValue("_handle", Value::null);
 	soundClass.SetValue("loop", Value::zero);
-	soundClass.SetValue("play", i_sound_play->GetFunc());
-	soundClass.SetValue("stop", i_sound_stop->GetFunc());
-	soundClass.SetValue("stopAll", i_sound_stopAll->GetFunc());
 
+	i_textDisplay_clear =Intrinsic::Create("");
+	i_textDisplay_clear->code = &intrinsic_textDisplay_clear;
+	textDisplayClassMap.SetValue("clear", i_textDisplay_clear->GetFunc());
+	
+	textDisplayClassMap.SetValue("row", Value::zero);
+	textDisplayClassMap.SetValue("column", Value::zero);
+
+	f = Intrinsic::Create("TextDisplay");
+	f->code = &intrinsic_textDisplayClass;
+	
+	f = Intrinsic::Create("text");
+	f->code = &intrinsic_textDisplayInstance;
+	
 	f = Intrinsic::Create("key");
 	f->code = &intrinsic_keyModule;
 

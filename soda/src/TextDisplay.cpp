@@ -60,6 +60,20 @@ void RenderTextDisplay() {
 	mainTextDisplay->Render();
 }
 
+void TextDisplay::NoteWindowSizeChange(int newWidth, int newHeight) {
+	int prevRows = rows;
+	int prevCols = cols;
+	rows = newHeight / 22;
+	cols = newWidth / 14;
+	if (rows == prevRows && cols == prevCols) return;
+	content.resize(rows);
+	for (int row=0; row<rows; row++) {
+		content[row].resize(cols);
+		if (row >= prevRows) prevCols = 0;
+		for (int col=prevCols; col<cols; col++) content[row][col].Clear();
+	}
+}
+
 void TextDisplay::Render() {
 	int windowHeight = GetWindowHeight();
 	for (int row=0; row<rows; row++) {
