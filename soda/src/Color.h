@@ -20,4 +20,6 @@ struct Color {
 	MiniScript::String ToString();
 };
 
+Color ToColor(MiniScript::String s);
+
 #endif /* COLOR_H */

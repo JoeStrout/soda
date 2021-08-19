@@ -38,6 +38,8 @@ void SetBackgroundColor(MiniScript::String colorStr);
 double GetAxis(MiniScript::String axisName);
 MiniScript::Value LoadImage(MiniScript::String path);
 MiniScript::Value GetSubImage(MiniScript::Value image, int left, int bottom, int width, int height);
+MiniScript::Value GetImagePixel(MiniScript::Value image, int x, int y);
+void SetImagePixel(MiniScript::Value image, int x, int y, MiniScript::String colorStr);
 
 void Print(MiniScript::String s);
 void Clear();

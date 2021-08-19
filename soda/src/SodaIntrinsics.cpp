@@ -41,9 +41,27 @@ static IntrinsicResult intrinsic_sprites(Context *context, IntrinsicResult parti
 //--------------------------------------------------------------------------------
 ValueDict imageClass;
 static Intrinsic *i_image_getImage = nullptr;
+static Intrinsic *i_image_pixel = nullptr;
+static Intrinsic *i_image_setPixel = nullptr;
 
 static IntrinsicResult intrinsic_imageClass(Context *context, IntrinsicResult partialResult) {
 	return IntrinsicResult(imageClass);
+}
+
+static IntrinsicResult intrinsic_image_pixel(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	Value x = context->GetVar("x");
+	Value y = context->GetVar("y");
+	return IntrinsicResult(SdlGlue::GetImagePixel(self, (int)x.IntValue(), (int)x.IntValue()));
+}
+
+static IntrinsicResult intrinsic_image_setPixel(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	Value x = context->GetVar("x");
+	Value y = context->GetVar("y");
+	Value color = context->GetVar("color");
+	SdlGlue::SetImagePixel(self, (int)x.IntValue(), (int)y.IntValue(), color.ToString());
+	return IntrinsicResult::Null;
 }
 
 static IntrinsicResult intrinsic_image_getImage(Context *context, IntrinsicResult partialResult) {
@@ -52,7 +70,8 @@ static IntrinsicResult intrinsic_image_getImage(Context *context, IntrinsicResul
 	Value bottom = context->GetVar("bottom");
 	Value width = context->GetVar("width");
 	Value height = context->GetVar("height");
-	return IntrinsicResult(SdlGlue::GetSubImage(self, left.IntValue(), bottom.IntValue(), width.IntValue(), height.IntValue()));
+	return IntrinsicResult(SdlGlue::GetSubImage(self,
+		(int)left.IntValue(), (int)bottom.IntValue(), (int)width.IntValue(), (int)height.IntValue()));
 }
 
 //--------------------------------------------------------------------------------
@@ -267,6 +286,17 @@ void AddSodaIntrinsics() {
 	f = Intrinsic::Create("sprites");	// ToDo: put this in a SpriteDisplay
 	f->code = &intrinsic_sprites;
 
+	i_image_pixel = Intrinsic::Create("");
+	i_image_pixel->AddParam("x", Value::zero);
+	i_image_pixel->AddParam("y", Value::zero);
+	i_image_pixel->code = &intrinsic_image_pixel;
+
+	i_image_setPixel = Intrinsic::Create("");
+	i_image_setPixel->AddParam("x", Value::zero);
+	i_image_setPixel->AddParam("y", Value::zero);
+	i_image_setPixel->AddParam("color");
+	i_image_setPixel->code = &intrinsic_image_setPixel;
+
 	i_image_getImage = Intrinsic::Create("");
 	i_image_getImage->AddParam("left", Value::zero);
 	i_image_getImage->AddParam("bottom", Value::zero);
@@ -279,6 +309,8 @@ void AddSodaIntrinsics() {
 	imageClass.SetValue("width", Value::zero);
 	imageClass.SetValue("height", Value::zero);
 	imageClass.SetValue("getImage", i_image_getImage->GetFunc());
+	imageClass.SetValue("pixel", i_image_pixel->GetFunc());
+	imageClass.SetValue("setPixel", i_image_setPixel->GetFunc());
 
 	Intrinsic *fileIntrinsic = Intrinsic::GetByName("file");
 	if (fileIntrinsic == nullptr) {

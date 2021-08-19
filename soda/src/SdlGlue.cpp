@@ -43,7 +43,6 @@ static bool CheckNotNull(void *ptr, const char *context);
 static int RoundToInt(double d);
 static void DrawSprites();
 static void SetupKeyNameMap();
-static Color ToColor(String s);
 static Value NewImageFromSurface(SDL_Surface *surf);
 static double GetControllerAxis(SDL_GameController* controller, SDL_GameControllerAxis axis);
 void HandleWindowSizeChange(int newWidth, int newHeight);
@@ -314,7 +313,100 @@ Value LoadImage(MiniScript::String path) {
 	return NewImageFromSurface(IMG_Load(path.c_str()));
 }
 
-Value GetSubImage(MiniScript::Value image, int left, int bottom, int width, int height) {
+Value GetImagePixel(Value image, int x, int y) {
+	if (x < 0 || y < 0) return Value::null;
+	
+	// First, get our image storage out of the handle in the MiniScript object.
+	if (image.type != ValueType::Map) return Value::null;
+	Value textureH = image.Lookup(magicHandle);
+	if (textureH.type != ValueType::Handle) return Value::null;
+	
+	// ToDo: how do we be sure the data is specifically a TextureStorage?
+	// Do we need to enable RTTI, or use some common base class?
+	TextureStorage *storage = ((TextureStorage*)(textureH.data.ref));
+	if (storage == nullptr) return Value::null;
+
+	if (x >= storage->surface->w || y >= storage->surface->h) return Value::null;
+	y = storage->surface->h - 1 - y;
+	
+	int bpp = storage->surface->format->BytesPerPixel;
+	Uint8 *p = (Uint8 *)storage->surface->pixels + y * storage->surface->pitch + x * bpp;
+	Uint32 data = 0;
+	switch (bpp) {
+		case 1:
+			data = *p;
+			break;
+
+		case 2:
+			data = *(Uint16 *)p;
+			break;
+
+		case 3:
+			if (SDL_BYTEORDER == SDL_BIG_ENDIAN) data = p[0] << 16 | p[1] << 8 | p[2];
+			else data = p[0] | p[1] << 8 | p[2] << 16;
+			break;
+
+		case 4:
+			// I guess we're assuming native order here?!  (ToDo)
+			data = *(Uint32 *)p;
+			break;
+	}
+
+	Color color;
+	SDL_GetRGBA(data, storage->surface->format, &color.r, &color.g, &color.b, &color.a);
+	return color.ToString();
+}
+	
+void SetImagePixel(Value image, int x, int y, String colorStr) {
+	if (x < 0 || y < 0) return;
+	
+	// First, get our image storage out of the handle in the MiniScript object.
+	if (image.type != ValueType::Map) return;
+	Value textureH = image.Lookup(magicHandle);
+	if (textureH.type != ValueType::Handle) return;
+	
+	// ToDo: how do we be sure the data is specifically a TextureStorage?
+	// Do we need to enable RTTI, or use some common base class?
+	TextureStorage *storage = ((TextureStorage*)(textureH.data.ref));
+	if (storage == nullptr) return;
+
+	if (x >= storage->surface->w || y >= storage->surface->h) return;
+	y = storage->surface->h - 1 - y;
+	
+	Color color = ToColor(colorStr);
+	Uint32 data = SDL_MapRGBA(storage->surface->format, color.r, color.g, color.b, color.a);
+	
+	int bpp = storage->surface->format->BytesPerPixel;
+	Uint8 *p = (Uint8 *)storage->surface->pixels + y * storage->surface->pitch + x * bpp;
+	switch (bpp) {
+		case 1:
+			*p = (Uint8)data;
+			break;
+
+		case 2:
+			*(Uint16 *)p = (Uint16)data;
+			break;
+
+		case 3:
+			if (SDL_BYTEORDER == SDL_BIG_ENDIAN) {
+				p[0] = (data >> 16) & 0xFF;
+				p[1] = (data >> 8) & 0xFF;
+				p[2] = data & 0xFF;
+			} else {
+				p[2] = (data >> 16) & 0xFF;
+				p[1] = (data >> 8) & 0xFF;
+				p[0] = data & 0xFF;
+			}
+			break;
+
+		case 4:
+			// I guess we're assuming native order here?!  (ToDo)
+			*(Uint32 *)p = data;
+			break;
+	}
+}
+
+Value GetSubImage(Value image, int left, int bottom, int width, int height) {
 	// Get an Image that represents a rectangular portion of a given image.
 
 	// First, get our image storage out of the handle in the MiniScript object.
@@ -435,29 +527,6 @@ void DoSdlTest() {
 
 int RoundToInt(double d) {
 	return (int)round(d);
-}
-
-Uint8 HexDigitVal(char c) {
-	if (c >= '0' && c <= '9') return c - '0';
-	if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-	if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-	return 0;
-}
-
-Uint8 HexDigitsToByte(String s, size_t indexB=0) {
-	if (s.LengthB() < indexB+1) return 0;
-	return (HexDigitVal(s[indexB]) << 4) | HexDigitVal(s[indexB+1]);
-}
-
-Color ToColor(String s) {
-	Color result;
-	if (s.LengthB() < 7 || s[0] != '#') return result;
-	result.r = HexDigitsToByte(s, 1);
-	result.g = HexDigitsToByte(s, 3);
-	result.b = HexDigitsToByte(s, 5);
-	if (s.LengthB() < 9) result.a = 255;
-	else result.a = HexDigitsToByte(s, 7);
-	return result;
 }
 
 void DrawSprites() {
