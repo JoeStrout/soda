@@ -20,9 +20,9 @@ Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_
 
 - Display class, display(n),  Display.install
 - Bounds class, with its connections to Sprite
-- Image.getPixel, Image.setPixel
+- ~~Image.pixel, Image.setPixel~~
 - SolidColor display
-- Text display
+- Text display (in progress)
 - TileDisplay
 - import
 - sound synthesis (Sound.init, Sound.mix, etc.)

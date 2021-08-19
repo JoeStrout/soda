@@ -4,6 +4,9 @@ print "Hello imageOps!"
 
 img = file.loadImage("images/soda-512.png")
 
+print "Pixel at 100,100: " + img.pixel(100,100)
+img.setPixel 100,100, "#FFFF00"
+
 sp1 = new Sprite
 sp1.image = img
 sp1.x = 300; sp1.y = 320

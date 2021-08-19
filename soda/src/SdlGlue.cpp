@@ -404,6 +404,9 @@ void SetImagePixel(Value image, int x, int y, String colorStr) {
 			*(Uint32 *)p = data;
 			break;
 	}
+	
+	// clear the texture associated with this image, if any, so it will get recreated on next use
+	SDL_DestroyTexture(storage->texture); storage->texture = nullptr;
 }
 
 Value GetSubImage(Value image, int left, int bottom, int width, int height) {
