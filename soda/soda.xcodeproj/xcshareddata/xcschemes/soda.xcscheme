@@ -57,6 +57,10 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "tests/bounds.ms"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "tests/text.ms"
             isEnabled = "NO">
          </CommandLineArgument>
@@ -66,7 +70,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "tests/imageOps.ms"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "tests/axis.ms"

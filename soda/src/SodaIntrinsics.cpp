@@ -21,6 +21,7 @@
 #include "MiniScript/MiniscriptInterpreter.h"
 #include "OstreamSupport.h"
 #include "MiniScript/SplitJoin.h"
+#include "BoundingBox.h"
 
 using namespace MiniScript;
 
@@ -34,6 +35,51 @@ static IntrinsicResult intrinsic_clear(Context *context, IntrinsicResult partial
 
 static IntrinsicResult intrinsic_sprites(Context *context, IntrinsicResult partialResult) {
 	return IntrinsicResult(spriteList);
+}
+
+//--------------------------------------------------------------------------------
+// Bounds class
+//--------------------------------------------------------------------------------
+ValueDict boundsClass;
+static Intrinsic *i_bounds_corners = nullptr;
+static Intrinsic *i_bounds_overlaps = nullptr;
+static Intrinsic *i_bounds_contains = nullptr;
+
+static IntrinsicResult intrinsic_boundsClass(Context *context, IntrinsicResult partialResult) {
+	return IntrinsicResult(boundsClass);
+}
+
+static BoundingBox* BoundingBoxFromMap(Value map) {
+	if (map.type != ValueType::Map) return nullptr;
+	// ToDo: caching
+	// for now...
+	Value x = map.Lookup("x");	// ToDo: cache Values of these magic strings
+	Value y = map.Lookup("y");
+	Value width = map.Lookup("width");
+	Value height = map.Lookup("height");
+	Value rotation = map.Lookup("rotation");
+	BoundingBox *bb = new BoundingBox(Vector2(x.DoubleValue(), y.DoubleValue()),
+									  Vector2(width.DoubleValue()/2, height.DoubleValue()/2),
+									  rotation.DoubleValue());
+	return bb;
+}
+
+static IntrinsicResult intrinsic_boundsCorners(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	
+	return IntrinsicResult::Null;
+}
+
+static IntrinsicResult intrinsic_boundsContains(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	Value x = context->GetVar("x");
+	Value y = context->GetVar("y");
+	
+	BoundingBox* bb = BoundingBoxFromMap(self);
+	if (bb == nullptr) return IntrinsicResult::Null;
+	Value result = Value::Truth(bb->Contains(Vector2(x.DoubleValue(), y.DoubleValue())));
+	delete bb;
+	return IntrinsicResult(result);
 }
 
 //--------------------------------------------------------------------------------
@@ -285,7 +331,26 @@ void AddSodaIntrinsics() {
 
 	f = Intrinsic::Create("sprites");	// ToDo: put this in a SpriteDisplay
 	f->code = &intrinsic_sprites;
-
+	
+	i_bounds_corners = Intrinsic::Create("");
+	i_bounds_corners->code = &intrinsic_boundsCorners;
+	
+	i_bounds_contains = Intrinsic::Create("");
+	i_bounds_contains->AddParam("x", Value::zero);
+	i_bounds_contains->AddParam("y", Value::zero);
+	i_bounds_contains->code = &intrinsic_boundsContains;
+	
+	f = Intrinsic::Create("Bounds");
+	f->code = &intrinsic_boundsClass;
+	boundsClass.SetValue("x", Value::zero);
+	boundsClass.SetValue("y", Value::zero);
+	Value v100(100);
+	boundsClass.SetValue("width", v100);
+	boundsClass.SetValue("height", v100);
+	boundsClass.SetValue("rotation", Value::zero);
+	boundsClass.SetValue("corners", i_bounds_corners->GetFunc());
+	boundsClass.SetValue("contains", i_bounds_contains->GetFunc());
+	
 	i_image_pixel = Intrinsic::Create("");
 	i_image_pixel->AddParam("x", Value::zero);
 	i_image_pixel->AddParam("y", Value::zero);
