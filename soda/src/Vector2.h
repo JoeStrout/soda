@@ -28,6 +28,14 @@ struct Vector2 {
     Vector2 operator+ () const { return *this; }
     Vector2 operator- () const { return Vector2(-x, -y); }
             
+	// Math functions
+	static double Dot(const Vector2& v1, const Vector2& v2) {
+		return v1.x * v2.x + v1.y * v2.y;
+	}
+	double SqrMagnitude() {
+		return x * x + y * y;
+	}
+	
     // Factory function
 	static Vector2 Zero() { return Vector2(0.0, 0.0); }
 			
@@ -35,8 +43,19 @@ struct Vector2 {
 	double y;
 };
 
-// Binary operators
-Vector2 operator+ (const Vector2& v1, const Vector2& v2);
-Vector2 operator- (const Vector2& v1, const Vector2& v2);
-Vector2 operator* (const Vector2& v1, float scalar);
-Vector2 operator/ (const Vector2& v1, float scalar);
+// Binary operators.
+inline Vector2 operator+ (const Vector2& v1, const Vector2& v2) {
+	return Vector2(v1.x + v2.x, v1.y + v2.y);
+}
+
+inline Vector2 operator- (const Vector2& v1, const Vector2& v2) {
+	return Vector2(v1.x - v2.x, v1.y - v2.y);
+}
+
+inline Vector2 operator* (const Vector2& v1, float scalar) {
+	return Vector2(v1.x * scalar, v1.y * scalar);
+}
+
+inline Vector2 operator/ (const Vector2& v1, float scalar) {
+	return Vector2(v1.x / scalar, v1.y / scalar);
+}

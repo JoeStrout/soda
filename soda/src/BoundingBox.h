@@ -29,7 +29,7 @@ public:
 
 	
 	bool Contains(Vector2 point);
-	bool Intersects(BoundingBox other);
+	bool Intersects(BoundingBox& other);
 
 	const Vector2* Corners() {
 		if (dirty) Recompute();

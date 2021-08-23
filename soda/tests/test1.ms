@@ -1,6 +1,7 @@
 // Soda test!
 
-sp = {"x":150, "y":200}
+sp = new Sprite
+sp.image = file.loadImage("images/soda-128.png")
 sprites.push sp
 dx = 3
 dy = 2

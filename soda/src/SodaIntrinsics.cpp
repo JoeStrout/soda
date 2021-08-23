@@ -51,8 +51,8 @@ static IntrinsicResult intrinsic_boundsClass(Context *context, IntrinsicResult p
 
 static BoundingBox* BoundingBoxFromMap(Value map) {
 	if (map.type != ValueType::Map) return nullptr;
-	// ToDo: caching
-	// for now...
+	// ToDo: cache these maps for improved performance!
+	// for now:
 	Value x = map.Lookup("x");	// ToDo: cache Values of these magic strings
 	Value y = map.Lookup("y");
 	Value width = map.Lookup("width");
@@ -60,7 +60,7 @@ static BoundingBox* BoundingBoxFromMap(Value map) {
 	Value rotation = map.Lookup("rotation");
 	BoundingBox *bb = new BoundingBox(Vector2(x.DoubleValue(), y.DoubleValue()),
 									  Vector2(width.DoubleValue()/2, height.DoubleValue()/2),
-									  rotation.DoubleValue());
+									  rotation.DoubleValue() * 57.29578);
 	return bb;
 }
 
@@ -79,6 +79,23 @@ static IntrinsicResult intrinsic_boundsContains(Context *context, IntrinsicResul
 	if (bb == nullptr) return IntrinsicResult::Null;
 	Value result = Value::Truth(bb->Contains(Vector2(x.DoubleValue(), y.DoubleValue())));
 	delete bb;
+	return IntrinsicResult(result);
+}
+
+static IntrinsicResult intrinsic_boundsOverlaps(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	Value other = context->GetVar("other");
+	
+	BoundingBox* bb = BoundingBoxFromMap(self);
+	if (bb == nullptr) return IntrinsicResult::Null;
+	BoundingBox* bb2 = BoundingBoxFromMap(other);
+	if (bb2 == nullptr) {
+		delete bb;
+		return IntrinsicResult::Null;
+	}
+	Value result = Value::Truth(bb->Intersects(*bb2));
+	delete bb;
+	delete bb2;
 	return IntrinsicResult(result);
 }
 
@@ -340,6 +357,10 @@ void AddSodaIntrinsics() {
 	i_bounds_contains->AddParam("y", Value::zero);
 	i_bounds_contains->code = &intrinsic_boundsContains;
 	
+	i_bounds_overlaps = Intrinsic::Create("");
+	i_bounds_overlaps->AddParam("other");
+	i_bounds_overlaps->code = &intrinsic_boundsOverlaps;
+	
 	f = Intrinsic::Create("Bounds");
 	f->code = &intrinsic_boundsClass;
 	boundsClass.SetValue("x", Value::zero);
@@ -350,7 +371,8 @@ void AddSodaIntrinsics() {
 	boundsClass.SetValue("rotation", Value::zero);
 	boundsClass.SetValue("corners", i_bounds_corners->GetFunc());
 	boundsClass.SetValue("contains", i_bounds_contains->GetFunc());
-	
+	boundsClass.SetValue("overlaps", i_bounds_overlaps->GetFunc());
+
 	i_image_pixel = Intrinsic::Create("");
 	i_image_pixel->AddParam("x", Value::zero);
 	i_image_pixel->AddParam("y", Value::zero);

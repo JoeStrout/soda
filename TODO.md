@@ -19,7 +19,7 @@ Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_
 # Medium Priority
 
 - Display class, display(n),  Display.install
-- Bounds class, with its connections to Sprite
+- Bounds class, with its connections to Sprite (in progress)
 - ~~Image.pixel, Image.setPixel~~
 - SolidColor display
 - Text display (in progress)
