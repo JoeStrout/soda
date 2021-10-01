@@ -27,6 +27,11 @@ using namespace MiniScript;
 
 Value spriteList = ValueList();
 Value white("#FFFFFF");
+Value xStr("x");
+Value yStr("y");
+Value widthStr("width");
+Value heightStr("height");
+Value rotationStr("rotation");
 
 static IntrinsicResult intrinsic_clear(Context *context, IntrinsicResult partialResult) {
 	SdlGlue::Clear();
@@ -51,13 +56,14 @@ static IntrinsicResult intrinsic_boundsClass(Context *context, IntrinsicResult p
 
 static BoundingBox* BoundingBoxFromMap(Value map) {
 	if (map.type != ValueType::Map) return nullptr;
+	
 	// ToDo: cache these maps for improved performance!
 	// for now:
-	Value x = map.Lookup("x");	// ToDo: cache Values of these magic strings
-	Value y = map.Lookup("y");
-	Value width = map.Lookup("width");
-	Value height = map.Lookup("height");
-	Value rotation = map.Lookup("rotation");
+	Value x = map.Lookup(xStr);
+	Value y = map.Lookup(yStr);
+	Value width = map.Lookup(widthStr);
+	Value height = map.Lookup(heightStr);
+	Value rotation = map.Lookup(rotationStr);
 	BoundingBox *bb = new BoundingBox(Vector2(x.DoubleValue(), y.DoubleValue()),
 									  Vector2(width.DoubleValue()/2, height.DoubleValue()/2),
 									  rotation.DoubleValue() * 57.29578);
