@@ -111,6 +111,5 @@ void BoundingBox::Recompute() {
 	}
 	
 	dirty = false;
-
 }
 

@@ -17,7 +17,7 @@ public:
 	Vector2 halfSize;
 	double rotation;	// rotation angle in RADIANS
 	
-	int changeCounter;	// change counter
+//	int changeCounter;	// change counter
 	bool dirty;			// true if corner, axis, and origin need recalculated
 	
 	// Computed properties -- updated in Recompute():
@@ -28,18 +28,20 @@ public:
 	BoundingBox(Vector2 center, Vector2 halfSize, double rotation=0)
 	: center(center), halfSize(halfSize), rotation(rotation), dirty(true) {}
 
-	
 	bool Contains(Vector2 point);
 	bool Intersects(BoundingBox& other);
 
+	void Freshen() { if (dirty) Recompute(); }
+
 	const Vector2* Corners() {
-		if (dirty) Recompute();
+		Freshen();
 		return corner;
 	}
 	
 private:
 	void Recompute();		// rocalculate corner, axis, and origin	
 };
+
 
 
 #endif // BOUNDINGBOX_H

@@ -45,6 +45,21 @@ static IntrinsicResult intrinsic_sprites(Context *context, IntrinsicResult parti
 //--------------------------------------------------------------------------------
 // Bounds class
 //--------------------------------------------------------------------------------
+
+// BoundingBoxStorage: wraps and reference-counts a BoundingBox;
+// used as the _handle of a Bounds object in MiniScript.
+class BoundingBoxStorage : public RefCountedStorage {
+public:
+	BoundingBoxStorage(BoundingBox *b) : boundingBox(b) {}
+	
+	virtual ~BoundingBoxStorage() {
+		delete boundingBox;
+		boundingBox = nullptr;
+	}
+	
+	BoundingBox *boundingBox;
+};
+
 ValueDict boundsClass;
 static Intrinsic *i_bounds_corners = nullptr;
 static Intrinsic *i_bounds_overlaps = nullptr;
@@ -54,20 +69,66 @@ static IntrinsicResult intrinsic_boundsClass(Context *context, IntrinsicResult p
 	return IntrinsicResult(boundsClass);
 }
 
+static bool boundsAssignOverride(ValueDict& boundsMap, Value key, Value value) {
+	// If the value hasn't changed, do nothing.
+	Value curVal = boundsMap.Lookup(key, Value::null);
+	if (curVal == value) return not value.IsNull();	// (block the assignment, unless actually assigning null)
+	
+	// To avoid doing a bunch of string comparisons, we'll just assume
+	// (with high probability) that any assignment to a bounds should
+	// trigger recomputing the bounding box.
+	MiniScript::Value handle = boundsMap.Lookup(SdlGlue::magicHandle, Value::null);
+	BoundingBoxStorage *storage = nullptr;
+	if (handle.type == ValueType::Handle) {
+		// ToDo: how do we be sure the data is specifically a SoundStorage?
+		// Do we need to enable RTTI, or use some common base class?
+		storage = ((BoundingBoxStorage*)(handle.data.ref));
+	}
+	if (storage) storage->boundingBox->dirty = true;
+	// Marking it dirty in this way will signal us (in BoundingBoxFromMap) that
+	// we need to copy values out of the map and apply to the box before we
+	// do any actual computations with it.
+	
+	return false;	// allow the assignment
+}
+
 static BoundingBox* BoundingBoxFromMap(Value map) {
 	if (map.type != ValueType::Map) return nullptr;
 	
-	// ToDo: cache these maps for improved performance!
-	// for now:
-	Value x = map.Lookup(xStr);
-	Value y = map.Lookup(yStr);
-	Value width = map.Lookup(widthStr);
-	Value height = map.Lookup(heightStr);
-	Value rotation = map.Lookup(rotationStr);
-	BoundingBox *bb = new BoundingBox(Vector2(x.DoubleValue(), y.DoubleValue()),
-									  Vector2(width.DoubleValue()/2, height.DoubleValue()/2),
-									  rotation.DoubleValue() * 57.29578);
-	return bb;
+	MiniScript::Value handle = map.Lookup(SdlGlue::magicHandle);
+	BoundingBoxStorage *storage = nullptr;
+	if (handle.type == ValueType::Handle) {
+		// ToDo: how do we be sure the data is specifically a SoundStorage?
+		// Do we need to enable RTTI, or use some common base class?
+		storage = ((BoundingBoxStorage*)(handle.data.ref));
+	}
+	if (storage == NULL || storage->boundingBox == nullptr) {
+		Value x = map.Lookup(xStr);
+		Value y = map.Lookup(yStr);
+		Value width = map.Lookup(widthStr);
+		Value height = map.Lookup(heightStr);
+		Value rotation = map.Lookup(rotationStr);
+		BoundingBox *bb = new BoundingBox(Vector2(x.DoubleValue(), y.DoubleValue()),
+										  Vector2(width.DoubleValue()/2, height.DoubleValue()/2),
+										  rotation.DoubleValue() * 57.29578);
+		handle = Value::NewHandle(new BoundingBoxStorage(bb));
+		map.SetElem(SdlGlue::magicHandle, handle);
+		map.GetDict().SetAssignOverride(boundsAssignOverride);
+		return bb;
+	} else {
+		BoundingBox *bb = storage->boundingBox;
+		if (bb->dirty) {
+			bb->center.x = map.Lookup(xStr).DoubleValue();
+			bb->center.y = map.Lookup(yStr).DoubleValue();
+			bb->halfSize.x = map.Lookup(widthStr).DoubleValue()/2;
+			bb->halfSize.y = map.Lookup(widthStr).DoubleValue()/2;
+			bb->rotation = map.Lookup(rotationStr).DoubleValue() * 57.29578;
+//			printf("Freshened BB with center %lf,%lf, halfSize %lf,%lf, rotation %lf\n",
+//				   bb->center.x, bb->center.y, bb->halfSize.x, bb->halfSize.y, bb->rotation);
+			bb->Freshen();
+		}
+		return bb;
+	}
 }
 
 static IntrinsicResult intrinsic_boundsCorners(Context *context, IntrinsicResult partialResult) {
@@ -84,7 +145,6 @@ static IntrinsicResult intrinsic_boundsContains(Context *context, IntrinsicResul
 	BoundingBox* bb = BoundingBoxFromMap(self);
 	if (bb == nullptr) return IntrinsicResult::Null;
 	Value result = Value::Truth(bb->Contains(Vector2(x.DoubleValue(), y.DoubleValue())));
-	delete bb;
 	return IntrinsicResult(result);
 }
 
@@ -95,13 +155,8 @@ static IntrinsicResult intrinsic_boundsOverlaps(Context *context, IntrinsicResul
 	BoundingBox* bb = BoundingBoxFromMap(self);
 	if (bb == nullptr) return IntrinsicResult::Null;
 	BoundingBox* bb2 = BoundingBoxFromMap(other);
-	if (bb2 == nullptr) {
-		delete bb;
-		return IntrinsicResult::Null;
-	}
+	if (bb2 == nullptr) return IntrinsicResult::Null;
 	Value result = Value::Truth(bb->Intersects(*bb2));
-	delete bb;
-	delete bb2;
 	return IntrinsicResult(result);
 }
 
