@@ -17,7 +17,7 @@ public:
 	Vector2 halfSize;
 	double rotation;	// rotation angle in RADIANS
 	
-//	int changeCounter;	// change counter
+	int changeCounter;	// change counter
 	bool dirty;			// true if corner, axis, and origin need recalculated
 	
 	// Computed properties -- updated in Recompute():

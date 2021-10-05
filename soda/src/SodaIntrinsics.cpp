@@ -22,6 +22,7 @@
 #include "OstreamSupport.h"
 #include "MiniScript/SplitJoin.h"
 #include "BoundingBox.h"
+#include "Sprite.h"
 
 using namespace MiniScript;
 
@@ -32,6 +33,7 @@ Value yStr("y");
 Value widthStr("width");
 Value heightStr("height");
 Value rotationStr("rotation");
+Value scaleStr("scale");
 
 static IntrinsicResult intrinsic_clear(Context *context, IntrinsicResult partialResult) {
 	SdlGlue::Clear();
@@ -80,7 +82,7 @@ static bool boundsAssignOverride(ValueDict& boundsMap, Value key, Value value) {
 	MiniScript::Value handle = boundsMap.Lookup(SdlGlue::magicHandle, Value::null);
 	BoundingBoxStorage *storage = nullptr;
 	if (handle.type == ValueType::Handle) {
-		// ToDo: how do we be sure the data is specifically a SoundStorage?
+		// ToDo: how do we be sure the data is specifically a BoundingBoxStorage?
 		// Do we need to enable RTTI, or use some common base class?
 		storage = ((BoundingBoxStorage*)(handle.data.ref));
 	}
@@ -296,6 +298,7 @@ static IntrinsicResult intrinsic_sound_stopAll(Context *context, IntrinsicResult
 //--------------------------------------------------------------------------------
 // Sprite class
 //--------------------------------------------------------------------------------
+static Intrinsic *i_sprite_worldBounds = nullptr;
 
 static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult partialResult) {
 	static ValueDict spriteClass;
@@ -307,10 +310,43 @@ static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult p
 		spriteClass.SetValue("scale", Value::one);
 		spriteClass.SetValue("rotation", Value::zero);
 		spriteClass.SetValue("tint", white);
+		spriteClass.SetValue("localBounds", Value::null);
+		spriteClass.SetValue("_handle", Value::null);
 	}
 	
 	return IntrinsicResult(spriteClass);
 }
+
+static IntrinsicResult intrinsic_sprite_worldBounds(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	if (self.type != ValueType::Map) return IntrinsicResult::Null;
+	
+	Value localBounds = self.Lookup("localBounds");
+	BoundingBox *localBbox = BoundingBoxFromMap(localBounds);
+	if (!localBbox) return IntrinsicResult::Null;
+	
+	// We may have an up to date world bounds already stored on the sprite.
+	// Or we may not.  So start by determining which is the case.
+	SpriteHandleData *data = GetSpriteHandleData(self);
+	if (!data->boundsChanged && data->lastLocalChangeCounter == localBbox->changeCounter && !data->worldBounds.IsNull()) {
+		// OK, we have a world bounds, our boundsChange flag hasn't been set, and our local bounds
+		// change counter hasn't changed since we last updated it... so the world bounds looks good.
+		return data->worldBounds;
+	}
+	// Something's changed, so we need to recompute our world bounds.
+	if (data->worldBounds.IsNull()) {
+		ValueDict inst;
+		inst.SetValue(Value::magicIsA, boundsClass);
+		data->worldBounds = Value(inst);
+	}
+	data->worldBounds.SetElem(xStr, data->x + localBbox->center.x);
+	data->worldBounds.SetElem(yStr, data->y + localBbox->center.y);
+	data->worldBounds.SetElem(widthStr, data->scale * localBbox->halfSize.x * 2);
+	data->worldBounds.SetElem(heightStr, data->scale * localBbox->halfSize.y * 2);
+	data->worldBounds.SetElem(rotationStr, data->rotation + localBbox->rotation);
+	return IntrinsicResult(data->worldBounds);
+}
+
 
 //--------------------------------------------------------------------------------
 // TextDisplay class

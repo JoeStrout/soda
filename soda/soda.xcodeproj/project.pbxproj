@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		8328CE2826B72E5300E32E12 /* SdlAudio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8328CE2626B72E5300E32E12 /* SdlAudio.cpp */; };
+		832C0D8D270BC52100E66E85 /* Sprite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 832C0D8B270BC52100E66E85 /* Sprite.cpp */; };
 		837C4C0426C3151D00D741B6 /* ScreenFont_png.c in Sources */ = {isa = PBXBuildFile; fileRef = 837C4C0326C3151D00D741B6 /* ScreenFont_png.c */; };
 		837C4C0826C315FF00D741B6 /* TextDisplay.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 837C4C0626C315FF00D741B6 /* TextDisplay.cpp */; };
 		837C4C0B26C474F100D741B6 /* Color.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 837C4C0926C474F100D741B6 /* Color.cpp */; };
@@ -69,6 +70,8 @@
 /* Begin PBXFileReference section */
 		8328CE2626B72E5300E32E12 /* SdlAudio.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SdlAudio.cpp; sourceTree = "<group>"; };
 		8328CE2726B72E5300E32E12 /* SdlAudio.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SdlAudio.h; sourceTree = "<group>"; };
+		832C0D8B270BC52100E66E85 /* Sprite.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Sprite.cpp; sourceTree = "<group>"; };
+		832C0D8C270BC52100E66E85 /* Sprite.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Sprite.h; sourceTree = "<group>"; };
 		837C4C0326C3151D00D741B6 /* ScreenFont_png.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ScreenFont_png.c; sourceTree = "<group>"; };
 		837C4C0526C3154E00D741B6 /* ScreenFont_png.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ScreenFont_png.h; sourceTree = "<group>"; };
 		837C4C0626C315FF00D741B6 /* TextDisplay.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TextDisplay.cpp; sourceTree = "<group>"; };
@@ -192,7 +195,6 @@
 				83D55DE326B38F2F00C76F4E /* main.cpp */,
 				83A424FB26D4519C00881BD3 /* BoundingBox.cpp */,
 				837C4C0926C474F100D741B6 /* Color.cpp */,
-				837C4C0A26C474F100D741B6 /* Color.h */,
 				83D55DE226B38F2F00C76F4E /* OstreamSupport.cpp */,
 				8328CE2626B72E5300E32E12 /* SdlAudio.cpp */,
 				83D55E0026B391BC00C76F4E /* SdlGlue.cpp */,
@@ -201,6 +203,9 @@
 				837C4C0626C315FF00D741B6 /* TextDisplay.cpp */,
 				83A424FD26D4530100881BD3 /* Vector2.cpp */,
 				83A424FC26D4519C00881BD3 /* BoundingBox.h */,
+				832C0D8B270BC52100E66E85 /* Sprite.cpp */,
+				832C0D8C270BC52100E66E85 /* Sprite.h */,
+				837C4C0A26C474F100D741B6 /* Color.h */,
 				83D55DE426B38F2F00C76F4E /* OstreamSupport.h */,
 				8328CE2726B72E5300E32E12 /* SdlAudio.h */,
 				83D55E0126B391BC00C76F4E /* SdlGlue.h */,
@@ -337,6 +342,7 @@
 			files = (
 				83D55DE926B38F2F00C76F4E /* sysunix.c in Sources */,
 				83A424FF26D4530100881BD3 /* Vector2.cpp in Sources */,
+				832C0D8D270BC52100E66E85 /* Sprite.cpp in Sources */,
 				837C4C0826C315FF00D741B6 /* TextDisplay.cpp in Sources */,
 				83D55E0226B391BC00C76F4E /* SdlGlue.cpp in Sources */,
 				8328CE2826B72E5300E32E12 /* SdlAudio.cpp in Sources */,
