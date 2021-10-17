@@ -29,7 +29,7 @@ static bool spriteAssignOverride(ValueDict& spriteMap, MiniScript::Value key, Va
 		}
 		if (data) data->boundsChanged = data->transformChanged = true;
 	} else if (keyStr == "localBounds") {
-		// ToDo: DRY this out.
+		// ToDo: DRY this out.  (See duplicate code above.)
 		MiniScript::Value handle = spriteMap.Lookup(SdlGlue::magicHandle, Value::null);
 		SpriteHandleData *data = nullptr;
 		if (handle.type == ValueType::Handle) {
@@ -67,7 +67,7 @@ SpriteHandleData* GetSpriteHandleData(MiniScript::Value spriteMap) {
 		data->x = spriteMap.Lookup(xStr).DoubleValue();
 		data->y = spriteMap.Lookup(yStr).DoubleValue();
 		data->scale = spriteMap.Lookup(scaleStr).DoubleValue();
-		data->scale = spriteMap.Lookup(rotationStr).DoubleValue();
+		data->rotation = spriteMap.Lookup(rotationStr).DoubleValue();
 		data->transformChanged = false;
 	}
 	return data;

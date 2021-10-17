@@ -139,14 +139,33 @@ static IntrinsicResult intrinsic_boundsCorners(Context *context, IntrinsicResult
 	return IntrinsicResult::Null;
 }
 
+// Helper method to get X and Y parameters that may be passed in any of several ways:
+//  1. two separate "x" and "y" parameters
+//  2. an [x, y] list
+//	3. a may with "x" and "y" entries
+static void GetXYParameters(Context *context, double* outX, double* outY) {
+	Value p1 = context->GetVar("x");
+	if (p1.type == ValueType::Map) {
+		*outX = p1.Lookup(xStr).DoubleValue();
+		*outY = p1.Lookup(yStr).DoubleValue();
+	} else if (p1.type == ValueType::List) {
+		ValueList list = p1.GetList();
+		*outX = list[0].DoubleValue();
+		*outY = list[1].DoubleValue();
+	} else {
+		*outX = p1.DoubleValue();
+		*outY = context->GetVar("y").DoubleValue();
+	}
+}
+
 static IntrinsicResult intrinsic_boundsContains(Context *context, IntrinsicResult partialResult) {
 	Value self = context->GetVar("self");
-	Value x = context->GetVar("x");
-	Value y = context->GetVar("y");
+	double x, y;
+	GetXYParameters(context, &x, &y);
 	
 	BoundingBox* bb = BoundingBoxFromMap(self);
 	if (bb == nullptr) return IntrinsicResult::Null;
-	Value result = Value::Truth(bb->Contains(Vector2(x.DoubleValue(), y.DoubleValue())));
+	Value result = Value::Truth(bb->Contains(Vector2(x, y)));
 	return IntrinsicResult(result);
 }
 
@@ -298,24 +317,9 @@ static IntrinsicResult intrinsic_sound_stopAll(Context *context, IntrinsicResult
 //--------------------------------------------------------------------------------
 // Sprite class
 //--------------------------------------------------------------------------------
+ValueDict spriteClass;
 static Intrinsic *i_sprite_worldBounds = nullptr;
-
-static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult partialResult) {
-	static ValueDict spriteClass;
-	
-	if (spriteClass.Count() == 0) {
-		spriteClass.SetValue("image", Value::null);
-		spriteClass.SetValue("x", Value::zero);
-		spriteClass.SetValue("y", Value::zero);
-		spriteClass.SetValue("scale", Value::one);
-		spriteClass.SetValue("rotation", Value::zero);
-		spriteClass.SetValue("tint", white);
-		spriteClass.SetValue("localBounds", Value::null);
-		spriteClass.SetValue("_handle", Value::null);
-	}
-	
-	return IntrinsicResult(spriteClass);
-}
+static Intrinsic *i_sprite_contains = nullptr;
 
 static IntrinsicResult intrinsic_sprite_worldBounds(Context *context, IntrinsicResult partialResult) {
 	Value self = context->GetVar("self");
@@ -347,6 +351,48 @@ static IntrinsicResult intrinsic_sprite_worldBounds(Context *context, IntrinsicR
 	return IntrinsicResult(data->worldBounds);
 }
 
+static IntrinsicResult intrinsic_sprite_contains(Context *context, IntrinsicResult partialResult) {
+	// call the normal worldBounds method to get the world bounds of this sprite
+	IntrinsicResult r = intrinsic_sprite_worldBounds(context, IntrinsicResult::Null);
+	Value worldBounds = r.Result();
+	
+	// then check the point against that
+	if (worldBounds.IsNull()) return IntrinsicResult(Value::zero);
+
+	double x, y;
+	GetXYParameters(context, &x, &y);
+	BoundingBox* bb = BoundingBoxFromMap(worldBounds);
+	if (bb == nullptr) return IntrinsicResult::Null;
+	Value result = Value::Truth(bb->Contains(Vector2(x, y)));
+	return IntrinsicResult(result);
+}
+
+static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult partialResult) {
+	static ValueDict spriteClass;
+	
+	if (spriteClass.Count() == 0) {
+		spriteClass.SetValue("image", Value::null);
+		spriteClass.SetValue("x", Value::zero);
+		spriteClass.SetValue("y", Value::zero);
+		spriteClass.SetValue("scale", Value::one);
+		spriteClass.SetValue("rotation", Value::zero);
+		spriteClass.SetValue("tint", white);
+		spriteClass.SetValue("localBounds", Value::null);
+		spriteClass.SetValue("_handle", Value::null);
+
+		i_sprite_worldBounds = Intrinsic::Create("");
+		i_sprite_worldBounds->code = &intrinsic_sprite_worldBounds;
+		spriteClass.SetValue("worldBounds", i_sprite_worldBounds->GetFunc());
+
+		i_sprite_contains = Intrinsic::Create("");
+		i_sprite_contains->AddParam("x", Value::zero);
+		i_sprite_contains->AddParam("y", Value::zero);
+		i_sprite_contains->code = &intrinsic_sprite_contains;
+		spriteClass.SetValue("contains", i_sprite_contains->GetFunc());
+	}
+	
+	return IntrinsicResult(spriteClass);
+}
 
 //--------------------------------------------------------------------------------
 // TextDisplay class
@@ -537,7 +583,7 @@ void AddSodaIntrinsics() {
 	soundClass.SetValue("_handle", Value::null);
 	soundClass.SetValue("loop", Value::zero);
 
-	i_textDisplay_clear =Intrinsic::Create("");
+	i_textDisplay_clear = Intrinsic::Create("");
 	i_textDisplay_clear->code = &intrinsic_textDisplay_clear;
 	textDisplayClassMap.SetValue("clear", i_textDisplay_clear->GetFunc());
 	
