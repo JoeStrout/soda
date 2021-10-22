@@ -14,7 +14,7 @@
 void AddSodaIntrinsics();
 
 extern MiniScript::Value spriteList;
-extern MiniScript::Value mouse;
+extern MiniScript::ValueDict mouseModule;
 extern MiniScript::ValueDict imageClass;
 extern MiniScript::ValueDict soundClass;
 extern MiniScript::ValueDict window;

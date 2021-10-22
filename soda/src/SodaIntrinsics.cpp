@@ -253,16 +253,15 @@ static IntrinsicResult intrinsic_key_axis(Context *context, IntrinsicResult part
 //--------------------------------------------------------------------------------
 
 static Intrinsic *i_mouse_button = nullptr;
-static Intrinsic *i_mouse_x = nullptr;
-static Intrinsic *i_mouse_y = nullptr;
+ValueDict mouseModule;
 
 static IntrinsicResult intrinsic_mouseModule(Context *context, IntrinsicResult partialResult) {
-	static ValueDict mouseModule;
-	
-	if (mouseModule.Count() == 0) {
+	if (mouseModule.Count() < 3) {
 		mouseModule.SetValue("button", i_mouse_button->GetFunc());
-		mouseModule.SetValue("x", i_mouse_x->GetFunc());
-		mouseModule.SetValue("y", i_mouse_y->GetFunc());
+		// Note: mouse x and y are updated in SdlGlue::Service, so they are
+		// ordinary numbers and can be used like any other XY map.
+		mouseModule.SetValue("x", SdlGlue::GetMouseX());
+		mouseModule.SetValue("y", SdlGlue::GetMouseY());
 	}
 	
 	return IntrinsicResult(mouseModule);
@@ -274,13 +273,6 @@ static IntrinsicResult intrinsic_mouse_button(Context *context, IntrinsicResult 
 	return IntrinsicResult(SdlGlue::IsMouseButtonPressed((int)which.IntValue()));
 }
 
-static IntrinsicResult intrinsic_mouse_x(Context *context, IntrinsicResult partialResult) {
-	return IntrinsicResult(SdlGlue::GetMouseX());
-}
-
-static IntrinsicResult intrinsic_mouse_y(Context *context, IntrinsicResult partialResult) {
-	return IntrinsicResult(SdlGlue::GetMouseY());
-}
 
 //--------------------------------------------------------------------------------
 // Sound class
@@ -320,18 +312,16 @@ static IntrinsicResult intrinsic_sound_stopAll(Context *context, IntrinsicResult
 ValueDict spriteClass;
 static Intrinsic *i_sprite_worldBounds = nullptr;
 static Intrinsic *i_sprite_contains = nullptr;
+static Intrinsic *i_sprite_overlaps = nullptr;
 
-static IntrinsicResult intrinsic_sprite_worldBounds(Context *context, IntrinsicResult partialResult) {
-	Value self = context->GetVar("self");
-	if (self.type != ValueType::Map) return IntrinsicResult::Null;
-	
-	Value localBounds = self.Lookup("localBounds");
+static Value GetWorldBounds(Value sprite) {
+	Value localBounds = sprite.Lookup("localBounds");
 	BoundingBox *localBbox = BoundingBoxFromMap(localBounds);
-	if (!localBbox) return IntrinsicResult::Null;
+	if (!localBbox) return Value::null;
 	
 	// We may have an up to date world bounds already stored on the sprite.
 	// Or we may not.  So start by determining which is the case.
-	SpriteHandleData *data = GetSpriteHandleData(self);
+	SpriteHandleData *data = GetSpriteHandleData(sprite);
 	if (!data->boundsChanged && data->lastLocalChangeCounter == localBbox->changeCounter && !data->worldBounds.IsNull()) {
 		// OK, we have a world bounds, our boundsChange flag hasn't been set, and our local bounds
 		// change counter hasn't changed since we last updated it... so the world bounds looks good.
@@ -348,7 +338,16 @@ static IntrinsicResult intrinsic_sprite_worldBounds(Context *context, IntrinsicR
 	data->worldBounds.SetElem(widthStr, data->scale * localBbox->halfSize.x * 2);
 	data->worldBounds.SetElem(heightStr, data->scale * localBbox->halfSize.y * 2);
 	data->worldBounds.SetElem(rotationStr, data->rotation + localBbox->rotation);
-	return IntrinsicResult(data->worldBounds);
+	return data->worldBounds;
+}
+
+static IntrinsicResult intrinsic_sprite_worldBounds(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	if (self.type != ValueType::Map) return IntrinsicResult::Null;
+	
+	Value worldBounds = GetWorldBounds(self);
+	if (worldBounds.IsNull()) return IntrinsicResult::Null;
+	return IntrinsicResult(worldBounds);
 }
 
 static IntrinsicResult intrinsic_sprite_contains(Context *context, IntrinsicResult partialResult) {
@@ -367,9 +366,30 @@ static IntrinsicResult intrinsic_sprite_contains(Context *context, IntrinsicResu
 	return IntrinsicResult(result);
 }
 
-static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult partialResult) {
-	static ValueDict spriteClass;
+static IntrinsicResult intrinsic_sprite_overlaps(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	if (self.IsNull()) RuntimeException("Sprite required for self parameter").raise();
+	Value myWorldBounds = GetWorldBounds(self);
+	if (myWorldBounds.IsNull()) return IntrinsicResult(Value::zero);
+	BoundingBox *bb = BoundingBoxFromMap(myWorldBounds);
 	
+	// ...and the other sprite or bounds
+	Value other = context->GetVar("other");
+	BoundingBox* bb2 = nullptr;
+	if (other.IsA(spriteClass, context->vm)) {
+		bb2 = BoundingBoxFromMap(GetWorldBounds(other));
+	} else if (other.IsA(boundsClass, context->vm)) {
+		bb2 = BoundingBoxFromMap(other);
+	} else {
+		RuntimeException("Sprite or Bounds required for other parameter").raise();
+	}
+	if (!bb2) return IntrinsicResult(Value::zero);
+	
+	Value result = Value::Truth(bb->Intersects(*bb2));
+	return IntrinsicResult(result);
+}
+
+static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult partialResult) {
 	if (spriteClass.Count() == 0) {
 		spriteClass.SetValue("image", Value::null);
 		spriteClass.SetValue("x", Value::zero);
@@ -389,6 +409,11 @@ static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult p
 		i_sprite_contains->AddParam("y", Value::zero);
 		i_sprite_contains->code = &intrinsic_sprite_contains;
 		spriteClass.SetValue("contains", i_sprite_contains->GetFunc());
+		
+		i_sprite_overlaps = Intrinsic::Create("");
+		i_sprite_overlaps->AddParam("other");
+		i_sprite_overlaps->code = &intrinsic_sprite_overlaps;
+		spriteClass.SetValue("overlaps", i_sprite_overlaps->GetFunc());
 	}
 	
 	return IntrinsicResult(spriteClass);
@@ -613,13 +638,7 @@ void AddSodaIntrinsics() {
 	i_mouse_button = Intrinsic::Create("");
 	i_mouse_button->AddParam("which", Value::zero);
 	i_mouse_button->code = &intrinsic_mouse_button;
-	
-	i_mouse_x = Intrinsic::Create("");
-	i_mouse_x->code = &intrinsic_mouse_x;
-	
-	i_mouse_y = Intrinsic::Create("");
-	i_mouse_y->code = &intrinsic_mouse_y;
-	
+
 	f = Intrinsic::Create("window");
 	f->code = &intrinsic_windowModule;
 	

@@ -21,5 +21,5 @@ while true
 	else
 		sp.tint = "#FFFFFF"
 	end if
-	wait 0.01
+	yield
 end while

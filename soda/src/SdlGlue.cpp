@@ -130,6 +130,12 @@ void Service() {
 		}
 	}
 	
+	// Update mouse position
+	// (we store mouse x and y as values, rather than functions, so they can be used
+	// in any context that needs an XY map, such as Bounds.contains)
+	mouseModule.SetValue(xStr, Value(GetMouseX()));
+	mouseModule.SetValue(yStr, Value(GetMouseY()));
+
 	// Update screen
 	SDL_SetRenderDrawColor(mainRenderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
 	SDL_RenderClear(mainRenderer);
