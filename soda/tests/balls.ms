@@ -27,11 +27,11 @@ end function
 	
 for i in range(5)
 	b = new Ball
-	b.x = 960*rnd
+	b.x = 30 + 900*rnd
 	b.y = 320 + 320*rnd
 	b.vx = 20 * (rnd - 0.5)
 	b.vrot = 30 * rnd
-	print "created ball at " + b.x + ", " + b.y
+	//print "created ball at " + b.x + ", " + b.y
 	sprites.push b
 end for
 
@@ -39,5 +39,5 @@ while true
 	for ball in sprites
 		ball.update
 	end for
-	wait 0.01
+	yield
 end while

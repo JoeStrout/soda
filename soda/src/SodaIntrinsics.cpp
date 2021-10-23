@@ -67,10 +67,6 @@ static Intrinsic *i_bounds_corners = nullptr;
 static Intrinsic *i_bounds_overlaps = nullptr;
 static Intrinsic *i_bounds_contains = nullptr;
 
-static IntrinsicResult intrinsic_boundsClass(Context *context, IntrinsicResult partialResult) {
-	return IntrinsicResult(boundsClass);
-}
-
 static bool boundsAssignOverride(ValueDict& boundsMap, Value key, Value value) {
 	// If the value hasn't changed, do nothing.
 	Value curVal = boundsMap.Lookup(key, Value::null);
@@ -181,6 +177,35 @@ static IntrinsicResult intrinsic_boundsOverlaps(Context *context, IntrinsicResul
 	return IntrinsicResult(result);
 }
 
+static IntrinsicResult intrinsic_boundsClass(Context *context, IntrinsicResult partialResult) {
+	if (boundsClass.Count() == 0) {
+		i_bounds_corners = Intrinsic::Create("");
+		i_bounds_corners->code = &intrinsic_boundsCorners;
+		
+		i_bounds_contains = Intrinsic::Create("");
+		i_bounds_contains->AddParam("x", Value::zero);
+		i_bounds_contains->AddParam("y", Value::zero);
+		i_bounds_contains->code = &intrinsic_boundsContains;
+		
+		i_bounds_overlaps = Intrinsic::Create("");
+		i_bounds_overlaps->AddParam("other");
+		i_bounds_overlaps->code = &intrinsic_boundsOverlaps;
+		
+		boundsClass.SetValue("x", Value::zero);
+		boundsClass.SetValue("y", Value::zero);
+		Value v100(100);
+		boundsClass.SetValue("width", v100);
+		boundsClass.SetValue("height", v100);
+		boundsClass.SetValue("rotation", Value::zero);
+		boundsClass.SetValue("corners", i_bounds_corners->GetFunc());
+		boundsClass.SetValue("contains", i_bounds_contains->GetFunc());
+		boundsClass.SetValue("overlaps", i_bounds_overlaps->GetFunc());
+	}
+
+	return IntrinsicResult(boundsClass);
+}
+
+
 //--------------------------------------------------------------------------------
 // Image class
 //--------------------------------------------------------------------------------
@@ -188,10 +213,6 @@ ValueDict imageClass;
 static Intrinsic *i_image_getImage = nullptr;
 static Intrinsic *i_image_pixel = nullptr;
 static Intrinsic *i_image_setPixel = nullptr;
-
-static IntrinsicResult intrinsic_imageClass(Context *context, IntrinsicResult partialResult) {
-	return IntrinsicResult(imageClass);
-}
 
 static IntrinsicResult intrinsic_image_pixel(Context *context, IntrinsicResult partialResult) {
 	Value self = context->GetVar("self");
@@ -217,6 +238,35 @@ static IntrinsicResult intrinsic_image_getImage(Context *context, IntrinsicResul
 	Value height = context->GetVar("height");
 	return IntrinsicResult(SdlGlue::GetSubImage(self,
 		(int)left.IntValue(), (int)bottom.IntValue(), (int)width.IntValue(), (int)height.IntValue()));
+}
+
+static IntrinsicResult intrinsic_imageClass(Context *context, IntrinsicResult partialResult) {
+	if (imageClass.Count() == 0) {
+		i_image_pixel = Intrinsic::Create("");
+		i_image_pixel->AddParam("x", Value::zero);
+		i_image_pixel->AddParam("y", Value::zero);
+		i_image_pixel->code = &intrinsic_image_pixel;
+
+		i_image_setPixel = Intrinsic::Create("");
+		i_image_setPixel->AddParam("x", Value::zero);
+		i_image_setPixel->AddParam("y", Value::zero);
+		i_image_setPixel->AddParam("color");
+		i_image_setPixel->code = &intrinsic_image_setPixel;
+
+		i_image_getImage = Intrinsic::Create("");
+		i_image_getImage->AddParam("left", Value::zero);
+		i_image_getImage->AddParam("bottom", Value::zero);
+		i_image_getImage->AddParam("width", Value(-1));
+		i_image_getImage->AddParam("height", Value(-1));
+		i_image_getImage->code = &intrinsic_image_getImage;
+
+		imageClass.SetValue("width", Value::zero);
+		imageClass.SetValue("height", Value::zero);
+		imageClass.SetValue("getImage", i_image_getImage->GetFunc());
+		imageClass.SetValue("pixel", i_image_pixel->GetFunc());
+		imageClass.SetValue("setPixel", i_image_setPixel->GetFunc());
+	}
+	return IntrinsicResult(imageClass);
 }
 
 //--------------------------------------------------------------------------------
@@ -282,10 +332,6 @@ static Intrinsic *i_sound_play = nullptr;
 static Intrinsic *i_sound_stop = nullptr;
 static Intrinsic *i_sound_stopAll = nullptr;
 
-static IntrinsicResult intrinsic_soundClass(Context *context, IntrinsicResult partialResult) {
-	return IntrinsicResult(soundClass);
-}
-
 static IntrinsicResult intrinsic_sound_play(Context *context, IntrinsicResult partialResult) {
 	Value self = context->GetVar("self");
 	double volume = context->GetVar("volume").DoubleValue();
@@ -304,6 +350,29 @@ static IntrinsicResult intrinsic_sound_stop(Context *context, IntrinsicResult pa
 static IntrinsicResult intrinsic_sound_stopAll(Context *context, IntrinsicResult partialResult) {
 	SdlGlue::StopAllSounds();
 	return IntrinsicResult::Null;
+}
+
+static IntrinsicResult intrinsic_soundClass(Context *context, IntrinsicResult partialResult) {
+	if (soundClass.Count() == 0) {
+		i_sound_play = Intrinsic::Create("");
+		i_sound_play->AddParam("volume", Value::one);
+		i_sound_play->AddParam("pan", Value::zero);
+		i_sound_play->AddParam("speed", Value::one);
+		i_sound_play->code = &intrinsic_sound_play;
+		soundClass.SetValue("play", i_sound_play->GetFunc());
+
+		i_sound_stop = Intrinsic::Create("");
+		i_sound_stop->code = &intrinsic_sound_stop;
+		soundClass.SetValue("stop", i_sound_stop->GetFunc());
+
+		i_sound_stopAll = Intrinsic::Create("");
+		i_sound_stopAll->code = &intrinsic_sound_stopAll;
+		soundClass.SetValue("stopAll", i_sound_stopAll->GetFunc());
+
+		soundClass.SetValue("_handle", Value::null);
+		soundClass.SetValue("loop", Value::zero);
+	}
+	return IntrinsicResult(soundClass);
 }
 
 //--------------------------------------------------------------------------------
@@ -422,13 +491,10 @@ static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult p
 //--------------------------------------------------------------------------------
 // TextDisplay class
 //--------------------------------------------------------------------------------
-ValueDict textDisplayClassMap;
-Value textDisplayClass(textDisplayClassMap);
+ValueDict textDisplayClass;
 static Intrinsic *i_textDisplay_clear = nullptr;
-
-static IntrinsicResult intrinsic_textDisplayClass(Context *context, IntrinsicResult partialResult) {
-	return IntrinsicResult(textDisplayClass);
-}
+static Intrinsic *i_textDisplay_columns = nullptr;
+static Intrinsic *i_textDisplay_rows = nullptr;
 
 static IntrinsicResult intrinsic_textDisplay_clear(Context *context, IntrinsicResult partialResult) {
 	//Value self = context->GetVar("self");
@@ -436,6 +502,40 @@ static IntrinsicResult intrinsic_textDisplay_clear(Context *context, IntrinsicRe
 	// When we support multiple text displays, we'll need to be more discriminating.
 	SdlGlue::mainTextDisplay->Clear();
 	return IntrinsicResult::Null;
+}
+
+static IntrinsicResult intrinsic_textDisplay_columns(Context *context, IntrinsicResult partialResult) {
+	//Value self = context->GetVar("self");
+	// Note: for now, we'll just always access the main text display.
+	// When we support multiple text displays, we'll need to be more discriminating.
+	return IntrinsicResult(SdlGlue::mainTextDisplay->cols);
+}
+
+static IntrinsicResult intrinsic_textDisplay_rows(Context *context, IntrinsicResult partialResult) {
+	//Value self = context->GetVar("self");
+	// Note: for now, we'll just always access the main text display.
+	// When we support multiple text displays, we'll need to be more discriminating.
+	return IntrinsicResult(SdlGlue::mainTextDisplay->rows);
+}
+
+static IntrinsicResult intrinsic_textDisplayClass(Context *context, IntrinsicResult partialResult) {
+	if (textDisplayClass.Count() == 0) {
+		i_textDisplay_clear = Intrinsic::Create("");
+		i_textDisplay_clear->code = &intrinsic_textDisplay_clear;
+		textDisplayClass.SetValue("clear", i_textDisplay_clear->GetFunc());
+		
+		i_textDisplay_columns = Intrinsic::Create("");
+		i_textDisplay_columns->code = &intrinsic_textDisplay_columns;
+		textDisplayClass.SetValue("columns", i_textDisplay_columns->GetFunc());
+		
+		i_textDisplay_rows = Intrinsic::Create("");
+		i_textDisplay_rows->code = &intrinsic_textDisplay_rows;
+		textDisplayClass.SetValue("rows", i_textDisplay_rows->GetFunc());
+		
+		textDisplayClass.SetValue("row", Value::zero);
+		textDisplayClass.SetValue("column", Value::zero);
+	}
+	return IntrinsicResult(textDisplayClass);
 }
 
 Value textDisplayInstance;
@@ -517,56 +617,15 @@ void AddSodaIntrinsics() {
 	f = Intrinsic::Create("sprites");	// ToDo: put this in a SpriteDisplay
 	f->code = &intrinsic_sprites;
 	
-	i_bounds_corners = Intrinsic::Create("");
-	i_bounds_corners->code = &intrinsic_boundsCorners;
-	
-	i_bounds_contains = Intrinsic::Create("");
-	i_bounds_contains->AddParam("x", Value::zero);
-	i_bounds_contains->AddParam("y", Value::zero);
-	i_bounds_contains->code = &intrinsic_boundsContains;
-	
-	i_bounds_overlaps = Intrinsic::Create("");
-	i_bounds_overlaps->AddParam("other");
-	i_bounds_overlaps->code = &intrinsic_boundsOverlaps;
-	
 	f = Intrinsic::Create("Bounds");
 	f->code = &intrinsic_boundsClass;
-	boundsClass.SetValue("x", Value::zero);
-	boundsClass.SetValue("y", Value::zero);
-	Value v100(100);
-	boundsClass.SetValue("width", v100);
-	boundsClass.SetValue("height", v100);
-	boundsClass.SetValue("rotation", Value::zero);
-	boundsClass.SetValue("corners", i_bounds_corners->GetFunc());
-	boundsClass.SetValue("contains", i_bounds_contains->GetFunc());
-	boundsClass.SetValue("overlaps", i_bounds_overlaps->GetFunc());
-
-	i_image_pixel = Intrinsic::Create("");
-	i_image_pixel->AddParam("x", Value::zero);
-	i_image_pixel->AddParam("y", Value::zero);
-	i_image_pixel->code = &intrinsic_image_pixel;
-
-	i_image_setPixel = Intrinsic::Create("");
-	i_image_setPixel->AddParam("x", Value::zero);
-	i_image_setPixel->AddParam("y", Value::zero);
-	i_image_setPixel->AddParam("color");
-	i_image_setPixel->code = &intrinsic_image_setPixel;
-
-	i_image_getImage = Intrinsic::Create("");
-	i_image_getImage->AddParam("left", Value::zero);
-	i_image_getImage->AddParam("bottom", Value::zero);
-	i_image_getImage->AddParam("width", Value(-1));
-	i_image_getImage->AddParam("height", Value(-1));
-	i_image_getImage->code = &intrinsic_image_getImage;
+	intrinsic_boundsClass(nullptr, IntrinsicResult::Null);
 
 	f = Intrinsic::Create("Image");
 	f->code = &intrinsic_imageClass;
-	imageClass.SetValue("width", Value::zero);
-	imageClass.SetValue("height", Value::zero);
-	imageClass.SetValue("getImage", i_image_getImage->GetFunc());
-	imageClass.SetValue("pixel", i_image_pixel->GetFunc());
-	imageClass.SetValue("setPixel", i_image_setPixel->GetFunc());
+	intrinsic_imageClass(nullptr, IntrinsicResult::Null);
 
+	// add additional file intrinsics to the MiniScript core file module
 	Intrinsic *fileIntrinsic = Intrinsic::GetByName("file");
 	if (fileIntrinsic == nullptr) {
 		printf("ERROR: fileModule not found.\nAddSodaIntrinsics must be called after AddShellIntrinsics.\n");
@@ -587,37 +646,16 @@ void AddSodaIntrinsics() {
 	
 	f = Intrinsic::Create("Sprite");
 	f->code = &intrinsic_spriteClass;
-
-	i_sound_play = Intrinsic::Create("");
-	i_sound_play->AddParam("volume", Value::one);
-	i_sound_play->AddParam("pan", Value::zero);
-	i_sound_play->AddParam("speed", Value::one);
-	i_sound_play->code = &intrinsic_sound_play;
-	soundClass.SetValue("play", i_sound_play->GetFunc());
-
-	i_sound_stop = Intrinsic::Create("");
-	i_sound_stop->code = &intrinsic_sound_stop;
-	soundClass.SetValue("stop", i_sound_stop->GetFunc());
-
-	i_sound_stopAll = Intrinsic::Create("");
-	i_sound_stopAll->code = &intrinsic_sound_stopAll;
-	soundClass.SetValue("stopAll", i_sound_stopAll->GetFunc());
+	intrinsic_spriteClass(nullptr, IntrinsicResult::Null);
 
 	f = Intrinsic::Create("Sound");
 	f->code = &intrinsic_soundClass;
-	soundClass.SetValue("_handle", Value::null);
-	soundClass.SetValue("loop", Value::zero);
-
-	i_textDisplay_clear = Intrinsic::Create("");
-	i_textDisplay_clear->code = &intrinsic_textDisplay_clear;
-	textDisplayClassMap.SetValue("clear", i_textDisplay_clear->GetFunc());
-	
-	textDisplayClassMap.SetValue("row", Value::zero);
-	textDisplayClassMap.SetValue("column", Value::zero);
+	intrinsic_soundClass(nullptr, IntrinsicResult::Null);
 
 	f = Intrinsic::Create("TextDisplay");
 	f->code = &intrinsic_textDisplayClass;
-	
+	intrinsic_textDisplayClass(nullptr, IntrinsicResult::Null);
+
 	f = Intrinsic::Create("text");
 	f->code = &intrinsic_textDisplayInstance;
 	
