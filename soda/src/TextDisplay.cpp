@@ -123,6 +123,13 @@ void TextDisplay::SetCharAtPosition(long unicodeChar, int row, int column) {
 //	SetStringAtPosition(s.c_str(), (int)s.LengthB(), row, column);
 //}
 
+void TextDisplay::ScrollUp() {
+	for (int row=rows-1; row>0; row--) {
+		for (int col=0; col<cols; col++) content[row][col] = content[row-1][col];
+	}
+	for (int col=0; col<cols; col++) content[0][col].Clear();
+}
+
 void TextDisplay::PutChar(long unicodeChar) {
 	if (unicodeChar == 9) {						// Tab
 		cursorX = ((cursorX+3)/4) * 4;
@@ -136,7 +143,7 @@ void TextDisplay::PutChar(long unicodeChar) {
 		cursorX = 0;
 		cursorY = cursorY - 1;
 		if (cursorY < 0) {
-			// ToDo: scroll all text up one row
+			ScrollUp();
 			cursorY = 0;
 		}
 	}

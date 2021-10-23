@@ -54,6 +54,7 @@ private:
 //	void SetStringAtPosition(const char* s, int stringBytes, int row, int column);
 //	void SetStringAtPosition(MiniScript::String s, int row, int column);
 	void RenderCharAtPosition(Uint8 character, int row, int column, int windowHeight);
+	void ScrollUp();
 	
 	int cursorX;
 	int cursorY;
