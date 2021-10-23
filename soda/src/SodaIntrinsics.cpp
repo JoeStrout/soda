@@ -493,6 +493,8 @@ static IntrinsicResult intrinsic_spriteClass(Context *context, IntrinsicResult p
 //--------------------------------------------------------------------------------
 ValueDict textDisplayClass;
 static Intrinsic *i_textDisplay_clear = nullptr;
+static Intrinsic *i_textDisplay_column = nullptr;
+static Intrinsic *i_textDisplay_row = nullptr;
 static Intrinsic *i_textDisplay_columns = nullptr;
 static Intrinsic *i_textDisplay_rows = nullptr;
 
@@ -502,6 +504,20 @@ static IntrinsicResult intrinsic_textDisplay_clear(Context *context, IntrinsicRe
 	// When we support multiple text displays, we'll need to be more discriminating.
 	SdlGlue::mainTextDisplay->Clear();
 	return IntrinsicResult::Null;
+}
+
+static IntrinsicResult intrinsic_textDisplay_column(Context *context, IntrinsicResult partialResult) {
+	//Value self = context->GetVar("self");
+	// Note: for now, we'll just always access the main text display.
+	// When we support multiple text displays, we'll need to be more discriminating.
+	return IntrinsicResult(SdlGlue::mainTextDisplay->GetColumn());
+}
+
+static IntrinsicResult intrinsic_textDisplay_row(Context *context, IntrinsicResult partialResult) {
+	//Value self = context->GetVar("self");
+	// Note: for now, we'll just always access the main text display.
+	// When we support multiple text displays, we'll need to be more discriminating.
+	return IntrinsicResult(SdlGlue::mainTextDisplay->GetRow());
 }
 
 static IntrinsicResult intrinsic_textDisplay_columns(Context *context, IntrinsicResult partialResult) {
@@ -518,11 +534,39 @@ static IntrinsicResult intrinsic_textDisplay_rows(Context *context, IntrinsicRes
 	return IntrinsicResult(SdlGlue::mainTextDisplay->rows);
 }
 
+static bool textDisplayAssignOverride(ValueDict& spriteMap, MiniScript::Value key, Value value) {
+	// If the value hasn't changed, do nothing.
+	Value curVal = spriteMap.Lookup(key, Value::null);
+	if (curVal == value) return not value.IsNull();	// (block the assignment, unless actually assigning null)
+	
+	String keyStr = key.ToString();
+	if (keyStr == "row") {
+		// Note: for now, we'll just always access the main text display.
+		// When we support multiple text displays, we'll need to be more discriminating.
+		SdlGlue::mainTextDisplay->SetRow((int)value.IntValue());
+		return true;	// (block the assignment)
+	} else if (keyStr == "column") {
+		// Note: for now, we'll just always access the main text display.
+		// When we support multiple text displays, we'll need to be more discriminating.
+		SdlGlue::mainTextDisplay->SetColumn((int)value.IntValue());
+		return true;	// (block the assignment)
+	}
+	return false;	// allow the assignment
+}
+
 static IntrinsicResult intrinsic_textDisplayClass(Context *context, IntrinsicResult partialResult) {
 	if (textDisplayClass.Count() == 0) {
 		i_textDisplay_clear = Intrinsic::Create("");
 		i_textDisplay_clear->code = &intrinsic_textDisplay_clear;
 		textDisplayClass.SetValue("clear", i_textDisplay_clear->GetFunc());
+		
+		i_textDisplay_column = Intrinsic::Create("");
+		i_textDisplay_column->code = &intrinsic_textDisplay_column;
+		textDisplayClass.SetValue("column", i_textDisplay_column->GetFunc());
+		
+		i_textDisplay_row = Intrinsic::Create("");
+		i_textDisplay_row->code = &intrinsic_textDisplay_row;
+		textDisplayClass.SetValue("row", i_textDisplay_row->GetFunc());
 		
 		i_textDisplay_columns = Intrinsic::Create("");
 		i_textDisplay_columns->code = &intrinsic_textDisplay_columns;
@@ -532,8 +576,7 @@ static IntrinsicResult intrinsic_textDisplayClass(Context *context, IntrinsicRes
 		i_textDisplay_rows->code = &intrinsic_textDisplay_rows;
 		textDisplayClass.SetValue("rows", i_textDisplay_rows->GetFunc());
 		
-		textDisplayClass.SetValue("row", Value::zero);
-		textDisplayClass.SetValue("column", Value::zero);
+
 	}
 	return IntrinsicResult(textDisplayClass);
 }
@@ -543,6 +586,7 @@ static IntrinsicResult intrinsic_textDisplayInstance(Context *context, Intrinsic
 	if (textDisplayInstance.type != ValueType::Map) {
 		ValueDict text;
 		text.SetValue(Value::magicIsA, textDisplayClass);
+		text.SetAssignOverride(textDisplayAssignOverride);
 		textDisplayInstance = text;
 	}
 	return IntrinsicResult(textDisplayInstance);

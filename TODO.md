@@ -14,12 +14,12 @@ Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_
 - ~~full support for Sprite.tint including alpha~~
 - ~~Sound.loop, Sound.stop, Sound.stopAll~~
 - ~~basic screen handling: fullscreen mode, window size, window.backColor~~
-- builds for Mac, Windows, Linux (PC), and Raspberry Pi
+- manual builds for Mac, Windows, Linux (PC), and Raspberry Pi
 
 # Medium Priority
 
 - Display class, display(n),  Display.install
-- Bounds class, with its connections to Sprite (in progress)
+- ~~Bounds class, with its connections to Sprite~~
 - ~~Image.pixel, Image.setPixel~~
 - SolidColor display
 - Text display (in progress)

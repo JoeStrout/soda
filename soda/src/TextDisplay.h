@@ -44,6 +44,11 @@ public:
 	
 	void NoteWindowSizeChange(int newWidth, int newHeight);
 	
+	int GetRow() const { return cursorY; }
+	void SetRow(int value) { cursorY = value < 0 ? 0 : (value >= rows ? rows-1 : value); }
+	int GetColumn() const { return cursorX; }
+	void SetColumn(int value) { cursorX = value < 0 ? 0 : (value >= cols ? cols-1 : value); }
+	
 	int rows;
 	int cols;
 	Color textColor;
