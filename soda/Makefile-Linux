@@ -1,0 +1,39 @@
+# Define the compiler commands (for C and C++)
+CC=gcc
+CPP=gcc
+
+# Compiler flags: 
+#	-c to compile (but not link)
+# 	-g (if desired) for debugging symbols
+#   -std=c++11 to ensure C++11 compatibility
+CFLAGS=-c -g
+CPPFLAGS=-std=c++11 $(CFLAGS)
+
+LFLAGS=
+# the -no-pie flag is needed on Ubuntu to keep it from building as a shared
+# library rather than an ordinary executable.  (https://askubuntu.com/questions/911538)
+#LFLAGS=-no-pie
+# ...though I'm not sure this is actually necessary.  Most other executables
+# are relocatable (shlibs), and they work just fine.
+
+LIBS=-lstdc++ -lm -lSDL2_image -lSDL2
+
+IDIRS=-I../src -I../src/editline -I../src/MiniScript -I../src/compiledData
+CFILES=../src/editline/complete.c ../src/editline/editline.c ../src/editline/sysunix.c ../src/compiledData/*.c
+CPPFILES=../src/*.cpp ../src/MiniScript/*.cpp
+HEADERFILES=../src/*.h ../src/MiniScript/*.h ../src/editline/*.h ../src/compiledData/*.h
+
+miniscript: $(CFILES) $(CPPFILES) $(HEADERFILES)
+	$(CC) $(CFLAGS) $(LFLAGS) $(CFILES) $(IDIRS)
+	$(CPP) $(CPPFLAGS) $(CPPFILES) $(IDIRS)
+	$(CPP) *.o $(LFLAGS) -o soda $(LIBS)
+	rm *.o
+
+.PHONY: clean
+
+install:
+	chmod ugo+x soda
+	mv soda /usr/local/bin
+
+clean:
+	rm -f soda /usr/local/bin/soda *.o

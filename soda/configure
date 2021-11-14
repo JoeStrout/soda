@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# NOTE: this is NOT using Autotool.  We're keeping it simple.
+# All this does is copy the appropriate makefile for your platform
+# into the Build directory, and tell you to go there to make.
+
+echo "Configuring build system for Linux"
+echo
+cp Makefile-Linux Build/Makefile
+
+echo "Configuration complete.  To build and install:"
+echo
+echo "0. Ensure you have SDL2 and SDL2_image packages installed"
+echo "1. cd Build"
+echo "2. make"
+echo "3. sudo make install"

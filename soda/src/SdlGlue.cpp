@@ -10,7 +10,7 @@
 #include "SdlGlue.h"
 #include "SdlAudio.h"
 #include "TextDisplay.h"
-#include <SDL2_image/SDL_image.h>
+#include <SDL2/SDL_image.h>		// must be <SDL2_image/SDL_image.h> on some platforms
 #include <SDL2/SDL_gamecontroller.h>
 #include <stdlib.h>
 #include "SodaIntrinsics.h"

@@ -11,7 +11,7 @@
 #include "SdlGlue.h"
 #include "TextDisplay.h"
 #include "SdlAudio.h"
-#include "MiniScript/String.h"
+#include "MiniScript/SimpleString.h"
 #include "MiniScript/UnicodeUtil.h"
 #include "MiniScript/UnitTest.h"
 #include "MiniScript/SimpleVector.h"

@@ -4,13 +4,13 @@
 //	using one of the built-in monospaced fonts.
 
 #include "TextDisplay.h"
-#include "ScreenFont_png.h"
+#include "compiledData/ScreenFont_png.h"
 #include "SimpleVector.h"
 #include "SdlGlue.h"
 #include "UnicodeUtil.h"
 #include "Color.h"
 #include <SDL2/SDL.h>
-#include <SDL2_image/SDL_image.h>
+#include <SDL2/SDL_image.h>  // must be <SDL2_image/SDL_image.h> on some platforms
 
 using namespace MiniScript;
 using namespace SdlGlue;
