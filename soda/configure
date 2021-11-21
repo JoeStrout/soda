@@ -4,9 +4,33 @@
 # All this does is copy the appropriate makefile for your platform
 # into the Build directory, and tell you to go there to make.
 
-echo "Configuring build system for Linux"
-echo
-cp Makefile-Linux Build/Makefile
+mkdir -p Build
+
+case "$(uname -s)" in
+
+	Darwin)
+		echo "Configuring build system for MacOS"
+		echo
+		cp Makefile-Mac Build/Makefile
+		;;
+		
+	Linux)
+		echo "Configuring build system for Linux"
+		echo
+		cp Makefile-Linux Build/Makefile
+		;;
+	
+	CYGWIN*|MINGW32*|MSYS*|MINGW*)
+		echo "Configuring build system for Windows"
+		echo
+		cp Makefile-Win Build/Makefile	
+		;;
+		
+	*)
+		echo "Unrecognized OS.  I'm afraid you're on your own."
+		exit 1
+		;;
+esac
 
 echo "Configuration complete.  To build and install:"
 echo

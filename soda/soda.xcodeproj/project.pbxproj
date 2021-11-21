@@ -27,7 +27,6 @@
 		83D55DEC26B38F2F00C76F4E /* MiniscriptIntrinsics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83D55DC626B38F2F00C76F4E /* MiniscriptIntrinsics.cpp */; };
 		83D55DED26B38F2F00C76F4E /* QA.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83D55DCB26B38F2F00C76F4E /* QA.cpp */; };
 		83D55DEE26B38F2F00C76F4E /* MiniscriptParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83D55DCC26B38F2F00C76F4E /* MiniscriptParser.cpp */; };
-		83D55DEF26B38F2F00C76F4E /* String.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83D55DCD26B38F2F00C76F4E /* String.cpp */; };
 		83D55DF026B38F2F00C76F4E /* UnicodeUtil.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83D55DCF26B38F2F00C76F4E /* UnicodeUtil.cpp */; };
 		83D55DF126B38F2F00C76F4E /* MiniscriptTAC.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83D55DD126B38F2F00C76F4E /* MiniscriptTAC.cpp */; };
 		83D55DF226B38F2F00C76F4E /* MiniscriptTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83D55DD226B38F2F00C76F4E /* MiniscriptTypes.cpp */; };
@@ -41,6 +40,7 @@
 		83D55DFA26B38F2F00C76F4E /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83D55DE326B38F2F00C76F4E /* main.cpp */; };
 		83D55DFF26B3907B00C76F4E /* SodaIntrinsics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83D55DFD26B3907B00C76F4E /* SodaIntrinsics.cpp */; };
 		83D55E0226B391BC00C76F4E /* SdlGlue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83D55E0026B391BC00C76F4E /* SdlGlue.cpp */; };
+		83E2A858274A8A49009E7FCE /* SimpleString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83E2A857274A8A49009E7FCE /* SimpleString.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -109,7 +109,6 @@
 		83D55DCA26B38F2F00C76F4E /* UnitTest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UnitTest.h; sourceTree = "<group>"; };
 		83D55DCB26B38F2F00C76F4E /* QA.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = QA.cpp; sourceTree = "<group>"; };
 		83D55DCC26B38F2F00C76F4E /* MiniscriptParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MiniscriptParser.cpp; sourceTree = "<group>"; };
-		83D55DCD26B38F2F00C76F4E /* String.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = String.cpp; sourceTree = "<group>"; };
 		83D55DCE26B38F2F00C76F4E /* MiniscriptIntrinsics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MiniscriptIntrinsics.h; sourceTree = "<group>"; };
 		83D55DCF26B38F2F00C76F4E /* UnicodeUtil.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UnicodeUtil.cpp; sourceTree = "<group>"; };
 		83D55DD026B38F2F00C76F4E /* MiniscriptParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MiniscriptParser.h; sourceTree = "<group>"; };
@@ -128,7 +127,6 @@
 		83D55DDD26B38F2F00C76F4E /* UnicodeUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UnicodeUtil.h; sourceTree = "<group>"; };
 		83D55DDE26B38F2F00C76F4E /* MiniscriptLexer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MiniscriptLexer.cpp; sourceTree = "<group>"; };
 		83D55DDF26B38F2F00C76F4E /* SimpleVector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SimpleVector.h; sourceTree = "<group>"; };
-		83D55DE026B38F2F00C76F4E /* String.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = String.h; sourceTree = "<group>"; };
 		83D55DE226B38F2F00C76F4E /* OstreamSupport.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OstreamSupport.cpp; sourceTree = "<group>"; };
 		83D55DE326B38F2F00C76F4E /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		83D55DE426B38F2F00C76F4E /* OstreamSupport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OstreamSupport.h; sourceTree = "<group>"; };
@@ -137,6 +135,8 @@
 		83D55DFE26B3907B00C76F4E /* SodaIntrinsics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SodaIntrinsics.h; sourceTree = "<group>"; };
 		83D55E0026B391BC00C76F4E /* SdlGlue.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SdlGlue.cpp; sourceTree = "<group>"; };
 		83D55E0126B391BC00C76F4E /* SdlGlue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SdlGlue.h; sourceTree = "<group>"; };
+		83E2A856274A8A49009E7FCE /* SimpleString.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SimpleString.h; sourceTree = "<group>"; };
+		83E2A857274A8A49009E7FCE /* SimpleString.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SimpleString.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -249,9 +249,9 @@
 				83D55DD126B38F2F00C76F4E /* MiniscriptTAC.cpp */,
 				83D55DD226B38F2F00C76F4E /* MiniscriptTypes.cpp */,
 				83D55DCB26B38F2F00C76F4E /* QA.cpp */,
+				83E2A857274A8A49009E7FCE /* SimpleString.cpp */,
 				83D55DD826B38F2F00C76F4E /* SimpleVector.cpp */,
 				83D55DC126B38F2F00C76F4E /* SplitJoin.cpp */,
-				83D55DCD26B38F2F00C76F4E /* String.cpp */,
 				83D55DCF26B38F2F00C76F4E /* UnicodeUtil.cpp */,
 				83D55DDA26B38F2F00C76F4E /* UnitTest.cpp */,
 				83D55DD426B38F2F00C76F4E /* Dictionary.h */,
@@ -268,7 +268,7 @@
 				83D55DC726B38F2F00C76F4E /* RefCountedStorage.h */,
 				83D55DDF26B38F2F00C76F4E /* SimpleVector.h */,
 				83D55DD626B38F2F00C76F4E /* SplitJoin.h */,
-				83D55DE026B38F2F00C76F4E /* String.h */,
+				83E2A856274A8A49009E7FCE /* SimpleString.h */,
 				83D55DDD26B38F2F00C76F4E /* UnicodeUtil.h */,
 				83D55DCA26B38F2F00C76F4E /* UnitTest.h */,
 			);
@@ -344,6 +344,7 @@
 				83A424FF26D4530100881BD3 /* Vector2.cpp in Sources */,
 				832C0D8D270BC52100E66E85 /* Sprite.cpp in Sources */,
 				837C4C0826C315FF00D741B6 /* TextDisplay.cpp in Sources */,
+				83E2A858274A8A49009E7FCE /* SimpleString.cpp in Sources */,
 				83D55E0226B391BC00C76F4E /* SdlGlue.cpp in Sources */,
 				8328CE2826B72E5300E32E12 /* SdlAudio.cpp in Sources */,
 				83D55DEC26B38F2F00C76F4E /* MiniscriptIntrinsics.cpp in Sources */,
@@ -366,7 +367,6 @@
 				83D55DE526B38F2F00C76F4E /* ShellIntrinsics.cpp in Sources */,
 				83D55DEE26B38F2F00C76F4E /* MiniscriptParser.cpp in Sources */,
 				83D55DF226B38F2F00C76F4E /* MiniscriptTypes.cpp in Sources */,
-				83D55DEF26B38F2F00C76F4E /* String.cpp in Sources */,
 				83D55DF726B38F2F00C76F4E /* Dictionary.cpp in Sources */,
 				83D55DF426B38F2F00C76F4E /* SimpleVector.cpp in Sources */,
 				83D55DED26B38F2F00C76F4E /* QA.cpp in Sources */,

@@ -6,19 +6,20 @@ CPP=gcc
 #	-c to compile (but not link)
 # 	-g (if desired) for debugging symbols
 #   -std=c++11 to ensure C++11 compatibility
-CFLAGS=-c -g
+CFLAGS=-c -g -Wno-switch
 CPPFLAGS=-std=c++11 $(CFLAGS)
 
+# Linker flags
 LFLAGS=
-# the -no-pie flag is needed on Ubuntu to keep it from building as a shared
-# library rather than an ordinary executable.  (https://askubuntu.com/questions/911538)
-#LFLAGS=-no-pie
-# ...though I'm not sure this is actually necessary.  Most other executables
-# are relocatable (shlibs), and they work just fine.
 
+# Libraries
 LIBS=-lstdc++ -lm -lSDL2_image -lSDL2
 
-IDIRS=-I../src -I../src/editline -I../src/MiniScript -I../src/compiledData
+# Include paths: note that we expect to find the SDL2 directory (containing
+# all SDL2 headers), or a symlink to it, at /usr/include/SDL2.  If you
+# keep yours somewhere else, edit the following line.
+IDIRS=-I../src -I../src/editline -I../src/MiniScript -I../src/compiledData -I/usr/include/SDL2
+
 CFILES=../src/editline/complete.c ../src/editline/editline.c ../src/editline/sysunix.c ../src/compiledData/*.c
 CPPFILES=../src/*.cpp ../src/MiniScript/*.cpp
 HEADERFILES=../src/*.h ../src/MiniScript/*.h ../src/editline/*.h ../src/compiledData/*.h

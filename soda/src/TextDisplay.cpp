@@ -10,7 +10,7 @@
 #include "UnicodeUtil.h"
 #include "Color.h"
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>  // must be <SDL2_image/SDL_image.h> on some platforms
+#include <SDL2_image/SDL_image.h>  // must be <SDL2_image/SDL_image.h> on some platforms
 
 using namespace MiniScript;
 using namespace SdlGlue;
@@ -72,6 +72,8 @@ void TextDisplay::NoteWindowSizeChange(int newWidth, int newHeight) {
 		if (row >= prevRows) prevCols = 0;
 		for (int col=prevCols; col<cols; col++) content[row][col].Clear();
 	}
+	if (cursorY >= rows) cursorY = rows-1;
+	if (cursorX >= cols) cursorX = cols-1;
 }
 
 void TextDisplay::Render() {
@@ -98,6 +100,7 @@ void TextDisplay::Clear() {
 }
 
 void TextDisplay::SetCharAtPosition(long unicodeChar, int row, int column) {
+	if (row >= rows || column >= cols) return;	// out of bounds
 	Uint8 character = (Uint8)unicodeChar;
 
 	if (character == 32) character = 0;		// don't draw spaces
@@ -150,6 +153,9 @@ void TextDisplay::PutChar(long unicodeChar) {
 }
 
 void TextDisplay::Print(String s) {
+	if (cursorY >= rows) cursorY = rows-1;
+	if (cursorX >= cols) cursorX = cols-1;
+
 	unsigned char *c = (unsigned char*)(s.c_str());
 	const unsigned char *end = c + s.LengthB();
 	while (c < end) {
