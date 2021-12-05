@@ -1,0 +1,43 @@
+# Define the compiler commands (for C and C++)
+CC=gcc
+CPP=gcc
+
+# Compiler flags: 
+#	-c to compile (but not link)
+# 	-g (if desired) for debugging symbols
+#   -std=c++11 to ensure C++11 compatibility
+CFLAGS=-c -g -Wno-switch
+CPPFLAGS=-std=c++11 $(CFLAGS)
+
+# Linker flags
+LFLAGS=-L/Library/Frameworks
+
+# Libraries
+LIBS=-lstdc++ -lm -lSDL2_image -lSDL2
+
+# Include paths: note that we expect to find the SDL2 headers to be found
+# in a directory (or symlink to a directory) called SDL2, somewhere in
+# the standard search path -- usually /usr/local/include.  So you may need
+# to do:
+#   ln -s /Library/Frameworks/SDL2.framework/Headers /usr/local/include/SDL2 
+# before building (unless you already have headers there from homebrew etc.)
+IDIRS=-I../src -I../src/editline -I../src/MiniScript -I../src/compiledData -I/Library/Frameworks/SDL2_image.framework/Headers/
+
+CFILES=../src/editline/complete.c ../src/editline/editline.c ../src/editline/sysunix.c ../src/compiledData/*.c
+CPPFILES=../src/*.cpp ../src/MiniScript/*.cpp
+HEADERFILES=../src/*.h ../src/MiniScript/*.h ../src/editline/*.h ../src/compiledData/*.h
+
+miniscript: $(CFILES) $(CPPFILES) $(HEADERFILES)
+	$(CC) $(CFLAGS) $(LFLAGS) $(CFILES) $(IDIRS)
+	$(CPP) $(CPPFLAGS) $(CPPFILES) $(IDIRS)
+	$(CPP) *.o $(LFLAGS) -o soda $(LIBS)
+	rm *.o
+
+.PHONY: clean
+
+install:
+	chmod ugo+x soda
+	mv soda /usr/local/bin
+
+clean:
+	rm -f soda /usr/local/bin/soda *.o
