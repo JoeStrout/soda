@@ -1,9 +1,11 @@
 // Bouncy-balls sprite demo.
+// Run this from the "soda" directory (containing "sounds" and
+// "images" subfolders), in order for it to find its resources.
 
-bounceSnd = file.loadSound("sounds/bongo.wav")
+bounceSnd = file.loadSound(file.child("sounds","bongo.wav"))
 
 Ball = new Sprite
-Ball.image = file.loadImage("images/soda-128.png")
+Ball.image = file.loadImage(file.child("images","soda-128.png"))
 Ball.scale = 0.5
 Ball.vx = 0
 Ball.vy = 0
