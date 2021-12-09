@@ -285,7 +285,7 @@ bool GetFullScreen() {
 
 void SetFullScreen(bool fullScreen) {
 	if (fullScreen) {
-		SDL_SetWindowFullscreen(mainWindow, SDL_WINDOW_FULLSCREEN);
+		SDL_SetWindowFullscreen(mainWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);
 	} else {
 		SDL_SetWindowFullscreen(mainWindow, 0);
 		SDL_SetWindowSize(mainWindow, windowWidth, windowHeight);
