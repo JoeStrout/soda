@@ -10,7 +10,7 @@
 #include "UnicodeUtil.h"
 #include "Color.h"
 #include <SDL2/SDL.h>
-#include <SDL2_image/SDL_image.h>  // must be <SDL2_image/SDL_image.h> on some platforms
+#include <SDL2/SDL_image.h>  // must be <SDL2_image/SDL_image.h> on some platforms
 
 using namespace MiniScript;
 using namespace SdlGlue;
