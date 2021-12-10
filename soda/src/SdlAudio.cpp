@@ -101,8 +101,8 @@ void SetupAudio() {
 	if (deviceId == 0) {
 		printf("Unable to open audio output; error = %s\n", SDL_GetError());
 	} else {
-		printf("Opened audio output with device ID %d\n", deviceId);
-		printf("freq: %d  channels: %d  samples: %d\n", audioSpec.freq, audioSpec.channels, audioSpec.samples);
+		//printf("Opened audio output with device ID %d\n", deviceId);
+		//printf("freq: %d  channels: %d  samples: %d\n", audioSpec.freq, audioSpec.channels, audioSpec.samples);
 		
 		SDL_PauseAudioDevice(deviceId, 0);
 	}
@@ -214,8 +214,8 @@ AudioClip* AudioClip::Load(const char *path) {
 		delete result;
 		return NULL;
 	}
-	printf("Loaded WAV with freq: %d  channels: %d  samples: %d  format: %d  bytes: %d\n",
-		   result->spec.freq, result->spec.channels, result->spec.samples, result->spec.format, result->dataLen);
+	//printf("Loaded WAV with freq: %d  channels: %d  samples: %d  format: %d  bytes: %d\n",
+	//	   result->spec.freq, result->spec.channels, result->spec.samples, result->spec.format, result->dataLen);
 	// Now let's convert that to our mix format.
 	// For frequency, we'll use whichever is less of the original and our mix frequency.
 	double freq = (result->spec.freq < audioSpec.freq ? result->spec.freq : audioSpec.freq);
@@ -227,7 +227,7 @@ AudioClip* AudioClip::Load(const char *path) {
 		cvt.buf = (Uint8*)SDL_malloc(cvt.len * cvt.len_mult);
 		SDL_memcpy(cvt.buf, result->data, result->dataLen);
 		SDL_ConvertAudio(&cvt);
-		printf("After conversion, we have %d bytes in format %d with %d channels, freq %lf\n", cvt.len_cvt, cvt.dst_format, audioSpec.channels, freq);
+		//printf("After conversion, we have %d bytes in format %d with %d channels, freq %lf\n", cvt.len_cvt, cvt.dst_format, audioSpec.channels, freq);
 		SDL_FreeWAV(result->data);
 		result->data = cvt.buf;
 		result->dataLen = cvt.len_cvt;
@@ -238,7 +238,7 @@ AudioClip* AudioClip::Load(const char *path) {
 	int bytesPerFrame = sizeof(float) * result->spec.channels;
 	result->frameCount = result->dataLen / bytesPerFrame;
 	result->length = (double)result->frameCount / result->spec.freq;
-	printf("Sound length: %lf seconds, or %d frames\n", result->length, result->frameCount);
+	//printf("Sound length: %lf seconds, or %d frames\n", result->length, result->frameCount);
 	return result;
 }
 

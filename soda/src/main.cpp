@@ -218,6 +218,10 @@ static int DoScriptFile(String path) {
 	// Read the file
 	List<String> source;
 	std::ifstream infile(path.c_str());
+	if (!infile.is_open()) {
+		std::cerr << "Error opening file: " << path.c_str() << std::endl;
+		return -1;
+	}
 	char buf[1024];
 	while (infile.getline(buf, sizeof(buf))) {
 		source.Add(buf);

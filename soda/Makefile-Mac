@@ -11,7 +11,7 @@ CPPFLAGS=-std=c++11 $(CFLAGS)
 
 # Linker flags
 # (None needed if you've installed sdl2 and sdl2_image
-# using homebrew, which was the only way I could make this work.)
+# using homebrew, which was the only way I could make this work.) 
 LFLAGS=
 
 # Libraries
