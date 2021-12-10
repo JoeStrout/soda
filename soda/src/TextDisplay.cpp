@@ -54,8 +54,8 @@ void SetupTextDisplay(SDL_Renderer *renderer) {
 }
 
 void ShutdownTextDisplay() {
-	SDL_DestroyTexture(screenFontTexture);	screenFontTexture = nullptr;
-	delete mainTextDisplay;
+	SDL_DestroyTexture(screenFontTexture); screenFontTexture = nullptr;
+	delete mainTextDisplay;	mainTextDisplay = nullptr;
 }
 
 void RenderTextDisplay() {

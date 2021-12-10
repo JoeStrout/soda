@@ -118,7 +118,9 @@ static int ReplThread(void *interpreter) {
 		#endif
 		
 		if (exitASAP) {
-			SdlGlue::Shutdown();
+			// Note: do NOT call SdlGlue::Shutdown here;
+			// this thread is only responsible for handling terminal input.
+			// The SDL shutdown will be done on the main thread, in DoREPL.
 			return exitResult;
 		}
 	}
