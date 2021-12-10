@@ -11,7 +11,7 @@
 #define SDLGLUE_H
 
 #include <stdio.h>
-#include <SDL2/SDL.h>
+#include "SdlUtils.h"
 #include "MiniScript/SimpleString.h"
 #include "MiniScript/MiniscriptTypes.h"
 

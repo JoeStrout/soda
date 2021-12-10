@@ -10,8 +10,6 @@
 #include "SdlGlue.h"
 #include "SdlAudio.h"
 #include "TextDisplay.h"
-#include <SDL2/SDL_image.h>		// must be <SDL2_image/SDL_image.h> on some platforms
-#include <SDL2/SDL_gamecontroller.h>
 #include <stdlib.h>
 #include "SodaIntrinsics.h"
 #include "Color.h"
@@ -38,8 +36,6 @@ static Dictionary<Sint32, bool, hashInt> keyDownMap;	// makes SDL key codes to w
 static SimpleVector<SDL_GameController*> gameControllers;
 
 // forward declarations of private methods:
-static bool CheckFail(int resultCode, const char *callName);
-static bool CheckNotNull(void *ptr, const char *context);
 static int RoundToInt(double d);
 static void DrawSprites();
 static void SetupKeyNameMap();
@@ -66,7 +62,9 @@ public:
 
 // Initialize SDL and get everything ready to go.
 void Setup() {
-	if (CheckFail(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO), "SDL_Init")) return;
+	int init = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO);
+	SdlAssertOK(init);
+	if (init < 0) return;
 	
 	if (!SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1")) {
 		printf( "Warning: Linear texture filtering not enabled!" );
@@ -79,11 +77,11 @@ void Setup() {
 	}
 
 	mainWindow = SDL_CreateWindow( "Soda", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN );
-	if (CheckNotNull(mainWindow, "mainWindow")) return;
+	SdlAssertNotNull(mainWindow);
 
 	// Create renderer (hardware-accelerated and vsync'd) for the window
 	mainRenderer = SDL_CreateRenderer(mainWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	if (CheckNotNull(mainRenderer, "mainRenderer")) return;
+	SdlAssertNotNull(mainRenderer);
 	
 	SetupKeyNameMap();
 	for (int i=0; i<SDL_NumJoysticks(); i++) {
@@ -578,18 +576,6 @@ void DrawSprites() {
 
 void HandleWindowSizeChange(int newWidth, int newHeight) {
 	mainTextDisplay->NoteWindowSizeChange(newWidth, newHeight);
-}
-
-bool CheckFail(int resultCode, const char *context) {
-	if (resultCode >= 0) return false;
-	printf("Failed: %s (result code %d)\n", context, resultCode);
-	return true;
-}
-
-bool CheckNotNull(void *ptr, const char *context) {
-	if (ptr != NULL) return false;
-	printf("Unexpected NULL: %s\n", context);
-	return true;
 }
 
 }	// end of namespace SdlGlue

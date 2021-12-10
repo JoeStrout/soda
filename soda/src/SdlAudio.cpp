@@ -6,9 +6,9 @@
 //  Created by Joe Strout on 8/1/21.
 //
 
+#include "SdlUtils.h"
 #include "SdlGlue.h"
 #include "SdlAudio.h"
-#include <SDL2/SDL.h>
 #include <stdlib.h>
 #include "SodaIntrinsics.h"
 

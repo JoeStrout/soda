@@ -10,7 +10,9 @@ CFLAGS=-c -g -Wno-switch
 CPPFLAGS=-std=c++11 $(CFLAGS)
 
 # Linker flags
-LFLAGS=-L/Library/Frameworks
+# (None needed if you've installed sdl2 and sdl2_image
+# using homebrew, which was the only way I could make this work.)
+LFLAGS=
 
 # Libraries
 LIBS=-lstdc++ -lm -lSDL2_image -lSDL2

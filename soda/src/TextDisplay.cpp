@@ -6,11 +6,10 @@
 #include "TextDisplay.h"
 #include "compiledData/ScreenFont_png.h"
 #include "SimpleVector.h"
+#include "SdlUtils.h"
 #include "SdlGlue.h"
 #include "UnicodeUtil.h"
 #include "Color.h"
-#include <SDL2/SDL.h>
-#include <SDL2_image/SDL_image.h>  // must be <SDL2_image/SDL_image.h> on some platforms
 
 using namespace MiniScript;
 using namespace SdlGlue;
@@ -44,8 +43,11 @@ void SetupTextDisplay(SDL_Renderer *renderer) {
 	mainRenderer = renderer;
 	
 	SDL_RWops *stream = SDL_RWFromConstMem(ScreenFont_png, ScreenFont_png_len);
+	SdlAssertNotNull(stream);
 	SDL_Surface *surf = IMG_Load_RW(stream, 1);
+	SdlAssertNotNull(surf);
 	screenFontTexture = SDL_CreateTextureFromSurface(mainRenderer, surf);
+	SdlAssertNotNull(screenFontTexture);
 	SDL_SetTextureBlendMode(screenFontTexture, SDL_BLENDMODE_BLEND);
 
 	mainTextDisplay = new TextDisplay();
