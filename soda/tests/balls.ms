@@ -2,10 +2,18 @@
 // Run this from the "soda" directory (containing "sounds" and
 // "images" subfolders), in order for it to find its resources.
 
-bounceSnd = file.loadSound(file.child("sounds","bongo.wav"))
+fileInFolder = function(folderName, fileName)
+	if not file.exists(folderName) then
+		print "Folder """ + folderName + """ not found."
+		exit
+	end if
+	return file.child(folderName, fileName)
+end function
+
+bounceSnd = file.loadSound(fileInFolder("sounds","bongo.wav"))
 
 Ball = new Sprite
-Ball.image = file.loadImage(file.child("images","soda-128.png"))
+Ball.image = file.loadImage(fileInFolder("images","soda-128.png"))
 Ball.scale = 0.5
 Ball.vx = 0
 Ball.vy = 0

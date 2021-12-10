@@ -2,6 +2,14 @@
 
 print "Starting test."
 
+fileInFolder = function(folderName, fileName)
+	if not file.exists(folderName) then
+		print "Folder """ + folderName + """ not found."
+		exit
+	end if
+	return file.child(folderName, fileName)
+end function
+
 window.backColor = "#aaaaaa"
 window.width = 640
 window.height = 480
@@ -17,7 +25,7 @@ makeCardSprite = function(cardImg)
   return cardSprite
 end function
 
-cardImg = file.loadImage("images/soda-128.png")
+cardImg = file.loadImage(fileInFolder("images", "soda-128.png"))
 
 cardA = makeCardSprite(cardImg)
 sprites.push cardA

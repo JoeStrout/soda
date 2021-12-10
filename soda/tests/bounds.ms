@@ -1,5 +1,13 @@
 // Various tests of the Bounds class.
 
+fileInFolder = function(folderName, fileName)
+	if not file.exists(folderName) then
+		print "Folder """ + folderName + """ not found."
+		exit
+	end if
+	return file.child(folderName, fileName)
+end function
+
 checkCount = 0
 failCount = 0
 
@@ -36,7 +44,7 @@ print "Failures: " + failCount
 print
 
 sp1 = new Sprite
-sp1.image = file.loadImage("images/SquareThin.png")
+sp1.image = file.loadImage(fileInFolder("images", "SquareThin.png"))
 sprites.push sp1
 sp1.bounds = new Bounds
 sp1.bounds.width = sp1.image.width

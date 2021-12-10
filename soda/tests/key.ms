@@ -1,7 +1,15 @@
-// Soda test!
+// key.pressed test
+
+fileInFolder = function(folderName, fileName)
+	if not file.exists(folderName) then
+		print "Folder """ + folderName + """ not found."
+		exit
+	end if
+	return file.child(folderName, fileName)
+end function
 
 sp = new Sprite
-sp.image = file.loadImage("images/soda-128.png")
+sp.image = file.loadImage(fileInFolder("images", "soda-128.png"))
 sprites.push sp
 speed = 10
 while true

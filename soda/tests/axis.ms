@@ -1,7 +1,15 @@
 // Test app for key.axis
 
+fileInFolder = function(folderName, fileName)
+	if not file.exists(folderName) then
+		print "Folder """ + folderName + """ not found."
+		exit
+	end if
+	return file.child(folderName, fileName)
+end function
+
 Ball = new Sprite
-Ball.image = file.loadImage("images/soda-128.png")
+Ball.image = file.loadImage(fileInFolder("images", "soda-128.png"))
 sprites.push Ball
 
 while true

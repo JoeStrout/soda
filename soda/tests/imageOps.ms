@@ -2,7 +2,15 @@
 
 print "Hello imageOps!"
 
-img = file.loadImage("images/soda-512.png")
+fileInFolder = function(folderName, fileName)
+	if not file.exists(folderName) then
+		print "Folder """ + folderName + """ not found."
+		exit
+	end if
+	return file.child(folderName, fileName)
+end function
+
+img = file.loadImage(fileInFolder("images", "soda-512.png"))
 
 print "Pixel at 100,100: " + img.pixel(100,100)
 img.setPixel 100,100, "#FFFF00"
