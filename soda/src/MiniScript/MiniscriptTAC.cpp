@@ -8,6 +8,7 @@
 
 #include "MiniscriptTAC.h"
 #include <math.h>		// for pow() and fmod()
+#include <cmath>		// for std::signbit()
 #if _WIN32 || _WIN64
 	#include <windows.h>	// for GetTickCount
 #else
@@ -18,7 +19,7 @@
 namespace MiniScript {
 
 	static inline double AbsClamp01(double d) {
-		if (d < 0 || d == -0) d = -d;
+		if (std::signbit(d)) d = -d;
 		if (d > 1) return 1;
 		return d;
 	}
@@ -635,6 +636,20 @@ namespace MiniScript {
 		stack[0]->JumpToEnd();
 	}
 	
+	/// <summary>
+	/// Directly invoke a ValFunction by manually pushing it onto the call stack.
+	/// This might be useful, for example, in invoking handlers that have somehow
+	/// been registered with the host app via intrinsics.
+	/// </summary>
+	/// <param name="func">Miniscript function to invoke</param>
+	/// <param name="resultStorage">where to store result of the call, in the calling context</param>
+	void Machine::ManuallyPushCall(FunctionStorage* func, Value resultStorage) {
+		int argCount = 0;
+		Context* nextContext = stack.Last()->NextCallContext(func, argCount, false, Value::null);
+		nextContext->resultStorage = resultStorage;
+		stack.Add(nextContext);
+	}
+
 	void Machine::DoOneLine(TACLine& line, Context *context) {
 		if (line.op == TACLine::Op::PushParam) {
 			Value val = line.rhsA.IsNull() ? line.rhsA : line.rhsA.Val(context);
