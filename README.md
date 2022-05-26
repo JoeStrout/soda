@@ -11,6 +11,7 @@ Soda is in the "early prototype" stage.  It works, but building it requires a fa
 
 * loading sprite images or sheets from disk
 * sprite scaling, rotation, tint
+* text display
 * keyboard and game controller input
 * window size, background color, and fullscreen switch
 * sounds/music, including volume, pitch, stereo pan, and looping
@@ -18,7 +19,6 @@ Soda is in the "early prototype" stage.  It works, but building it requires a fa
 You can build just about any 80s-style game with this feature set!  However it's worth pointing out the major features still on the [To-Do list](TODO.md):
 
 * tile display
-* text display (for now, you'll have to use sprites to display any text)
 * pixel-level drawing
 * networking
 
