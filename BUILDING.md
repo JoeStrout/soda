@@ -4,13 +4,15 @@ Soda is a command-line program written in C++ and using SDL.  On most systems th
 
 ## Prerequisites
 
-1. Make sure you have a C++ toolchain installed.  Currently, the makefile assumes this is accessed via a `gcc` command.  Unix-like systems can use `gcc -v` to verify that such a compiler is installed, and check the version number.
+1. Make sure you have a C++ toolchain installed.  Currently, the Linux/Mac makefile assumes this is accessed via a `gcc` command.  You can use `gcc -v` to verify that such a compiler is installed, and check the version number.  On Windows, install the [Visual Studio Command-Line Tools](https://docs.microsoft.com/en-us/cpp/build/walkthrough-compiling-a-native-cpp-program-on-the-command-line?view=vs-2019).
 
-2. Install the SDL2 libraries.  See https://wiki.libsdl.org/Installation for details.
+2. Install the **SDL2** and **SDL2_image** development libraries.  For details, see:
+- https://wiki.libsdl.org/Installation
+- https://www.libsdl.org/projects/SDL_image/
 
 ## Build Steps (Mac/Linux)
 
-1. `cd soda` to change to the _soda_ subdirectory
+1. `cd soda` to change to the _soda_ subdirectory (next to this document).
 2. `./configure` to run the _configure_ script.  This will detect what platform you are on, and copy the appropriate makefile to the Build directory.
 3. `cd Build` to change to the _soda/Build_ subdirectory.
 4. `make` to build the soda executable.  If all goes well, you will now have a _soda_ executable in the Build directory.
@@ -19,4 +21,8 @@ Soda is a command-line program written in C++ and using SDL.  On most systems th
 
 ## Build Steps (Windows)
 
-- ToDo.
+1. `cd soda` to change to the _soda_ subdirectory (next to this document).
+2. `cd src` to move to the _soda\src_ directory.
+3. `cl /EHsc /wd4068 *.cpp MiniScript/*.cpp /Fesoda.exe`
+
+That should do it _if_ the SDL paths are all sorted out.  Which they probably aren't.  This is a work in progress.
