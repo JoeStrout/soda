@@ -665,6 +665,11 @@ static IntrinsicResult intrinsic_import(Context *context, IntrinsicResult partia
 	// Figure out what directories to look for the import modules in.
 	SimpleVector<String> libDirs;
 	libDirs.push_back(".");		// for now!
+#if WINDOWS
+	libDirs.push_back(".\\lib");
+#else
+	libDirs.push_back("./lib");
+#endif
 	// ToDo: other import dirs, maybe from env, or from something the user can set.
 	
 	// Search the lib dirs for a matching file.
