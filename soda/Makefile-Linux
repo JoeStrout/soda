@@ -6,7 +6,7 @@ CPP=gcc
 #	-c to compile (but not link)
 # 	-g (if desired) for debugging symbols
 #   -std=c++11 to ensure C++11 compatibility
-CFLAGS=-c -g -Wno-switch
+CFLAGS=-c -g -Wno-switch -fsigned-char
 CPPFLAGS=-std=c++11 $(CFLAGS)
 
 # Linker flags
