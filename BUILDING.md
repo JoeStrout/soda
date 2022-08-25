@@ -21,6 +21,7 @@ Soda is a command-line program written in C++ and using SDL.  On most systems th
 
 ## Build Steps (Windows)
 
+0. Run the **Developer Command Prompt for VS**.
 1. `cd soda` to change to the _soda_ subdirectory (next to this document).
 2. `cd src` to move to the _soda\src_ directory.
 3. `cl /EHsc /wd4068 *.cpp MiniScript/*.cpp /Fesoda.exe`

@@ -10,7 +10,11 @@
 // some platforms but not others.
 
 #include <SDL2/SDL.h>
-#include <SDL_image.h>  // must be <SDL2_image/SDL_image.h> on some platforms
+#if TARGET_OS_MAC
+  #include <SDL2_image/SDL_image.h>
+#else
+  #include <SDL_image.h>
+#endif
 #include <SDL2/SDL_gamecontroller.h>
 
 #include "QA.h"
