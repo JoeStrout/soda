@@ -135,6 +135,7 @@
 		83D55DFE26B3907B00C76F4E /* SodaIntrinsics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SodaIntrinsics.h; sourceTree = "<group>"; };
 		83D55E0026B391BC00C76F4E /* SdlGlue.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SdlGlue.cpp; sourceTree = "<group>"; };
 		83D55E0126B391BC00C76F4E /* SdlGlue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SdlGlue.h; sourceTree = "<group>"; };
+		83DC8CB42916FE0600125256 /* SdlUtils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SdlUtils.h; sourceTree = "<group>"; };
 		83E2A856274A8A49009E7FCE /* SimpleString.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SimpleString.h; sourceTree = "<group>"; };
 		83E2A857274A8A49009E7FCE /* SimpleString.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SimpleString.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -207,6 +208,7 @@
 				832C0D8C270BC52100E66E85 /* Sprite.h */,
 				837C4C0A26C474F100D741B6 /* Color.h */,
 				83D55DE426B38F2F00C76F4E /* OstreamSupport.h */,
+				83DC8CB42916FE0600125256 /* SdlUtils.h */,
 				8328CE2726B72E5300E32E12 /* SdlAudio.h */,
 				83D55E0126B391BC00C76F4E /* SdlGlue.h */,
 				83D55DBF26B38F2F00C76F4E /* ShellIntrinsics.h */,
@@ -494,6 +496,7 @@
 		83D55DA626B38E1300C76F4E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = NO;
 				CODE_SIGN_ENTITLEMENTS = soda/soda.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 68PYL3J323;
@@ -502,7 +505,14 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)",
 				);
-				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/SDL2.framework/Headers";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"TARGET_OS_MAC=1",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/SDL2.framework/Headers",
+					"$(PROJECT_DIR)/SDL2_image.framework/Headers",
+				);
 				OTHER_LDFLAGS = (
 					"-rpath",
 					"@executable_path/",
@@ -514,6 +524,7 @@
 		83D55DA726B38E1300C76F4E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = NO;
 				CODE_SIGN_ENTITLEMENTS = soda/soda.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 68PYL3J323;
@@ -522,7 +533,11 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)",
 				);
-				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/SDL2.framework/Headers";
+				GCC_PREPROCESSOR_DEFINITIONS = "TARGET_OS_MAC=1";
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/SDL2.framework/Headers",
+					"$(PROJECT_DIR)/SDL2_image.framework/Headers",
+				);
 				OTHER_LDFLAGS = (
 					"-rpath",
 					"@executable_path/",

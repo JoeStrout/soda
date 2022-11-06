@@ -23,6 +23,7 @@ Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_
 - ~~Image.pixel, Image.setPixel~~
 - SolidColor display
 - Text display (in progress)
+- PixelDisplay
 - TileDisplay
 - import
 - sound synthesis (Sound.init, Sound.mix, etc.)
@@ -34,7 +35,6 @@ Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_
 - font class, with loading from truetype and bitmap font files
 - `http` class
 - loading a script from a URL
-- PixelDisplay
 - build for the web (see [this thread](https://discourse.libsdl.org/t/more-info-needed-on-converting-sdl2-to-web-encripten/28584/6), [this write-up](http://main.lv/writeup/web_assembly_sdl_example.md), and [this useful series](https://www.jamesfmackenzie.com/2019/11/30/whats-is-webassembly-hello-world/)).
 
 # Future Features

@@ -6,6 +6,26 @@
 
 static char hexDigits[] = "0123456789ABCDEF";
 
+Color Color::clear =	Color(0x00000000);
+Color Color::black =	Color(0x000000FF);
+Color Color::white =	Color(0xFFFFFFFF);
+Color Color::gray =	 	Color(0x808080FF);
+Color Color::silver =	Color(0xC0C0C0FF);
+Color Color::maroon =	Color(0x800000FF);
+Color Color::red =	 	Color(0xFF0000FF);
+Color Color::olive =	Color(0x808000FF);
+Color Color::yellow =	Color(0xFFFF00FF);
+Color Color::orange =	Color(0xFF8000FF);
+Color Color::green =	Color(0x008000FF);
+Color Color::lime =	 	Color(0x00FF00FF);
+Color Color::teal =	 	Color(0x008080FF);
+Color Color::aqua =	 	Color(0x00FFFFFF);
+Color Color::navy =	 	Color(0x000080FF);
+Color Color::blue =		Color(0x0000FFFF);
+Color Color::purple =	Color(0x800080FF);
+Color Color::fuchsia =	Color(0xFF00FFFF);
+Color Color::brown =	Color(0x996633FF);
+Color Color::pink =		Color(0xFF8080FF);
 
 static Uint8 HexDigitVal(char c) {
 	if (c >= '0' && c <= '9') return c - '0';

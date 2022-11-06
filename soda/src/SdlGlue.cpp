@@ -14,6 +14,7 @@
 #include "SodaIntrinsics.h"
 #include "Color.h"
 #include "TextDisplay.h"
+#include "PixelSurface.h"
 
 using namespace MiniScript;
 
@@ -30,7 +31,7 @@ static SDL_Renderer *mainRenderer;
 static int windowWidth = 960;
 static int windowHeight = 640;
 static bool isFullScreen = false;
-static Color backgroundColor = {0, 0, 100, 255};
+static Color backgroundColor = Color::black;//{0, 0, 100, 255};
 static Dictionary<String, Sint32, hashString> keyNameMap;	// maps Soda key names to SDL key codes
 static Dictionary<Sint32, bool, hashInt> keyDownMap;	// makes SDL key codes to whether they are currently down
 static SimpleVector<SDL_GameController*> gameControllers;
@@ -91,6 +92,7 @@ void Setup() {
 	
 	SetupAudio();
 	SetupTextDisplay(mainRenderer);
+	SetupPixelSurface(mainRenderer);
 }
 
 
@@ -101,6 +103,7 @@ void Shutdown() {
 	IMG_Quit();
 	ShutdownAudio();
 	ShutdownTextDisplay();
+	ShutdownPixelSurface();
 	VecIterate(i, gameControllers) SDL_GameControllerClose(gameControllers[i]);
 	gameControllers.deleteAll();
 	SDL_Quit();
@@ -139,6 +142,9 @@ void Service() {
 	SDL_RenderClear(mainRenderer);
 	DrawSprites();
 	RenderTextDisplay();
+	// HACK for testing:
+	RenderPixelSurface();
+	// END HACK
 	SDL_RenderPresent(mainRenderer);
 }
 

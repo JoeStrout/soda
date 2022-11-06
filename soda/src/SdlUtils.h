@@ -11,7 +11,7 @@
 
 #include <SDL2/SDL.h>
 #if TARGET_OS_MAC
-  #include <SDL2_image/SDL_image.h>
+  #include <SDL2/SDL_image.h>
 #else
   #include <SDL_image.h>
 #endif
