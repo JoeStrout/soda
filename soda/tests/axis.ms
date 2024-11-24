@@ -8,6 +8,10 @@ fileInFolder = function(folderName, fileName)
 	return file.child(folderName, fileName)
 end function
 
+print "key.axis and key.pressed Test"
+print "Use WASD, arrow keys, or gamepad inputs."
+print "See the ball move accordingly."
+
 Ball = new Sprite
 Ball.image = file.loadImage(fileInFolder("images", "soda-128.png"))
 sprites.push Ball

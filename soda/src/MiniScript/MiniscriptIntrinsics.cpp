@@ -11,7 +11,7 @@
 #include "MiniscriptTAC.h"
 #include "UnicodeUtil.h"
 #include "SplitJoin.h"
-#include <math.h>
+#include <cmath>
 #include <ctime>
 #include <algorithm>
 
@@ -26,20 +26,21 @@ namespace MiniScript {
 	static Value _mapType;
 	static Value _numberType;
 	static Value _stringType;
-	
+	static Value _EOL("\n");
+
 	List<Intrinsic*> Intrinsic::all;
 	Dictionary<String, Intrinsic*, hashString> Intrinsic::nameMap;
 	IntrinsicResult IntrinsicResult::Null;	// represents a completed, null result
 	IntrinsicResult IntrinsicResult::EmptyString(Value("")); // represents an empty string result
 
 	bool Intrinsics::initialized = false;
-	
-	
+	static ValueDict _intrinsicsMap;
+
 	static bool randInitialized = false;
 
 	static inline void InitRand() {
 		if (!randInitialized) {
-			srand((unsigned int)time(NULL));
+			srand((unsigned int)time(nullptr));
 			for (int i=0; i<10; i++) rand();
 			randInitialized = true;
 		}
@@ -71,23 +72,33 @@ namespace MiniScript {
 		if (x == 1.0) return IntrinsicResult(atan(y));
 		return IntrinsicResult(atan2(y, x));
 	}
+
+	static std::pair<bool, uint64_t> doubleToUnsignedSplit(double val) {
+		return { std::signbit(val), std::abs(val) };
+	}
 	
 	static IntrinsicResult intrinsic_bitAnd(Context *context, IntrinsicResult partialResult) {
-		Value i = context->GetVar("i");
-		Value j = context->GetVar("j");
-		return IntrinsicResult(i.IntValue() & j.IntValue());
+		auto i = doubleToUnsignedSplit(context->GetVar("i").DoubleValue());
+		auto j = doubleToUnsignedSplit(context->GetVar("j").DoubleValue());
+		auto sign = i.first & j.first;
+		double val = i.second & j.second;
+		return IntrinsicResult(sign ? -val : val);
 	}
 	
 	static IntrinsicResult intrinsic_bitOr(Context *context, IntrinsicResult partialResult) {
-		Value i = context->GetVar("i");
-		Value j = context->GetVar("j");
-		return IntrinsicResult(i.IntValue() | j.IntValue());
+		auto i = doubleToUnsignedSplit(context->GetVar("i").DoubleValue());
+		auto j = doubleToUnsignedSplit(context->GetVar("j").DoubleValue());
+		auto sign = i.first | j.first;
+		double val = i.second | j.second;
+		return IntrinsicResult(sign ? -val : val);
 	}
 	
 	static IntrinsicResult intrinsic_bitXor(Context *context, IntrinsicResult partialResult) {
-		Value i = context->GetVar("i");
-		Value j = context->GetVar("j");
-		return IntrinsicResult(i.IntValue() ^ j.IntValue());
+		auto i = doubleToUnsignedSplit(context->GetVar("i").DoubleValue());
+		auto j = doubleToUnsignedSplit(context->GetVar("j").DoubleValue());
+		auto sign = i.first ^ j.first;
+		double val = i.second ^ j.second;
+		return IntrinsicResult(sign ? -val : val);
 	}
 
 	static IntrinsicResult intrinsic_char(Context *context, IntrinsicResult partialResult) {
@@ -136,14 +147,19 @@ namespace MiniScript {
 		Value self = context->GetVar("self");
 		Value index = context->GetVar("index");
 		if (self.type == ValueType::List) {
-			if (index.type != ValueType::Number) return IntrinsicResult(Value::zero);		// #3
-			ValueList list = self.GetList();
-			long i = index.IntValue();
-			return IntrinsicResult(Value::Truth(i >= -list.Count() and i < list.Count()));
+			if (index.type == ValueType::Number) {
+				ValueList list = self.GetList();
+				long i = index.IntValue();
+				return IntrinsicResult(Value::Truth(i >= -list.Count() and i < list.Count()));
+			}
+			return IntrinsicResult(Value::zero);
 		} else if (self.type == ValueType::String) {
-			String str = self.GetString();
-			long i = index.IntValue();
-			return IntrinsicResult(Value::Truth(i >= -str.Length() and i < str.Length()));
+			if (index.type == ValueType::Number) {
+				String str = self.GetString();
+				long i = index.IntValue();
+				return IntrinsicResult(Value::Truth(i >= -str.Length() and i < str.Length()));
+			}
+			return IntrinsicResult(Value::zero);
 		} else if (self.type == ValueType::Map) {
 			ValueDict map = self.GetDict();
 			return IntrinsicResult(Value::Truth(map.ContainsKey(index)));
@@ -232,7 +248,19 @@ namespace MiniScript {
 			RuntimeException("insert called on invalid type").raise();
 			return IntrinsicResult::Null;
 		}
-	};
+	}
+
+	static IntrinsicResult intrinsic_intrinsics(Context *context, IntrinsicResult partialResult) {
+		if (_intrinsicsMap.Count() > 0) return IntrinsicResult(_intrinsicsMap);
+		
+		for (int i=0; i<Intrinsic::all.Count(); i++) {
+			Intrinsic* intrinsic = Intrinsic::all[i];
+			if (intrinsic == nullptr || intrinsic->name.empty()) continue;
+			_intrinsicsMap.SetValue(intrinsic->name, intrinsic->GetFunc());
+		}
+		
+		return IntrinsicResult(_intrinsicsMap);
+	}
 
 	static IntrinsicResult intrinsic_join(Context *context, IntrinsicResult partialResult) {
 		Value val = context->GetVar("self");
@@ -309,8 +337,15 @@ namespace MiniScript {
 
 	static IntrinsicResult intrinsic_print(Context *context, IntrinsicResult partialResult) {
 		Value s = context->GetVar("s");
-		if (!s.IsNull()) (*context->vm->standardOutput)(s.ToString());
-		else (*context->vm->standardOutput)("null");
+		if (s.IsNull()) s = "null";
+		Value delimiter = context->GetVar("delimiter");
+		if (delimiter.IsNull()) {
+			(*context->vm->standardOutput)(s.ToString(), false);
+		} else if (delimiter == _EOL) {
+			(*context->vm->standardOutput)(s.ToString(), true);
+		} else {
+			(*context->vm->standardOutput)(s.ToString() + delimiter.ToString(), false);
+		}
 		return IntrinsicResult::Null;
 	}
 	
@@ -394,6 +429,28 @@ namespace MiniScript {
 			LimitExceededException("range() error").raise();
 			return IntrinsicResult::Null;
 		}
+	}
+
+	static IntrinsicResult intrinsic_refEquals(Context *context, IntrinsicResult partialResult) {
+		Value a = context->GetVar("a");
+		Value b = context->GetVar("b");
+		bool result;
+		if (a.IsNull()) {
+			result = (b.IsNull());
+		} else if (a.type == ValueType::Number) {
+			result = (b.type == ValueType::Number && a.DoubleValue() == b.DoubleValue());
+		} else if (a.type == ValueType::String) {
+			result = (b.type == ValueType::String && a.RefEquals(b));
+		} else if (a.type == ValueType::List) {
+			result = (b.type == ValueType::List && a.RefEquals(b));
+		} else if (a.type == ValueType::Map) {
+			result = (b.type == ValueType::Map && a.RefEquals(b));
+		} else if (a.type == ValueType::Function) {
+			result = (b.type == ValueType::Function && a.RefEquals(b));
+		} else {
+			result = a.RefEquals(b);
+		}
+		return IntrinsicResult(Value::Truth(result));
 	}
 	
 	static IntrinsicResult intrinsic_remove(Context *context, IntrinsicResult partialResult) {
@@ -625,6 +682,20 @@ namespace MiniScript {
 		return IntrinsicResult(sqrt(context->GetVar("x").DoubleValue()));
 	}
 	
+	static IntrinsicResult intrinsic_stackTrace(Context *context, IntrinsicResult partialResult) {
+		Machine* vm = context->vm;
+		Value stackAtBreak;
+		if (vm->GetGlobalContext()->variables.Get("_stackAtBreak", &stackAtBreak)) {
+			// We have a stored stack from a break or exit.
+			// So, display that.  The host app should clear this when starting a 'run'
+			// so it never interferes with showing a more up-to-date stack during a run.
+			return IntrinsicResult(stackAtBreak);
+		}
+		// Otherwise, build a stack now from the state of the VM.
+		ValueList result = Intrinsics::StackList(vm);
+		return IntrinsicResult(result);
+	}
+
 	static IntrinsicResult intrinsic_str(Context *context, IntrinsicResult partialResult) {
 		return IntrinsicResult(context->GetVar("x").ToString());
 	}
@@ -928,6 +999,9 @@ namespace MiniScript {
 		f->AddParam("value");
 		f->code = &intrinsic_insert;
 		
+		f = Intrinsic::Create("intrinsics");
+		f->code = &intrinsic_intrinsics;
+		
 		f = Intrinsic::Create("join");
 		f->AddParam("self");
 		f->AddParam("delimiter", " ");
@@ -960,6 +1034,7 @@ namespace MiniScript {
 		
 		f = Intrinsic::Create("print");
 		f->AddParam("s", Value::emptyString);
+		f->AddParam("delimiter", _EOL);
 		f->code = &intrinsic_print;
 		
 		f = Intrinsic::Create("pop");
@@ -980,6 +1055,11 @@ namespace MiniScript {
 		f->AddParam("to", 0);
 		f->AddParam("step");
 		f->code = &intrinsic_range;
+		
+		f = Intrinsic::Create("refEquals");
+		f->AddParam("a");
+		f->AddParam("b");
+		f->code = &intrinsic_refEquals;
 		
 		f = Intrinsic::Create("remove");
 		f->AddParam("self");
@@ -1031,6 +1111,9 @@ namespace MiniScript {
 		f = Intrinsic::Create("sqrt");
 		f->AddParam("x", 0);
 		f->code = &intrinsic_sqrt;
+
+		f = Intrinsic::Create("stackTrace");
+		f->code = &intrinsic_stackTrace;
 
 		f = Intrinsic::Create("str");
 		f->AddParam("x", 0);
@@ -1087,6 +1170,22 @@ namespace MiniScript {
 		code.Add(TACLine(Value::Temp(resultTempNum), TACLine::Op::CallFunctionA, func, 3));
 	}
 
+	// Helper method to get a stack trace as a list (the heart of the stackTrace intrinsic).
+	ValueList Intrinsics::StackList(Machine* vm) {
+		ValueList result;
+		if (vm == nullptr) return result;
+		List<SourceLoc> sourceLocs = vm->GetStack();
+		for (long i=0, len=sourceLocs.Count(); i<len; i++) {
+			if (sourceLocs[i].IsEmpty()) continue;
+			String s = sourceLocs[i].context;
+			if (s.empty()) s = "(current program)";
+			s += " line ";
+			s += String::Format(sourceLocs[i].lineNum);
+			result.Add(s);
+		}
+		return result;
+
+	}
 	
 	Value Intrinsics::FunctionType() {
 		if (_functionType.IsNull()) {
@@ -1127,6 +1226,7 @@ namespace MiniScript {
 			d.SetValue("indexOf",  Intrinsic::GetByName("indexOf")->GetFunc());
 			d.SetValue("len",  Intrinsic::GetByName("len")->GetFunc());
 			d.SetValue("pop",  Intrinsic::GetByName("pop")->GetFunc());
+			d.SetValue("pull",  Intrinsic::GetByName("pull")->GetFunc());
 			d.SetValue("push",  Intrinsic::GetByName("push")->GetFunc());
 			d.SetValue("shuffle",  Intrinsic::GetByName("shuffle")->GetFunc());
 			d.SetValue("sum",  Intrinsic::GetByName("sum")->GetFunc());

@@ -1,9 +1,6 @@
 //
-//  TextDisplay.hpp
+//  TextDisplay.h
 //  soda
-//
-//  Created by Joe Strout on 8/10/21.
-//
 
 #ifndef TEXTDISPLAY_H
 #define TEXTDISPLAY_H
@@ -39,7 +36,7 @@ public:
 	void Clear();
 	void SetCharAtPosition(long unicodeChar, int row, int column);
 	void PutChar(long unicodeChar);
-	void Print(MiniScript::String s);
+	void Print(MiniScript::String s, bool addLineBreak=true);
 	void Render();
 	
 	void NoteWindowSizeChange(int newWidth, int newHeight);
@@ -70,4 +67,4 @@ extern TextDisplay* mainTextDisplay;
 }
 
 
-#endif /* TextDisplay_hpp */
+#endif // TEXTDISPLAY_H

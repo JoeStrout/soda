@@ -27,6 +27,10 @@ namespace MiniScript {
 			if (context.empty()) return String("[line ") + String::Format(lineNum) + "]";
 		   return String("[") + context + " line " + String::Format(lineNum) + "]";
 		}
+		
+		bool IsEmpty() const {
+			return lineNum == 0 && context.empty();
+		}
 	};
 	
 	class MiniscriptException : public std::exception {
@@ -95,8 +99,10 @@ namespace MiniScript {
 	
 	class KeyException : public RuntimeException {
 	public:
-		KeyException(String msg="Key Error") : RuntimeException(msg) {}
-		KeyException(String context, int lineNum, String msg) : RuntimeException(context, lineNum, msg) {}
+		KeyException(String key) : RuntimeException(
+			String("Key Not Found: '") + key + "' not found in map") {}
+		KeyException(String context, int lineNum, String key) : RuntimeException(
+			context, lineNum, String("Key Not Found: '") + key + "' not found in map") {}
 		virtual void raise() { throw *this; }
 	};
 	
@@ -104,6 +110,14 @@ namespace MiniScript {
 	public:
 		UndefinedIdentifierException(String ident) : RuntimeException(
 			 String("Undefined Identifier: '") + ident + "' is unknown in this context") {}
+		virtual void raise() { throw *this; }
+	};
+
+	class UndefinedLocalException : public UndefinedIdentifierException {
+	public:
+		UndefinedLocalException(String ident) : UndefinedIdentifierException("") {
+			message = String("Undefined Local Identifier: '") + ident + "' is unknown in this context";
+		}
 		virtual void raise() { throw *this; }
 	};
 

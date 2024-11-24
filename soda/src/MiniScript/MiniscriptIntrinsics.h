@@ -44,6 +44,10 @@ namespace MiniScript {
 		// Helper method to compile a call to Slice.
 		static void CompileSlice(List<TACLine> code, Value list, Value fromIdx, Value toIdx, int resultTempNum);
 		
+		// Helper method to get a stack trace as a list (the heart of the stackTrace intrinsic).
+		static ValueList StackList(Machine *vm);
+		
+		// Accessors for the maps that represent the core types.
 		static Value FunctionType();
 		static Value ListType();
 		static Value MapType();
@@ -131,7 +135,10 @@ namespace MiniScript {
 		// Internally-used function to execute an intrinsic (by ID) given a context
 		// and a partial result.
 		static IntrinsicResult Execute(long id, Context *context, IntrinsicResult partialResult);
-	
+
+		// List of all intrinsics.
+		static List<Intrinsic*> all;
+
 	private:
 		Intrinsic() {}		// don't use this; use Create factory method instead.
 
@@ -139,7 +146,6 @@ namespace MiniScript {
 		Value valFunction;		// (cached wrapper for function)
 		long numericID;			// also its index in the 'all' list
 
-		static List<Intrinsic*> all;
 		static Dictionary<String, Intrinsic*, hashString> nameMap;
 	};
 

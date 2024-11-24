@@ -84,6 +84,9 @@ namespace MiniScript {
 			case Op::CopyA:
 				text = lhs.ToString() + " := copy of " + rhsA.ToString();
 				break;
+			case Op::NewA:
+				text = lhs.ToString() + " := new " + rhsA.ToString();
+				break;
 			case Op::NotA:
 				text = lhs.ToString() + " := not " + rhsA.ToString();
 				break;
@@ -164,10 +167,29 @@ namespace MiniScript {
 			return Value::Truth(opA.IsA(opB, context->vm));
 		}
 
+		if (op == Op::NewA) {
+			// Create a new map, and set __isa on it to operand A (after
+			// verifying that this is a valid map to subclass).
+			if (opA.type != ValueType::Map) {
+				RuntimeException("argument to 'new' must be a map").raise();
+			} else if (opA.RefEquals(context->vm->stringType)) {
+				RuntimeException("invalid use of 'new'; to create a string, use quotes, e.g. \"foo\"").raise();
+			} else if (opA.RefEquals(context->vm->listType)) {
+				RuntimeException("invalid use of 'new'; to create a list, use square brackets, e.g. [1,2]").raise();
+			} else if (opA.RefEquals(context->vm->numberType)) {
+				RuntimeException("invalid use of 'new'; to create a number, use a numeric literal, e.g. 42").raise();
+			} else if (opA.RefEquals(context->vm->functionType)) {
+				RuntimeException("invalid use of 'new'; to create a function, use the 'function' keyword").raise();
+			}
+			ValueDict newMap;
+			newMap.SetValue(Value::magicIsA, opA);
+			return newMap;
+		}
+		
 		if (op == Op::ElemBofA && opB.type == ValueType::String) {
 			// You can now look for a String in almost anything...
 			// and we have a convenient (and relatively fast) method for it:
-			return Value::Resolve(opA, opB.ToString(), context, NULL);
+			return Value::Resolve(opA, opB.ToString(), context, nullptr);
 		}
 		
 		// check for special cases of comparison to null (works with any type)
@@ -291,6 +313,8 @@ namespace MiniScript {
 						CheckType(opB, ValueType::Number, "String division");
 						factor = 1.0 / opB.data.number;
 					}
+					int factorClass = std::fpclassify(factor);
+					if (factorClass == FP_NAN || factorClass == FP_INFINITE) return Value::null;
 					if (factor <= 0) return Value::emptyString;
 					int repeats = (int)factor;
 					size_t lenB = sA.LengthB();
@@ -299,7 +323,7 @@ namespace MiniScript {
 					size_t totalBytes = lenB * repeats + extraStr.LengthB();
 					if (totalBytes > Value::maxStringSize) LimitExceededException("string too large").raise();
 					char *buf = new char[totalBytes+1];
-					if (buf == NULL) return Value::null;
+					if (buf == nullptr) return Value::null;
 					char *ptr = buf;
 					for (int i = 0; i < repeats; i++) {
 						strncpy(ptr, sA.c_str(), lenB);
@@ -314,12 +338,11 @@ namespace MiniScript {
 				case Op::ElemBofA:
 				case Op::ElemBofIterA:
 				{
-					long idx = opB.IntValue();
-					long len = sA.Length();
-					CheckRange(idx, -len, len - 1, "String index");
-					if (idx < 0) idx += len;
-					return Value(sA.Substring(idx, 1));
+					// string indexing
+					return opA.GetElem(opB);
 				}
+				default:
+					break;
 			}
 			if (opB.IsNull() or opB.type == ValueType::String) {
 				switch (op) {
@@ -361,11 +384,7 @@ namespace MiniScript {
 			 ValueList list = opA.GetList();
 			if (op == Op::ElemBofA || op == Op::ElemBofIterA) {
 				// list indexing
-				long idx = opB.IntValue();
-				long count = list.Count();
-				CheckRange(idx, -count, count - 1, "list index");
-				if (idx < 0) idx += count;
-				return list[idx];
+				return opA.GetElem(opB);
 			} else if (op == Op::LengthOfA) {
 				return Value(list.Count());
 			} else if (op == Op::AEqualB) {
@@ -393,6 +412,8 @@ namespace MiniScript {
 					CheckType(opB, ValueType::Number, "list division");
 					factor = 1.0 / opB.data.number;
 				}
+				int factorClass = std::fpclassify(factor);
+				if (factorClass == FP_NAN || factorClass == FP_INFINITE) return Value::null;
 				if (factor <= 0) return ValueList();
 				long listCount = list.Count();
 				long finalCount = (long)(listCount * factor);
@@ -460,6 +481,13 @@ namespace MiniScript {
 				} break;
 				case Op::NotA:
 					return Value::Truth(!opA.BoolValue());
+				case Op::ElemBofA:
+					if (opA.IsNull()) {
+						TypeException("Null Reference Exception: can't index into null").raise();
+					} else {
+						TypeException("Type Exception: can't index into this type").raise();
+					}
+
 				default:
 					break;
 			}
@@ -519,8 +547,9 @@ namespace MiniScript {
 	/// identifier can be found.
 	/// </summary>
 	/// <param name="identifier">name of identifier to look up</param>
+	/// <param name="localOnly">if true, look in local scope only</param>
 	/// <returns>value of that identifier</returns>
-	Value Context::GetVar(String identifier) {
+	Value Context::GetVar(String identifier, LocalOnlyMode localOnly) {
 		// check for special built-in identifiers 'locals', 'globals', and 'outer'
 		if (identifier == "locals") return variables;
 		if (identifier == "globals") return Root()->variables;
@@ -532,13 +561,19 @@ namespace MiniScript {
 		// check for a local variable
 		Value result;
 		if (variables.Get(identifier, &result)) return result;
+		if (localOnly != LocalOnlyMode::Off) {
+			if (localOnly == LocalOnlyMode::Strict) UndefinedLocalException(identifier).raise();
+			else vm->standardOutput("Warning: assignment of unqualified local '" + identifier
+									+ "' based on nonlocal is deprecated "
+									+ code[lineNum].location.ToString(), true);
+		}
 		
 		// check for a module variable
 		if (!outerVars.empty() && outerVars.Get(identifier, &result)) return result;
 		
 		// OK, we don't have a local or module variable with that name.
 		// Check the global scope (if that's not us already).
-		if (parent != NULL) {
+		if (parent != nullptr) {
 			Context* globals = Root();
 			if (globals->variables.Get(identifier, &result)) return result;
 		}
@@ -591,13 +626,20 @@ namespace MiniScript {
 		return result;
 	}
 	
+	SourceLoc Context::GetSourceLoc() {
+		if (lineNum < 0 || lineNum >= code.Count()) {
+			return SourceLoc();
+		}
+		return code[lineNum].location;
+	}
+
 //	Machine::Machine() : stack(16), storeImplicit(false) {
 //		Context *globalContext = new Context;
 //		stack.Add(new Context);
 //
 //	}
 	
-	Machine::Machine(Context *root, TextOutputMethod output) : stack(16), storeImplicit(false), standardOutput(output), startTime(0) {
+	Machine::Machine(Context *root, TextOutputMethod output) : stack(16), storeImplicit(false), standardOutput(output), startTime(0), yielding(false) {
 		// Note: this constructor adopts the given context, and destroys it later.
 		root->vm = this;
 		stack.Add(root);
@@ -716,9 +758,11 @@ namespace MiniScript {
 		String nullStr;
 		if (stack.Count() < 1) return nullStr;
 		Context *globalContext = stack[0];
-		if (globalContext == NULL) return nullStr;
+		if (globalContext == nullptr) return nullStr;
 		for (ValueDictIterator kv = globalContext->variables.GetIterator(); !kv.Done(); kv.Next()) {
-			if (kv.Value() == val && kv.Key() != val) return kv.Key().ToString();
+			if (!kv.Value().RefEquals(val)) continue;
+			String varName = kv.Key().ToString();
+			if (varName != "_") return varName;
 		}
 		return nullStr;
 	}
@@ -728,8 +772,20 @@ namespace MiniScript {
 			return GetTickCount() * 0.001;
 		#else
 			struct timeval timecheck;
-			gettimeofday(&timecheck, NULL);
+			gettimeofday(&timecheck, nullptr);
 			return (long)timecheck.tv_sec * 1.0 + (long)timecheck.tv_usec / 1000000.0;
 		#endif
 	}
+
+	List<SourceLoc> Machine::GetStack() {
+		long count = stack.Count();
+		List<SourceLoc> result(count);
+		// Careful: we want to return the stack in reverse order, i.e., the
+		// newest call context first, and the oldest (global) context last.
+		for (long i=count-1; i>=0; i--) {
+			result.Add(stack[i]->GetSourceLoc());
+		}
+		return result;
+	}
+
 }

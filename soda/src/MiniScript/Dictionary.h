@@ -42,7 +42,7 @@ namespace MiniScript {
 	template <class K, class V>
 	class DictionaryStorage : public RefCountedStorage {
 	private:
-		DictionaryStorage() : RefCountedStorage(), mSize(0), assignOverride(NULL) { for (int i=0; i<TABLE_SIZE; i++) mTable[i] = nullptr; }
+		DictionaryStorage() : RefCountedStorage(), mSize(0), assignOverride(nullptr), evalOverride(nullptr) { for (int i=0; i<TABLE_SIZE; i++) mTable[i] = nullptr; }
 		~DictionaryStorage() { RemoveAll(); }
 
 		void RemoveAll() {
@@ -59,6 +59,7 @@ namespace MiniScript {
 		HashMapEntry<K, V> *mTable[TABLE_SIZE];
 
 		void *assignOverride;
+		void *evalOverride;
 		
 		template <class K2, class V2, unsigned int HASH(const K2&)> friend class Dictionary;
 		template <class K2, class V2> friend class DictIterator;
@@ -134,9 +135,18 @@ namespace MiniScript {
 		typedef bool (*AssignOverrideCallback)(Dictionary<K,V,HASH> &dict, K key, V value);
 		void SetAssignOverride(AssignOverrideCallback callback) { ensureStorage(); ds->assignOverride = (void*)callback; }
 		bool ApplyAssignOverride(K key, V value) {
-			if (ds == NULL or ds->assignOverride == NULL) return false;
+			if (ds == nullptr or ds->assignOverride == nullptr) return false;
 			AssignOverrideCallback cb = (AssignOverrideCallback)(ds->assignOverride);
 			return cb(*this, key, value);
+		}
+		
+		/// LOOKUP OVERRIDE
+		typedef bool (*EvalOverrideCallback)(Dictionary<K,V,HASH> &dict, K key, V& outValue);
+		void SetEvalOverride(EvalOverrideCallback callback) { ensureStorage(); ds->evalOverride = (void*)callback; }
+		bool ApplyEvalOverride(K key, V& outValue) {
+			if (ds == nullptr or ds->evalOverride == nullptr) return false;
+			EvalOverrideCallback cb = (EvalOverrideCallback)(ds->evalOverride);
+			return cb(*this, key, outValue);
 		}
 		
 		/// DEBUGGING
@@ -171,6 +181,9 @@ namespace MiniScript {
 		ensureStorage();
 		HashMapEntry<K, V> *entry = ds->mTable[hash];
 		while (entry) {
+			// Note: We rely here on our key types defining == in a way
+			// that is intended to equate keys that should be unique in
+			// the dictionary (and consistent with the hash function).
 			if (entry->key == key) {
 				entry->value = value;
 				return;

@@ -35,6 +35,12 @@ namespace MiniScript {
 			OpGreatEqual,
 			OpLesser,
 			OpLessEqual,
+			OpAssignPlus,
+			OpAssignMinus,
+			OpAssignTimes,
+			OpAssignDivide,
+			OpAssignMod,
+			OpAssignPower,
 			LParen,
 			RParen,
 			LSquare,
@@ -106,6 +112,7 @@ namespace MiniScript {
 		// lexing
 		Token Dequeue();
 		Token Peek();
+		void Poke(Token tokenToInsert);
 		void SkipWhitespaceAndComment();
 		
 		// static methods

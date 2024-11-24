@@ -143,7 +143,7 @@ void Service() {
 	DrawSprites();
 	RenderTextDisplay();
 	// HACK for testing:
-	RenderPixelSurface();
+	//RenderPixelSurface();
 	// END HACK
 	SDL_RenderPresent(mainRenderer);
 }
@@ -450,8 +450,8 @@ Value GetSubImage(Value image, int left, int bottom, int width, int height) {
 	return NewImageFromSurface(newSurf);
 }
 
-void Print(MiniScript::String s) {
-	if (mainTextDisplay) mainTextDisplay->Print(s);
+void Print(MiniScript::String s, bool addLineBreak) {
+	if (mainTextDisplay) mainTextDisplay->Print(s, addLineBreak);
 }
 
 void Clear() {

@@ -31,14 +31,16 @@ bool printHeaderInfo = true;
 
 static bool dumpTAC = false;
 
-static void Print(String s) {
-	std::cout << s.c_str() << std::endl;
-	SdlGlue::Print(s);
+static void Print(String s, bool addLineBreak=true) {
+	std::cout << s.c_str();
+	if (addLineBreak) std::cout << std::endl; else std::cout << std::flush;
+	SdlGlue::Print(s, addLineBreak);
 }
 
-static void PrintErr(String s) {
-	std::cerr << s.c_str() << std::endl;
-	SdlGlue::Print(s);
+static void PrintErr(String s, bool addLineBreak=true) {
+	std::cerr << s.c_str();
+	if (addLineBreak) std::cerr << std::endl; else std::cerr << std::flush;
+	SdlGlue::Print(s, addLineBreak);
 }
 
 static int ReturnErr(String s, int errCode = -1) {
@@ -96,7 +98,10 @@ static int ReplThread(void *interpreter) {
 		#if useEditline
 			char *buf;
 			buf = readline(prompt);
-			if (buf == NULL) return 0;
+			if (buf == NULL) {		// user pressed Ctrl-D
+				exitASAP = true;
+				return 0;
+			}
 			String input(buf);
 			SDL_LockMutex(userInputMutex);
 			userInput.push_back(input);
@@ -109,6 +114,7 @@ static int ReplThread(void *interpreter) {
 			std::cout << prompt;
 			if (not std::cin.getline(buf, sizeof(buf))) {
 				std::cout << std::endl;
+				if (std::cin.eof()) exitASAP = true;	// Ctrl-D
 				return 0;
 			}
 			String input(buf);
@@ -162,7 +168,7 @@ static int DoREPL() {
 				inp = userInput[0];
 				userInput.deleteIdx(0);
 			}
-				SDL_UnlockMutex(userInputMutex);
+			SDL_UnlockMutex(userInputMutex);
 			// and feed it to the REPL
 			if (!inp.empty()) {
 				interpreterBusy = true;
@@ -238,7 +244,7 @@ static int DoScriptFile(String path) {
 }
 
 static List<String> testOutput;
-static void PrintToTestOutput(String s) {
+static void PrintToTestOutput(String s, bool addLineBreak) {
 	testOutput.Add(s);
 }
 

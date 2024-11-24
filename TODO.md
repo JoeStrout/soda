@@ -22,17 +22,18 @@ Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_
 - ~~Bounds class, with its connections to Sprite~~
 - ~~Image.pixel, Image.setPixel~~
 - SolidColor display
-- Text display (in progress)
-- PixelDisplay
+- Text display (done?)
+- PixelDisplay (in progress)
 - TileDisplay
 - import
 - sound synthesis (Sound.init, Sound.mix, etc.)
-- clear/simple build system for all platforms
+- clear/simple build system for Windows and RPi
 - Linux (especially RPi) builds that work without X11
+- allow control-C to break a running program and drop you into the REPL
 
 # Low Priority
 
-- font class, with loading from truetype and bitmap font files
+- font class, with loading from truetype and bitmap font files (or maybe just support BmfFont?)
 - `http` class
 - loading a script from a URL
 - build for the web (see [this thread](https://discourse.libsdl.org/t/more-info-needed-on-converting-sdl2-to-web-encripten/28584/6), [this write-up](http://main.lv/writeup/web_assembly_sdl_example.md), and [this useful series](https://www.jamesfmackenzie.com/2019/11/30/whats-is-webassembly-hello-world/)).

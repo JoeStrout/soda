@@ -13,6 +13,8 @@
 #include "List.h"
 #include "Dictionary.h"
 
+#include <cstdint>
+
 namespace MiniScript {
 	
 	extern const String VERSION;
@@ -53,7 +55,7 @@ namespace MiniScript {
 
 	class SeqElemStorage;
 
-	enum class ValueType {
+	enum class ValueType : unsigned char {
 		Null,
 		Number,
 		Temp,
@@ -67,15 +69,23 @@ namespace MiniScript {
 		Handle		// (any opaque RefCountedData subclass needed by the host app)
 	};
 	
+	enum class LocalOnlyMode : unsigned char {
+		Off = 0,
+		Warn,
+		Strict
+	};
+
 	String ToString(ValueType type);
 
 	class Value {
 	public:
 		static long maxStringSize;
 		static long maxListSize;
+		static int maxIsaDepth;
 		
 		ValueType type;
 		bool noInvoke;
+		LocalOnlyMode localOnly;
 		union {
 			double number;
 			RefCountedStorage *ref;
@@ -83,13 +93,13 @@ namespace MiniScript {
 		} data;
 		
 		// constructors from base types
-		Value() : type(ValueType::Null), noInvoke(false) {}
-		Value(double number) : type(ValueType::Number), noInvoke(false) { data.number = number; }
-		Value(const char *s) : type(ValueType::String), noInvoke(false) { String temp(s); data.ref = temp.ss; temp.forget(); }
-		Value(const String& s) : type(ValueType::String), noInvoke(false) { data.ref = (s.ss ? s.ss : emptyString.data.ref);	retain(); }
-		Value(const ValueList& l) : type(ValueType::List), noInvoke(false) { ((ValueList&)l).ensureStorage(); data.ref = l.ls; retain(); }
-		Value(const ValueDict& d) : type(ValueType::Map), noInvoke(false) { ((ValueDict&)d).ensureStorage(); data.ref = d.ds; retain(); }
-		Value(FunctionStorage *s) : type(ValueType::Function), noInvoke(false) { data.ref = s; }
+		Value() : type(ValueType::Null), noInvoke(false), localOnly(LocalOnlyMode::Off) {}
+		Value(double number) : type(ValueType::Number), noInvoke(false), localOnly(LocalOnlyMode::Off) { data.number = number; }
+		Value(const char *s) : type(ValueType::String), noInvoke(false), localOnly(LocalOnlyMode::Off) { String temp(s); data.ref = temp.ss; temp.forget(); }
+		Value(const String& s) : type(ValueType::String), noInvoke(false), localOnly(LocalOnlyMode::Off) { data.ref = (s.ss ? s.ss : emptyString.data.ref);	retain(); }
+		Value(const ValueList& l) : type(ValueType::List), noInvoke(false), localOnly(LocalOnlyMode::Off) { ((ValueList&)l).ensureStorage(); data.ref = l.ls; retain(); }
+		Value(const ValueDict& d) : type(ValueType::Map), noInvoke(false), localOnly(LocalOnlyMode::Off) { ((ValueDict&)d).ensureStorage(); data.ref = d.ds; retain(); }
+		Value(FunctionStorage *s) : type(ValueType::Function), noInvoke(false), localOnly(LocalOnlyMode::Off) { data.ref = s; }
 		Value(SeqElemStorage *s);
 
 		// some factory functions to make things clearer
@@ -103,7 +113,7 @@ namespace MiniScript {
 		static Value GetKeyValuePair(Value map, long index);
 		
 		// copy-ctor, assignment-op, destructor
-		Value(const Value &other) : type(other.type), noInvoke(other.noInvoke) {
+		Value(const Value &other) : type(other.type), noInvoke(other.noInvoke), localOnly(other.localOnly) {
 			data = other.data;
 			if (usesRef()) retain();
 		}
@@ -112,17 +122,20 @@ namespace MiniScript {
 			if (usesRef()) release();
 			type = other.type;
 			noInvoke = other.noInvoke;
+			localOnly = other.localOnly;
 			data = other.data;
 			return *this;
 		}
 		inline ~Value() { if (usesRef()) release(); }
 
 		// conversions
-		String ToString(Machine *vm=NULL);
+		String ToString(Machine *vm=nullptr);
 		String CodeForm(Machine *vm, int recursionLimit=-1);
-		long IntValue();
-		bool BoolValue();
-		double DoubleValue() const { return type == ValueType::Number ? data.number : 0; }
+		int32_t IntValue() const noexcept;
+		uint32_t UIntValue() const noexcept;
+		float FloatValue() const noexcept;
+		bool BoolValue() const noexcept;
+		double DoubleValue() const noexcept { return type == ValueType::Number ? data.number : 0; }
 		
 		// Looking up the inner value, *without* conversion.
 		// Note that these do NOT return a temp string/list/dict; they return
@@ -140,7 +153,7 @@ namespace MiniScript {
 			return type == ValueType::Null /* || (usesRef() && data.ref == nullptr) */;
 		}
 
-		Value Val(Context *context, ValueDict *outFoundInMap=NULL) const;
+		Value Val(Context *context, ValueDict *outFoundInMap=nullptr) const;
 		
 		/// Evaluate each of our contained elements, and if any of those is a variable
 		/// or temp, then resolve them now.  CAUTION: do not mutate the original list
@@ -166,6 +179,11 @@ namespace MiniScript {
 		/// <param name="value">value to set</param>
 		void SetElem(Value index, Value value);
 
+		/// <summary
+		/// Get the element associated with the given index within this value.
+		/// </summary>
+		Value GetElem(Value index);
+		
 		// Look up the given identifier in the given sequence, walking the
 		// type chain until we either find it, or fail.
 		static Value Resolve(Value sequence, String identifier, Context *context, ValueDict *outFoundInMap);
@@ -181,6 +199,7 @@ namespace MiniScript {
 			Value obj = *this;
 			while (obj.type == ValueType::Map) {
 				ValueDict d = obj.GetDict();
+				if (d.ApplyEvalOverride(key, result)) return result;
 				if (d.Get(key, &result)) return result;
 				if (!d.Get(Value::magicIsA, &obj)) break;
 			}
@@ -207,11 +226,12 @@ namespace MiniScript {
 		inline bool operator!=(const Value& rhs) const { return !(*this == rhs); }
 		unsigned int Hash() const;
 		static double Equality(const Value& lhs, const Value& rhs, int recursionDepth=16);
+		inline bool RefEquals(const Value& rhs) const;
 		
 	private:
 		// private constructors used by factory functions
-		Value(const int tempNum, ValueType type) : type(type), noInvoke(false) { data.tempNum = tempNum; }	// (type should be ValueType::Temp)
-		Value(const String& s, ValueType type) : type(type), noInvoke(false) { data.ref = s.ss; retain(); }
+		Value(const int tempNum, ValueType type) : type(type), noInvoke(false), localOnly(LocalOnlyMode::Off) { data.tempNum = tempNum; }	// (type should be ValueType::Temp)
+		Value(const String& s, ValueType type) : type(type), noInvoke(false), localOnly(LocalOnlyMode::Off) { data.ref = s.ss; retain(); }
 
 		// reference handling (for types where that applies)
 		bool usesRef() const { return type >= ValueType::String; }
@@ -224,6 +244,10 @@ namespace MiniScript {
 		static bool Equal(DictionaryStorage<Value, Value> *lhs, DictionaryStorage<Value, Value> *rhs);
 		static bool Equal(SeqElemStorage *lhs, SeqElemStorage *rhs);
 		static bool RefEqual(const Value& lhs, const Value& rhs);
+		
+		// more hashing/equality helpers, for recursive reference types (List and Map)
+		bool RecursiveEqual(Value rhs) const;
+		unsigned int RecursiveHash() const;
 	};
 	
 	class FuncParam {
@@ -236,7 +260,9 @@ namespace MiniScript {
 		FuncParam(String name, Value defaultValue) : name(name), defaultValue(defaultValue) {}
 	};
 	
-	
+	// operator== must be defined in a way that matches MiniScript equality,
+	// because it is used by the Dictionary template to figure out what keys
+	// should be considered equal in a map.
 	inline bool Value::operator==(const Value& rhs) const {
 		if (type != rhs.type) return false;
 		switch (type) {
@@ -257,13 +283,13 @@ namespace MiniScript {
 			{
 				if (data.ref == rhs.data.ref) return true;
 				if (!data.ref || !rhs.data.ref) return false;
-				return Equal((ListStorage<Value>*)data.ref, (ListStorage<Value>*)rhs.data.ref);
+				return RecursiveEqual(rhs);
 			}
 			case ValueType::Map:
 			{
 				if (data.ref == rhs.data.ref) return true;
 				if (!data.ref || !rhs.data.ref) return false;
-				return Equal((DictionaryStorage<Value, Value>*)data.ref, (DictionaryStorage<Value, Value>*)rhs.data.ref);
+				return RecursiveEqual(rhs);
 			}
 			case ValueType::Function:
 				// Two functions are equal only if they refer to the exact same function
@@ -281,6 +307,11 @@ namespace MiniScript {
 				return (data.ref == rhs.data.ref);
 		}
 		return false;
+	}
+
+	bool Value::RefEquals(const Value& rhs) const {
+		if (!usesRef()) return *this == rhs;
+		return data.ref == rhs.data.ref;
 	}
 	
 	/// <summary>
@@ -315,7 +346,7 @@ namespace MiniScript {
 
 	/// TextOutputMethod: function pointer that receives text to be output to the user
 	/// (or whatever the host environment wants to do with it).
-	typedef void (*TextOutputMethod)(String text);
+	typedef void (*TextOutputMethod)(String text, bool addLineBreak);
 
 }
 

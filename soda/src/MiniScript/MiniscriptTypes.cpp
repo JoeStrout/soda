@@ -15,13 +15,15 @@
 
 #include <iostream>
 #include <math.h>
+#include <bit>
 
 namespace MiniScript {
 
-	const String VERSION = "1.5.1";
+	const String VERSION = "1.6.2";
 
 	long Value::maxStringSize = 0xFFFFFF;		// about 16MB
 	long Value::maxListSize   = 0xFFFFFF;		// about 16M elements
+	int Value::maxIsaDepth = 256;
 
 	Value Value::zero(0.0);
 	Value Value::one(1.0);
@@ -31,6 +33,10 @@ namespace MiniScript {
 	Value Value::keyString("key");
 	Value Value::valueString("value");
 	Value Value::implicitResult = Value::Var("_");
+
+	static int rotateBits(int n) {
+		return (n >> 1) | (n << (sizeof(int) * 8 - 1));
+	}
 
 	FunctionStorage *FunctionStorage::BindAndCopy(ValueDict contextVariables) {
 		FunctionStorage *result = new FunctionStorage();
@@ -140,7 +146,7 @@ namespace MiniScript {
 			case ValueType::Map:
 			{
 				if (recursionLimit == 0) return "{...}";
-				if (recursionLimit > 0 && recursionLimit < 3 && vm != NULL) {
+				if (recursionLimit > 0 && recursionLimit < 3 && vm != nullptr) {
 					String shortName = vm->FindShortName(*this);
 					if (!shortName.empty()) return shortName;
 				}
@@ -152,13 +158,8 @@ namespace MiniScript {
 				return String("{") + Join(", ", strs) + String("}");
 			}
 				
-			case ValueType::Var:
-			case ValueType::Temp:
-			case ValueType::Handle:
-				return ToString(vm);
-
 			default:
-				return String();
+				return ToString(vm);
 		}
 	}
 	
@@ -169,7 +170,7 @@ namespace MiniScript {
 			case ValueType::Var:
 			{
 				String ident((StringStorage*)(data.ref));
-				Value result = context->GetVar(ident);
+				Value result = context->GetVar(ident, localOnly);
 				return result;
 			} break;
 			case ValueType::SeqElem:
@@ -192,6 +193,7 @@ namespace MiniScript {
 				if (baseVal.type == ValueType::Map) {
 					Value result = null;
 					// Keep walking the "__isa" chain until we find the value, or can go no further.
+					int chainDepth = 0;
 					while (baseVal.type == ValueType::Map) {
 //						if (idxVal.IsNull()) KeyException("null").raise();
 						ValueDict baseDict((ValueDictStorage*)(baseVal.data.ref));
@@ -201,22 +203,17 @@ namespace MiniScript {
 						if (not baseDict.Get(Value::magicIsA, &baseVal)) {
 							KeyException(idxVal.ToString(context->vm)).raise();
 						}
+						if (chainDepth++ > maxIsaDepth) {
+							LimitExceededException("__isa depth exceeded (perhaps a reference loop?)").raise();
+						}
 						baseVal = baseVal.Val(context);	// ToDo: is this really needed?
 					}
-				} else if (baseVal.type == ValueType::List and idxVal.type == ValueType::Number) {
-					ValueList baseLst((ValueListStorage*)(baseVal.data.ref));
-					Value result = baseLst.Item((long)(idxVal.data.number));
-					return result;
-				} else if (baseVal.type == ValueType::String and idxVal.type == ValueType::Number) {
-					String baseStr((StringStorage*)(baseVal.data.ref));
-					long len = baseStr.Length();
-					long i = (long)idxVal.data.number;
-					if (i < 0) i += len;
-					if (i < 0 or i >= len) {
-						IndexException(String("Index Error (string index ") + i + " out of range").raise();
-					}
-					Value result = baseStr.Substring(i, 1);
-					return result;
+				} else if (baseVal.type == ValueType::List) {
+					return baseVal.GetElem(idxVal);
+				} else if (baseVal.type == ValueType::String) {
+					return baseVal.GetElem(idxVal);
+				} else if (baseVal.type == ValueType::Null) {
+					TypeException("Null Reference Exception: can't index into null").raise();
 				}
 				
 				TypeException("Type Exception: can't index into this type").raise();
@@ -228,12 +225,19 @@ namespace MiniScript {
 		}
 	}
 	
-	long Value::IntValue() {
-		if (type == ValueType::Number) return data.number;
-		return 0;
+	int32_t Value::IntValue() const noexcept {
+		return type == ValueType::Number ? data.number : 0;
+	}
+
+	uint32_t Value::UIntValue() const noexcept {
+		return type == ValueType::Number ? data.number : 0;
+	}
+
+	float Value::FloatValue() const noexcept {
+		return type == ValueType::Number ? data.number : 0;
 	}
 	
-	bool Value::BoolValue() {
+	bool Value::BoolValue() const noexcept {
 		switch (type) {
 			case ValueType::Number:
 				// Any nonzero value is considered true, when treated as a bool.
@@ -263,10 +267,16 @@ namespace MiniScript {
 				return result;
 			}
 
+			case ValueType::Function:
+			{
+				// Functions are always true.
+				return true;
+			}
+			
 			case ValueType::Handle:
 			{
 				// Any handle at all is true.
-				return (data.ref != NULL);
+				return (data.ref != nullptr);
 			}
 				
 			default:
@@ -363,8 +373,8 @@ namespace MiniScript {
 			for (ValueDictIterator iter=src.GetIterator(); not iter.Done(); iter.Next()) {
 				Value key = iter.Key();
 				Value val = iter.Value();
-				if (key.type == ValueType::Temp or key.type == ValueType::Var) key = key.Val(context);
-				if (val.type == ValueType::Temp or val.type == ValueType::Var) val = val.Val(context);
+				if (key.type == ValueType::Temp or key.type == ValueType::Var or key.type == ValueType::SeqElem) key = key.Val(context);
+				if (val.type == ValueType::Temp or val.type == ValueType::Var or val.type == ValueType::SeqElem) val = val.Val(context);
 				result.SetValue(key, val);
 			}
 //			src.forget();
@@ -400,6 +410,44 @@ namespace MiniScript {
 		}
 	}
 
+	Value Value::GetElem(Value index) {
+		if (type == ValueType::List) {
+			if (index.type == ValueType::Number) {
+				ValueList baseLst((ValueListStorage*)(data.ref));
+				int i = index.data.number;
+				if (i < 0) i += baseLst.Count();
+				if (i < 0 || i >= baseLst.Count()) {
+					IndexException(String("Index Error (list index ") + index.ToString() + " out of range)").raise();
+				}
+				Value result = baseLst.Item((long)(index.data.number));
+				return result;
+			}
+			KeyException("List index must be numeric").raise();
+		}
+		if (type == ValueType::String) {
+			if (index.type == ValueType::Number) {
+				String baseStr((StringStorage*)(data.ref));
+				long len = baseStr.Length();
+				long i = (long)index.data.number;
+				if (i < 0) i += len;
+				if (i < 0 or i >= len) {
+					IndexException(String("Index Error (string index ") + i + " out of range").raise();
+				}
+				Value result = baseStr.Substring(i, 1);
+				return result;
+			}
+			KeyException("String index must be numeric").raise();
+		}
+		if (type == ValueType::Map) {
+			return Lookup(index);
+		}
+		if (type == ValueType::Null) {
+			TypeException("Null Reference Exception: can't index into null").raise();
+		}
+		TypeException("Type Exception: can't index into this type").raise();
+		return Value::null;
+	}
+
 	
 	/// <summary>
 	/// Look up the given identifier in the given sequence, walking the type chain
@@ -411,7 +459,7 @@ namespace MiniScript {
 	/// <param name="outFoundInMap">Output parameter: map the value was found in.</param>
 	Value Value::Resolve(Value sequence, String identifier, Context *context, ValueDict *outFoundInMap) {
 		bool includeMapType = true;
-		int loopsLeft = 1000;		// (max __isa chain depth)
+		int loopsLeft = maxIsaDepth;
 		while (not sequence.IsNull()) {
 			if (sequence.type == ValueType::Temp or sequence.type == ValueType::Var) sequence = sequence.Val(context);
 			if (sequence.type == ValueType::Map) {
@@ -423,7 +471,9 @@ namespace MiniScript {
 					return result;
 				}
 				// Otherwise, if we have an __isa, try that next
-				if (loopsLeft < 0) return null;		// (unless we've hit the loop limit)
+				if (loopsLeft < 0) {
+					LimitExceededException("__isa depth exceeded (perhaps a reference loop?)").raise();
+				}
 				if (not d.Get(Value::magicIsA, &sequence)) {
 					// ...and if we don't have an __isa, try the generic map type if allowed
 					if (!includeMapType) KeyException(identifier).raise();
@@ -464,6 +514,7 @@ namespace MiniScript {
 	/// in the context of the given virtual machine.
 	/// </summary>
 	bool Value::IsA(Value type, Machine *vm) {
+		if (type.IsNull()) return IsNull();
 		switch (this->type) {
 			case ValueType::Number:
 				return RefEqual(type, vm->numberType);
@@ -484,12 +535,16 @@ namespace MiniScript {
 				// otherwise, walk the __isa chain
 				ValueDict d = GetDict();
 				Value p;
+				int chainDepth = 0;
 				if (!d.Get(magicIsA, &p)) return false;
 				while (true) {
 					if (RefEqual(p, type)) return true;
 					if (p.type != ValueType::Map) return false;
 					d = p.GetDict();
 					if (!d.Get(magicIsA, &p)) return false;
+					if (chainDepth++ > maxIsaDepth) {
+						LimitExceededException("__isa depth exceeded (perhaps a reference loop?)").raise();
+					}
 				}
 			}
 
@@ -530,13 +585,7 @@ namespace MiniScript {
 			if (lhl == nullptr) return rhl == nullptr ? 1 : 0;
 			long count = lhl->size();
 			if (count != rhl->size()) return 0;
-			if (recursionDepth < 1) return 0.5;		// in too deep
-			double result = 1;
-			for (long i = 0; i < count; i++) {
-				result *= Equality((*lhl)[i], (*rhl)[i], recursionDepth-1);
-				if (result <= 0) break;
-			}
-			return result;
+			return lhs.RecursiveEqual(rhs) ? 1 : 0;
 		} else if (lhs.type == ValueType::Map) {
 			if (rhs.type != ValueType::Map) return 0;
 			if (lhs.data.ref == rhs.data.ref) return 1;
@@ -544,15 +593,7 @@ namespace MiniScript {
 			const ValueDict rhd = ((Value)rhs).GetDict();
 			long count = lhd.Count();
 			if (count != rhd.Count()) return 0;
-			if (recursionDepth < 1) return 0.5;		// in too deep
-			double result = 1;
-			Value v;
-			for (ValueDictIterator kv = lhd.GetIterator(); not kv.Done(); kv.Next()) {
-				if (not rhd.Get(kv.Key(), &v)) return 0;
-				result *= Equality(kv.Value(), v, recursionDepth-1);
-				if (result <= 0) break;
-			}
-			return result;
+			return lhs.RecursiveEqual(rhs) ? 1 : 0;
 		} else if (lhs.type == ValueType::Function) {
 			// Two Function values are equal only if they refer to the exact same function
 			if (rhs.type != ValueType::Function) return 0;
@@ -639,27 +680,12 @@ namespace MiniScript {
 				
 			case ValueType::List:
 			{
-				ValueList list((ListStorage<Value>*)data.ref);
-				long count = list.Count();
-				unsigned int x = IntHash((int)count);
-				for (int i=0; i<count; i++) x ^= list[i].Hash();
-//				list.forget();
-				return x;
+				return RecursiveHash();
 			} break;
 			
 			case ValueType::Map:
 			{
-				ValueDict dict((DictionaryStorage<Value, Value>*)data.ref);
-				long count = dict.Count();
-				unsigned int x = IntHash((int)count);
-				ValueList keys = dict.Keys();
-				for (int i=0; i<count; i++) {
-					Value key = keys[i];
-					x ^= key.Hash();
-					x ^= dict[key].Hash();
-				}
-//				dict.forget();
-				return x;
+				return RecursiveHash();
 			} break;
 
 			case ValueType::Temp:
@@ -679,6 +705,106 @@ namespace MiniScript {
 				return IntHash((int)(long)data.ref);
 		}
 		return 0;
+	}
+
+	bool Value::RecursiveEqual(Value rhs) const {
+		struct ValuePair {
+			Value a;
+			Value b;
+			ValuePair(const Value& inA, const Value& inB) : a(inA), b(inB) {}
+			ValuePair() {}
+			bool operator==(const ValuePair& rhs) {
+				// Careful: we must use RefEqual here to detect reference loops
+				// below; if we used ==, which does a deep comparison, it could
+				// just send us into an infinite recursion right here.
+				return Value::RefEqual(a, rhs.a) && Value::RefEqual(b, rhs.b);
+			}
+		};
+		SimpleVector<ValuePair> toDo;
+		SimpleVector<ValuePair> visited;
+		toDo.push_back(ValuePair(*this, rhs));
+		while (!toDo.empty()) {
+			ValuePair pair = toDo.pop_back();
+			visited.push_back(pair);
+			if (pair.a.type == ValueType::List) {
+				if (pair.b.type != ValueType::List) return false;
+				ValueList listA((ListStorage<Value>*)pair.a.data.ref);
+				long aCount = listA.Count();
+				ValueList listB((ListStorage<Value>*)pair.b.data.ref);
+				if (listB.Count() != aCount) return false;
+				if (Value::RefEqual(pair.a, pair.b)) continue;
+				for (int i=0; i < aCount; i++) {
+					ValuePair newPair(listA[i], listB[i]);
+					if (!visited.Contains(newPair)) toDo.push_back(newPair);
+				}
+			} else if (pair.a.type == ValueType::Map) {
+				if (pair.b.type != ValueType::Map) return false;
+				ValueDict dictA((DictionaryStorage<Value, Value>*)pair.a.data.ref);
+				long countA = dictA.Count();
+				ValueDict dictB((DictionaryStorage<Value, Value>*)pair.b.data.ref);
+				if (dictB.Count() != countA) return false;
+				if (Value::RefEqual(pair.a, pair.b)) continue;
+				ValueList keys = dictA.Keys();
+				for (int i=0; i<countA; i++) {
+					Value key = keys[i];
+					Value valFromB;
+					if (!dictB.Get(key, &valFromB)) return false;
+					Value valFromA = dictA[key];
+					ValuePair newPair(valFromA, valFromB);
+					if (!visited.Contains(newPair)) toDo.push_back(newPair);
+				}
+			} else {
+				// No other types can recurse, so can safely do:
+				if (Equality(pair.a, pair.b) == 0) return false;
+			}
+		}
+		// If we clear out our toDo list without finding anything unequal,
+		// then the values as a whole must be equal.
+		return true;
+	}
+
+	unsigned int Value::RecursiveHash() const {
+		unsigned int result = 0;
+		SimpleVector<Value> toDo;
+		SimpleVector<void*> visited;
+		toDo.push_back(*this);
+		visited.push_back(data.ref);
+		while (!toDo.empty()) {
+			Value item = toDo.pop_back();
+			if (item.type == ValueType::List) {
+				ValueList list((ListStorage<Value>*)item.data.ref);
+				long count = list.Count();
+				result = rotateBits(result) ^ IntHash((int)count);
+				for (int i=0; i<count; i++) {
+					Value child = list[i];
+					if (!(child.type == ValueType::List || child.type == ValueType::Map) || !visited.Contains(child.data.ref)) {
+						toDo.push_back(child);
+						visited.push_back(child.data.ref);
+					}
+				}
+			} else if (item.type == ValueType::Map) {
+				ValueDict dict((DictionaryStorage<Value, Value>*)item.data.ref);
+				long count = dict.Count();
+				result = rotateBits(result) ^ IntHash((int)count);
+				ValueList keys = dict.Keys();
+				for (int i=0; i<count; i++) {
+					Value key = keys[i];
+					if (!(key.type == ValueType::List || key.type == ValueType::Map) || !visited.Contains(key.data.ref)) {
+						toDo.push_back(key);
+						visited.push_back(key.data.ref);
+					}
+					Value value = dict[key];
+					if (!(value.type == ValueType::List || value.type == ValueType::Map) || !visited.Contains(value.data.ref)) {
+						toDo.push_back(value);
+						visited.push_back(value.data.ref);
+					}
+				}
+			} else {
+				// Anything else, we can safely use the standard hash method
+				result = rotateBits(result) ^ item.Hash();
+			}
+		}
+		return result;
 	}
 
 	bool Value::Equal(StringStorage *lhs, StringStorage *rhs) {
@@ -762,13 +888,13 @@ void TestValue::TestBasics()
 	Assert(c.type == ValueType::Number and c.data.number == 42);
 
 	a = "Foo!";
-	Assert(a.type == ValueType::String and a.ToString(NULL) == "Foo!");
+	Assert(a.type == ValueType::String and a.ToString(nullptr) == "Foo!");
 	b = a;
-	Assert(b.type == ValueType::String and b.ToString(NULL) == "Foo!");
+	Assert(b.type == ValueType::String and b.ToString(nullptr) == "Foo!");
 
  	Assert(c.type == ValueType::Number and c.data.number == 42);
 	b = 0.0;
-	Assert(a.type == ValueType::String and a.ToString(NULL) == "Foo!");
+	Assert(a.type == ValueType::String and a.ToString(nullptr) == "Foo!");
 
 	{
 		List<Value> lst;
@@ -778,7 +904,7 @@ void TestValue::TestBasics()
 		a = lst;
 	}
 	Assert(a.type == ValueType::List);
-	String s = a.ToString(NULL);
+	String s = a.ToString(nullptr);
 	Assert(s == "[1, \"two\", 3.14157]");
 }
 

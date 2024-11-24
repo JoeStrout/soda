@@ -27,6 +27,13 @@ namespace MiniScript {
 		Reset(source);
 	}
 
+	Interpreter::~Interpreter() {
+		// We own the parser and the VM...
+		delete(parser); parser = nullptr;
+		delete(vm); vm = nullptr;
+		// But we do not own hostData; it's up to the host to deal with that.
+	}
+
 	void Interpreter::Reset(List<String> source) {
 		Reset(Join("\n", source));
 	}
@@ -73,11 +80,13 @@ namespace MiniScript {
 	/// <param name="timeLimit">maximum amout of time to run before returning, in seconds</param>
 	/// <param name="returnEarly">if true, return as soon as we reach an intrinsic that returns a partial result</param>
 	void Interpreter::RunUntilDone(double timeLimit, bool returnEarly) {
+		long startImpResultCount = 0;
 		try {
 			if (not vm) {
 				Compile();
 				if (not vm) return;	// (must have been some error)
 			}
+			startImpResultCount = vm->GetGlobalContext()->implicitResultCounter;
 			double startTime = vm->RunTime();
 			vm->yielding = false;
 			int checkRuntimeIn = 15;		// (because vm->RunTime() is expensive on many machines)
@@ -93,6 +102,7 @@ namespace MiniScript {
 			ReportError(mse);
 			vm->GetTopContext()->JumpToEnd();
 		}
+		CheckImplicitResult(startImpResultCount);
 	}
 
 	/// <summary>
@@ -122,18 +132,16 @@ namespace MiniScript {
 		Context *globalContext = vm->GetGlobalContext();
 		long startImpResultCount = globalContext->implicitResultCounter;
 		vm->storeImplicit = (implicitOutput != nullptr);
+		vm->yielding = false;
 		
 		try {
 			if (not sourceLine.empty()) parser->Parse(sourceLine, true);
 			if (not parser->NeedMoreInput()) {
-				while (not vm->Done()) {
+				while (not vm->Done() && !vm->yielding) {
 					if (vm->RunTime() - startTime > timeLimit) return;	// time's up for now!
 					vm->Step();
 				}
-				if (implicitOutput and globalContext->implicitResultCounter > startImpResultCount) {
-					Value result = globalContext->GetVar("_");
-					if (!result.IsNull()) (*implicitOutput)(result.ToString(vm));
-				}
+				CheckImplicitResult(startImpResultCount);
 			}
 			
 		} catch (const MiniscriptException& mse) {
@@ -156,9 +164,56 @@ namespace MiniScript {
 	bool Interpreter::NeedMoreInput() {
 		return parser and parser->NeedMoreInput();
 	}
+
+
+	/// <summary>
+    /// Get a value from the global namespace of this interpreter.
+    /// </summary>
+    /// <param name="varName">name of global variable to get</param>
+    /// <returns>Value of the named variable, or null if not found</returns>
+    Value Interpreter::GetGlobalValue(String varName) {
+        if (not vm) return Value::null;
+
+		Context* globalContext = vm->GetGlobalContext();
+        if (globalContext == nullptr) return Value::null;
+        try
+        {
+            return globalContext->GetVar(varName);
+
+		} catch (const MiniscriptException& mse) {
+            ReportError(mse);
+            return Value::null;
+        }
+	}
+
+
+    /// <summary>
+    /// Set a value in the global namespace of this interpreter.
+    /// </summary>
+    /// <param name="varName">name of global variable to set</param>
+    /// <param name="value">value to set</param>	
+	void Interpreter::SetGlobalValue(String varName, Value value)
+    {
+        if (vm) vm->GetGlobalContext()->SetVar(varName, value);
+	}
+
+	/// <summary>
+	/// Helper method that checks whether we have a new implicit result, and if
+	/// so, invokes the implicitOutput callback (if any).  This is how you can
+	/// see the result of an expression in a Read-Eval-Print Loop (REPL).
+	/// </summary>
+	/// <param name="previousImpResultCount">previous value of implicitResultCounter</param>
+	void Interpreter::CheckImplicitResult(long previousImpResultCount) {
+		if (!implicitOutput) return;
+		Context* globalContext = vm->GetGlobalContext();
+		if (implicitOutput and globalContext->implicitResultCounter > previousImpResultCount) {
+			Value result = globalContext->GetVar("_");
+			if (!result.IsNull()) (*implicitOutput)(result.ToString(vm), true);
+		}
+	}
 	
 	void Interpreter::ReportError(const MiniscriptException& mse) {
-		if (errorOutput) (*errorOutput)(mse.Description());
+		if (errorOutput) (*errorOutput)(mse.Description(), true);
 	}
 
 }

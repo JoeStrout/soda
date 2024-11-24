@@ -8,7 +8,7 @@ Soda is a command-line program written in C++ and using SDL.  On most systems th
 
 2. Install the **SDL2** and **SDL2_image** development libraries.  For details, see:
 - https://wiki.libsdl.org/Installation
-- https://www.libsdl.org/projects/SDL_image/
+- https://github.com/libsdl-org/SDL_image
 
 ## Build Steps (Mac/Linux)
 

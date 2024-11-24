@@ -42,6 +42,7 @@ namespace MiniScript {
 			AOrB,
 			BindAssignA,
 			CopyA,
+			NewA,
 			NotA,
 			GotoA,
 			GotoAifB,
@@ -115,7 +116,7 @@ namespace MiniScript {
 		}
 	
 		void SetVar(String identifier, Value value);
-		Value GetVar(String identifier);
+		Value GetVar(String identifier, LocalOnlyMode localOnly=LocalOnlyMode::Off);
 		
 		/// <summary>
 		/// Store a parameter argument in preparation for an upcoming call
@@ -140,6 +141,8 @@ namespace MiniScript {
 
 		void JumpToEnd() { lineNum = code.Count(); }
 		
+		SourceLoc GetSourceLoc();
+		
 	private:
 		List<Value> temps;			// values of temporaries; temps[0] is always return value
 	};
@@ -161,6 +164,8 @@ namespace MiniScript {
 		String FindShortName(const Value& val);
 		
 		double RunTime() { return startTime  == 0 ? 0 : CurrentWallClockTime() - startTime; }
+		
+		List<SourceLoc> GetStack();
 		
 		TextOutputMethod standardOutput;
 		bool storeImplicit;

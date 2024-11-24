@@ -154,7 +154,7 @@ void TextDisplay::PutChar(long unicodeChar) {
 	}
 }
 
-void TextDisplay::Print(String s) {
+void TextDisplay::Print(String s, bool addLineBreak) {
 	if (cursorY >= rows) cursorY = rows-1;
 	if (cursorX >= cols) cursorX = cols-1;
 
@@ -163,7 +163,7 @@ void TextDisplay::Print(String s) {
 	while (c < end) {
 		PutChar(UTF8DecodeAndAdvance(&c));
 	}
-	PutChar(13);
+	if (addLineBreak) PutChar(13);
 }
 
 //--------------------------------------------------------------------------------

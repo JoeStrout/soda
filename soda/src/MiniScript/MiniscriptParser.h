@@ -45,14 +45,20 @@ namespace MiniScript {
 		List<BackPatch> backpatches;
 		List<JumpPoint> jumpPoints;
 		int nextTempNum;
+		String localOnlyIdentifier;		// identifier to be looked up in local scope *only*
+		bool localOnlyStrict;			// whether localOnlyIdentifier applies strictly, or merely warns
 		
 		bool empty() { return code.Count() == 0; }
+		
+		ParseState() { Clear(); }
 		
 		void Clear() {
 			code = List<TACLine>();
 			backpatches = List<BackPatch>();
 			jumpPoints = List<JumpPoint>();
 			nextTempNum = 0;
+			localOnlyIdentifier = "";
+			localOnlyStrict = false;
 		}
 		
 		void Add(TACLine line) { code.Add(line); }
@@ -99,7 +105,7 @@ namespace MiniScript {
 		/// Patches up all the branches for a single open if block.  That includes
 		/// the last "else" block, as well as one or more "end if" jumps.
 		/// </summary>
-		void PatchIfBlock();
+		void PatchIfBlock(bool singleLineIf);
 	};
 	
 	class Parser {
@@ -153,6 +159,8 @@ namespace MiniScript {
 			return (not partialInput.empty() or outputStack.Count() > 1 or output->backpatches.Count() > 0);
 		}
 
+		static bool EndsWithLineContinuation(String sourceCode);
+		
 		void Parse(String sourceCode, bool replMode=false);
 
 		Machine *CreateVM(TextOutputMethod standardOutput);
@@ -192,7 +200,8 @@ namespace MiniScript {
 		Value ParseCallArgs(Value funcRef, Lexer tokens);
 		Value ParseAtom(Lexer tokens, bool asLval=false, bool statementStart=false);
 
-		Value FullyEvaluate(Value val);
+		void CheckForOpenBackpatches(int sourceLineNum);
+		Value FullyEvaluate(Value val, LocalOnlyMode localOnlyMode=LocalOnlyMode::Off);
 		void StartElseClause();
 		Token RequireToken(Lexer tokens, Token::Type type, String text=String());
 		Token RequireEitherToken(Lexer tokens, Token::Type type1, String text1, Token::Type type2, String text2=String());

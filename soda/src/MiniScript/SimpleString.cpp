@@ -13,6 +13,17 @@ namespace MiniScript {
 #if(DEBUG)
 	long RefCountedStorage::instanceCount = 0;
 	long StringStorage::instanceCount = 0;
+	StringStorage* StringStorage::head = nullptr;
+
+	long _stringInstanceCount() { return StringStorage::instanceCount; }
+
+	void StringStorage::DumpStrings() {
+		StringStorage *ss = head;
+		while (ss) {
+			printf("%s\n", ss->data);
+			ss = ss->_next;
+		}
+	}
 #endif
 
 	
@@ -120,28 +131,24 @@ namespace MiniScript {
 	int String::IntValue(const char* formatSpec) const {
 		int retval = 0;
 		sscanf(c_str(), formatSpec, &retval);
-		if (retval == 0 and BooleanValue()) return 1;
 		return retval;
 	}
 
 	long String::LongValue(const char* formatSpec) const {
 		long retval = 0;
 		sscanf(c_str(), formatSpec, &retval);
-		if (retval == 0 and BooleanValue()) return 1;
 		return retval;
 	}
 
 	float String::FloatValue(const char* formatSpec) const {
 		float retval = 0;
 		sscanf(c_str(), formatSpec, &retval);
-		if (retval == 0 and BooleanValue()) return 1;
 		return retval;
 	}
 
 	double String::DoubleValue(const char* formatSpec) const {
 		double retval = 0;
 		sscanf(c_str(), formatSpec, &retval);
-		if (retval == 0 and BooleanValue()) return 1;
 		return retval;
 	}
 
@@ -249,7 +256,7 @@ namespace MiniScript {
 		Assert(s > empty);
 		Assert(empty < s);
 		// Test null and empty String are equal
-		Assert(empty == NULL);
+		Assert(empty == nullptr);
 		Assert(empty == "");
 		
 		
@@ -290,7 +297,7 @@ namespace MiniScript {
 		Assert(s == "foooobarbazaroooo");
 		
 		s = "another simple String";
-		char *str = new char[22];
+		char *str = new char[23];
 		strcpy(str,"an array of characters");
 		s.takeoverBuffer(str);
 		Assert(s == "an array of characters");

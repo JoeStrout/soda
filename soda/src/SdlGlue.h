@@ -41,7 +41,7 @@ MiniScript::Value GetSubImage(MiniScript::Value image, int left, int bottom, int
 MiniScript::Value GetImagePixel(MiniScript::Value image, int x, int y);
 void SetImagePixel(MiniScript::Value image, int x, int y, MiniScript::String colorStr);
 
-void Print(MiniScript::String s);
+void Print(MiniScript::String s, bool addLineBreak=true);
 void Clear();
 
 // flag set to true when the user tries to quit the app (by closing the window, cmd-Q, etc.)
