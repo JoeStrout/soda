@@ -23,6 +23,7 @@
 #include "MiniScript/SplitJoin.h"
 #include "BoundingBox.h"
 #include "Sprite.h"
+#include "PixelDisplay.h"
 
 using namespace MiniScript;
 
@@ -43,6 +44,12 @@ static IntrinsicResult intrinsic_clear(Context *context, IntrinsicResult partial
 static IntrinsicResult intrinsic_sprites(Context *context, IntrinsicResult partialResult) {
 	return IntrinsicResult(spriteList);
 }
+
+static int GetInt(Context *context, const char *varName) {
+	Value value = context->GetVar(varName);
+	return value.IntValue();
+}
+
 
 //--------------------------------------------------------------------------------
 // Bounds class
@@ -534,9 +541,9 @@ static IntrinsicResult intrinsic_textDisplay_rows(Context *context, IntrinsicRes
 	return IntrinsicResult(SdlGlue::mainTextDisplay->rows);
 }
 
-static bool textDisplayAssignOverride(ValueDict& spriteMap, MiniScript::Value key, Value value) {
+static bool textDisplayAssignOverride(ValueDict& map, MiniScript::Value key, Value value) {
 	// If the value hasn't changed, do nothing.
-	Value curVal = spriteMap.Lookup(key, Value::null);
+	Value curVal = map.Lookup(key, Value::null);
 	if (curVal == value) return not value.IsNull();	// (block the assignment, unless actually assigning null)
 	
 	String keyStr = key.ToString();
@@ -590,6 +597,142 @@ static IntrinsicResult intrinsic_textDisplayInstance(Context *context, Intrinsic
 		textDisplayInstance = text;
 	}
 	return IntrinsicResult(textDisplayInstance);
+}
+
+//--------------------------------------------------------------------------------
+// PixelDisplay class
+//--------------------------------------------------------------------------------
+ValueDict pixelDisplayClass;
+static Intrinsic *i_pixelDisplay_clear = nullptr;
+static Intrinsic *i_pixelDisplay_width = nullptr;
+static Intrinsic *i_pixelDisplay_height = nullptr;
+static Intrinsic *i_pixelDisplay_color = nullptr;
+static Intrinsic *i_pixelDisplay_fillRect = nullptr;
+static Intrinsic *i_pixelDisplay_fillEllipse = nullptr;
+
+static IntrinsicResult intrinsic_pixelDisplay_clear(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	Value colorStr = context->GetVar("color");
+	// Note: for now, we'll just always access the main pixel display.
+	// When we support multiple pixel displays, we'll need to be more discriminating.
+	SdlGlue::mainPixelDisplay->Clear(ToColor(colorStr.ToString()));
+	return IntrinsicResult::Null;
+}
+
+static IntrinsicResult intrinsic_pixelDisplay_height(Context *context, IntrinsicResult partialResult) {
+	//Value self = context->GetVar("self");
+	// Note: for now, we'll just always access the main pixel display.
+	// When we support multiple pixel displays, we'll need to be more discriminating.
+	return IntrinsicResult(SdlGlue::mainPixelDisplay->Height());
+}
+
+static IntrinsicResult intrinsic_pixelDisplay_width(Context *context, IntrinsicResult partialResult) {
+	//Value self = context->GetVar("self");
+	// Note: for now, we'll just always access the main pixel display.
+	// When we support multiple pixel displays, we'll need to be more discriminating.
+	return IntrinsicResult(SdlGlue::mainPixelDisplay->Width());
+}
+
+static IntrinsicResult intrinsic_pixelDisplay_color(Context *context, IntrinsicResult partialResult) {
+	//Value self = context->GetVar("self");
+	// Note: for now, we'll just always access the main pixel display.
+	// When we support multiple pixel displays, we'll need to be more discriminating.
+	return IntrinsicResult(SdlGlue::mainPixelDisplay->drawColor.ToString());
+}
+
+static IntrinsicResult intrinsic_pixelDisplay_fillRect(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	// Note: for now, we'll just always access the main pixel display.
+	// When we support multiple pixel displays, we'll need to be more discriminating.
+	int left = GetInt(context, "left");
+	int bottom = GetInt(context, "bottom");
+	int width = GetInt(context, "width");
+	int height = GetInt(context, "height");
+	Value colorVal = context->GetVar("color");
+	Color color;
+	if (!colorVal.IsNull()) color = ToColor(colorVal.ToString());
+	else color = SdlGlue::mainPixelDisplay->drawColor;
+	SdlGlue::mainPixelDisplay->FillRect(left, bottom, width, height, color);
+	return IntrinsicResult::Null;
+}
+
+static IntrinsicResult intrinsic_pixelDisplay_fillEllipse(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	// Note: for now, we'll just always access the main pixel display.
+	// When we support multiple pixel displays, we'll need to be more discriminating.
+	int left = GetInt(context, "left");
+	int bottom = GetInt(context, "bottom");
+	int width = GetInt(context, "width");
+	int height = GetInt(context, "height");
+	Value colorVal = context->GetVar("color");
+	Color color;
+	if (!colorVal.IsNull()) color = ToColor(colorVal.ToString());
+	else color = SdlGlue::mainPixelDisplay->drawColor;
+	SdlGlue::mainPixelDisplay->FillEllipse(left, bottom, width, height, color);
+	return IntrinsicResult::Null;
+}
+
+static bool pixelDisplayAssignOverride(ValueDict& map, MiniScript::Value key, Value value) {
+	// If the value hasn't changed, do nothing.
+	Value curVal = map.Lookup(key, Value::null);
+	if (curVal == value) return not value.IsNull();	// (block the assignment, unless actually assigning null)
+	
+	String keyStr = key.ToString();
+	if (keyStr == "color") {
+		SdlGlue::mainPixelDisplay->drawColor = ToColor(value.ToString());
+		return true;	// (block the assignment)
+	}
+	return false;	// allow the assignment
+}
+static IntrinsicResult intrinsic_pixelDisplayClass(Context *conpixel, IntrinsicResult partialResult) {
+	if (pixelDisplayClass.Count() == 0) {
+		i_pixelDisplay_clear = Intrinsic::Create("");
+		i_pixelDisplay_clear->AddParam("color", "#00000000");
+		i_pixelDisplay_clear->code = &intrinsic_pixelDisplay_clear;
+		pixelDisplayClass.SetValue("clear", i_pixelDisplay_clear->GetFunc());
+		
+		i_pixelDisplay_width = Intrinsic::Create("");
+		i_pixelDisplay_width->code = &intrinsic_pixelDisplay_width;
+		pixelDisplayClass.SetValue("width", i_pixelDisplay_width->GetFunc());
+		
+		i_pixelDisplay_height = Intrinsic::Create("");
+		i_pixelDisplay_height->code = &intrinsic_pixelDisplay_height;
+		pixelDisplayClass.SetValue("height", i_pixelDisplay_height->GetFunc());
+		
+		i_pixelDisplay_color = Intrinsic::Create("");
+		i_pixelDisplay_color->code = &intrinsic_pixelDisplay_color;
+		pixelDisplayClass.SetValue("color", i_pixelDisplay_color->GetFunc());
+		
+		i_pixelDisplay_fillRect = Intrinsic::Create("");
+		i_pixelDisplay_fillRect->AddParam("left", 0);
+		i_pixelDisplay_fillRect->AddParam("bottom", 0);
+		i_pixelDisplay_fillRect->AddParam("width", 100);
+		i_pixelDisplay_fillRect->AddParam("height", 100);
+		i_pixelDisplay_fillRect->AddParam("color");
+		i_pixelDisplay_fillRect->code = &intrinsic_pixelDisplay_fillRect;
+		pixelDisplayClass.SetValue("fillRect", i_pixelDisplay_fillRect->GetFunc());
+				
+		i_pixelDisplay_fillEllipse = Intrinsic::Create("");
+		i_pixelDisplay_fillEllipse->AddParam("left", 0);
+		i_pixelDisplay_fillEllipse->AddParam("bottom", 0);
+		i_pixelDisplay_fillEllipse->AddParam("width", 100);
+		i_pixelDisplay_fillEllipse->AddParam("height", 100);
+		i_pixelDisplay_fillEllipse->AddParam("color");
+		i_pixelDisplay_fillEllipse->code = &intrinsic_pixelDisplay_fillEllipse;
+		pixelDisplayClass.SetValue("fillEllipse", i_pixelDisplay_fillEllipse->GetFunc());
+	}
+	return IntrinsicResult(pixelDisplayClass);
+}
+
+Value pixelDisplayInstance;
+static IntrinsicResult intrinsic_pixelDisplayInstance(Context *conpixel, IntrinsicResult partialResult) {
+	if (pixelDisplayInstance.type != ValueType::Map) {
+		ValueDict disp;
+		disp.SetValue(Value::magicIsA, pixelDisplayClass);
+		disp.SetAssignOverride(pixelDisplayAssignOverride);
+		pixelDisplayInstance = disp;
+	}
+	return IntrinsicResult(pixelDisplayInstance);
 }
 
 //--------------------------------------------------------------------------------
@@ -652,7 +795,7 @@ static IntrinsicResult intrinsic_file_loadSound(Context *context, IntrinsicResul
 
 //--------------------------------------------------------------------------------
 void AddSodaIntrinsics() {
-	printf("Adding Soda intrinsics\n");
+// 	printf("Adding Soda intrinsics\n");
 	Intrinsic *f;
 
 	f = Intrinsic::Create("clear");
@@ -702,6 +845,13 @@ void AddSodaIntrinsics() {
 
 	f = Intrinsic::Create("text");
 	f->code = &intrinsic_textDisplayInstance;
+	
+	f = Intrinsic::Create("PixelDisplay");
+	f->code = &intrinsic_pixelDisplayClass;
+	intrinsic_pixelDisplayClass(nullptr, IntrinsicResult::Null);
+
+	f = Intrinsic::Create("gfx");
+	f->code = &intrinsic_pixelDisplayInstance;
 	
 	f = Intrinsic::Create("key");
 	f->code = &intrinsic_keyModule;

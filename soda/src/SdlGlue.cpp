@@ -14,7 +14,7 @@
 #include "SodaIntrinsics.h"
 #include "Color.h"
 #include "TextDisplay.h"
-#include "PixelSurface.h"
+#include "PixelDisplay.h"
 
 using namespace MiniScript;
 
@@ -92,7 +92,7 @@ void Setup() {
 	
 	SetupAudio();
 	SetupTextDisplay(mainRenderer);
-	SetupPixelSurface(mainRenderer);
+	SetupPixelDisplay(mainRenderer);
 }
 
 
@@ -141,10 +141,8 @@ void Service() {
 	SDL_SetRenderDrawColor(mainRenderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
 	SDL_RenderClear(mainRenderer);
 	DrawSprites();
+	mainPixelDisplay->Render();
 	RenderTextDisplay();
-	// HACK for testing:
-	//RenderPixelSurface();
-	// END HACK
 	SDL_RenderPresent(mainRenderer);
 }
 

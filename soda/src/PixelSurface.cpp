@@ -16,40 +16,10 @@ static SDL_Renderer *renderer = nullptr;
 
 void SetupPixelSurface(SDL_Renderer  *renderer) {
 	SdlGlue::renderer = renderer;
-	surface = new PixelSurface(960, 640, Color::green);
-	SDL_Rect r = {200,200, 400,300};
-	surface->FillEllipse(&r, Color::pink);
 }
 
 void RenderPixelSurface() {
 	surface->Render();
-	/*
-	unsigned char *pixels;
-	int pitch;
-	int err = SDL_LockTexture(tex, NULL, (void**)(&pixels), &pitch);
-	if (err) {
-		printf("SDL_LockTexture failed; error = %s\n", SDL_GetError());
-		return;
-	}
-	for (int y=0; y<256; y++) {
-		Uint32 *p = (Uint32*)(pixels + y * pitch);
-		for (int x=0; x<256; x++) {
-			Color c;
-			if ((x-128)*(x-128) + (y-128)*(y-128) < 128*128) c = clear32;
-			else if (x > 128) {
-				if (y > 128) c = Color(255,0,0);
-				else c = Color(255,255,0);
-			} else {
-				if (y > 128) c = Color(0,0,255);
-				else c = Color(0,255,255);
-			}
-			*p++ = c.asUint32;
-		}
-	}
-	
-	SDL_UnlockTexture(tex);
-	SDL_RenderCopy(renderer, tex, NULL, NULL);
-	*/
 }
 
 void ShutdownPixelSurface() {
