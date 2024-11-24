@@ -32,8 +32,6 @@ PixelDisplay::PixelDisplay() {
 	surf = new PixelSurface(GetWindowWidth(), GetWindowHeight());
 	drawColor = Color::white;
 	Clear();
-	SDL_Rect r = {200,200, 400,300};
-	surf->FillEllipse(&r, Color::pink);
 }
 
 PixelDisplay::~PixelDisplay() {

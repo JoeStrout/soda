@@ -67,8 +67,8 @@ void Setup() {
 	SdlAssertOK(init);
 	if (init < 0) return;
 	
-	if (!SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1")) {
-		printf( "Warning: Linear texture filtering not enabled!" );
+	if (!SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "0")) {
+		printf( "Warning: Render scale quality not set!" );
 	}
 
 	// Initialize PNG loading
@@ -567,6 +567,7 @@ void DrawSprites() {
 			storage->texture = SDL_CreateTextureFromSurface(mainRenderer, storage->surface);
 			if (storage->texture == nullptr) continue;
 			SDL_SetTextureBlendMode(storage->texture, SDL_BLENDMODE_BLEND);
+			SDL_SetTextureScaleMode(storage->texture, SDL_ScaleModeNearest);
 		}
 		double w = storage->surface->w*scale, h = storage->surface->h*scale;
 		
