@@ -608,6 +608,7 @@ static Intrinsic *i_pixelDisplay_width = nullptr;
 static Intrinsic *i_pixelDisplay_height = nullptr;
 static Intrinsic *i_pixelDisplay_color = nullptr;
 static Intrinsic *i_pixelDisplay_setPixel = nullptr;
+static Intrinsic *i_pixelDisplay_drawLine = nullptr;
 static Intrinsic *i_pixelDisplay_fillRect = nullptr;
 static Intrinsic *i_pixelDisplay_fillEllipse = nullptr;
 
@@ -652,6 +653,22 @@ static IntrinsicResult intrinsic_pixelDisplay_setPixel(Context *context, Intrins
 	if (!colorVal.IsNull()) color = ToColor(colorVal.ToString());
 	else color = SdlGlue::mainPixelDisplay->drawColor;
 	SdlGlue::mainPixelDisplay->SetPixel(x, y, color);
+	return IntrinsicResult::Null;
+}
+
+static IntrinsicResult intrinsic_pixelDisplay_drawLine(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	// Note: for now, we'll just always access the main pixel display.
+	// When we support multiple pixel displays, we'll need to be more discriminating.
+	int x1 = GetInt(context, "x1");
+	int y1 = GetInt(context, "y1");
+	int x2 = GetInt(context, "x2");
+	int y2 = GetInt(context, "y2");
+	Value colorVal = context->GetVar("color");
+	Color color;
+	if (!colorVal.IsNull()) color = ToColor(colorVal.ToString());
+	else color = SdlGlue::mainPixelDisplay->drawColor;
+	SdlGlue::mainPixelDisplay->DrawLine(x1, y1, x2, y2, color);
 	return IntrinsicResult::Null;
 }
 
@@ -724,6 +741,15 @@ static IntrinsicResult intrinsic_pixelDisplayClass(Context *conpixel, IntrinsicR
 		i_pixelDisplay_setPixel->AddParam("color");
 		i_pixelDisplay_setPixel->code = &intrinsic_pixelDisplay_setPixel;
 		pixelDisplayClass.SetValue("setPixel", i_pixelDisplay_setPixel->GetFunc());
+				
+		i_pixelDisplay_drawLine = Intrinsic::Create("");
+		i_pixelDisplay_drawLine->AddParam("x1", 0);
+		i_pixelDisplay_drawLine->AddParam("y1", 0);
+		i_pixelDisplay_drawLine->AddParam("x2", 100);
+		i_pixelDisplay_drawLine->AddParam("y2", 100);
+		i_pixelDisplay_drawLine->AddParam("color");
+		i_pixelDisplay_drawLine->code = &intrinsic_pixelDisplay_drawLine;
+		pixelDisplayClass.SetValue("line", i_pixelDisplay_drawLine->GetFunc());
 				
 		i_pixelDisplay_fillRect = Intrinsic::Create("");
 		i_pixelDisplay_fillRect->AddParam("left", 0);

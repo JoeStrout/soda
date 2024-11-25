@@ -36,6 +36,7 @@ public:
 	int Width() { return surf->totalWidth; }
 	
 	void SetPixel(int x, int y, Color color);
+	void DrawLine(int x1, int y1, int x2, int y2, Color color);
 	void FillRect(int left, int bottom, int width, int height, Color color);
 	void FillEllipse(int left, int bottom, int width, int height, Color color);
 	

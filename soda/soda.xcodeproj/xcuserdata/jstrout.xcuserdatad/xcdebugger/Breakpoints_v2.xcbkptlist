@@ -282,6 +282,36 @@
                   endingLineNumber = "193"
                   offsetFromSymbolStart = "53">
                </Location>
+               <Location
+                  uuid = "FB737BE3-1D5A-4785-A14C-8502239A6A77 - 8d2261f41c5b8e35"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "SimpleVector&lt;SimpleVector&lt;SdlGlue::CellContent&gt;&gt;::operator[](long)"
+                  moduleName = "soda"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jstrout/Documents/svnrepo/soda/soda/src/MiniScript/SimpleVector.h"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "193"
+                  endingLineNumber = "193"
+                  offsetFromSymbolStart = "53">
+               </Location>
+               <Location
+                  uuid = "FB737BE3-1D5A-4785-A14C-8502239A6A77 - 27eb7b71b4d38637"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "SimpleVector&lt;MiniScript::SourceLoc&gt;::operator[](long)"
+                  moduleName = "soda"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jstrout/Documents/svnrepo/soda/soda/src/MiniScript/SimpleVector.h"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "193"
+                  endingLineNumber = "193"
+                  offsetFromSymbolStart = "53">
+               </Location>
             </Locations>
          </BreakpointContent>
       </BreakpointProxy>
