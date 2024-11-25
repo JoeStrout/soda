@@ -6,8 +6,9 @@
 //	wraps a PixelSurface (which is a more low-level thing that manages an
 //	array of SDL textures).
 //
-//	Note that it's PixelDisplay that converts from Soda's bottom-up
-//	coordinate system, to PixelSurface's top-down one.
+//	ToDo: consider whether this wrapper is actually contributing anything
+//	worthwhile.  Maybe PixelDisplay and PixelSurface should be combined into
+//	one (sacrificing direct correspondence to the C# code).
 
 #ifndef PIXELDISPLAY_H
 #define PIXELDISPLAY_H
@@ -34,6 +35,7 @@ public:
 	int Height() { return surf->totalHeight; }
 	int Width() { return surf->totalWidth; }
 	
+	void SetPixel(int x, int y, Color color);
 	void FillRect(int left, int bottom, int width, int height, Color color);
 	void FillEllipse(int left, int bottom, int width, int height, Color color);
 	

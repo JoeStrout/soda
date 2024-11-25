@@ -57,13 +57,17 @@ void PixelDisplay::Clear(Color color) {
 	surf->Clear(color);
 }
 
+void PixelDisplay::SetPixel(int x, int y, Color color) {
+	surf->SetPixel(x, y, color);
+}
+
 void PixelDisplay::FillRect(int left, int bottom, int width, int height, Color color) {
-	SDL_Rect r = {left, surf->totalHeight - bottom - height, width, height};
+	SDL_Rect r = {left, bottom, width, height};
 	surf->FillRect(&r, color);
 }
 
 void PixelDisplay::FillEllipse(int left, int bottom, int width, int height, Color color) {
-	SDL_Rect r = {left, surf->totalHeight - bottom - height, width, height};
+	SDL_Rect r = {left, bottom, width, height};
 	surf->FillEllipse(&r, color);
 }
 

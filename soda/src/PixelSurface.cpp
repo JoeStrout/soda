@@ -103,55 +103,68 @@ void PixelSurface::Clear(Color color) {
 	}
 }
 
+/// <summary>
+/// Render this PixelSurface to the screen, bottom-up from the bottom-left
+/// corner of the window.
+/// </summary>
 void PixelSurface::Render() {
-	int i = 0;
-	for (int row=0; row < tileRows; row++) {
-		for (int col=0; col < tileCols; col++) {
-			SDL_Rect destRect = { col*tileWidth, row*tileHeight, tileWidth, tileHeight };
-			if (textureInUse[i]) {
-				// make sure texture is up to date
-				if (tileNeedsUpdate[i]) {
-					void* pixels;
-					int pitch;
-					int err = SDL_LockTexture(tileTex[i], NULL, &pixels, &pitch);
-					if (err) {
-						printf("Error in SDL_LockTexture: %s\n", SDL_GetError());
-						continue;
-					}
-					Color* srcP = pixelCache[i].pixels;
-					Uint8* destP = (Uint8*)pixels;
-					int bytesToCopy = tileWidth * 4;
-					if (bytesToCopy == pitch) {
-						memcpy(destP, srcP, bytesToCopy * tileHeight);
-					} else {
-						for (int y=0; y<tileHeight; y++) {
-							memcpy(destP, srcP, bytesToCopy);
-							srcP += tileWidth;
-							destP += pitch;
-						}
-					}
-					SDL_UnlockTexture(tileTex[i]);
-					tileNeedsUpdate[i] = false;
-				}
-				
-				// draw texture to screen
-				SDL_RenderCopy(renderer, tileTex[i], NULL, &destRect);
-			} else {
-				// draw a solid color
-				Color c = tileColor[i];
-				if (c.a > 0) {
-					SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
-					SDL_RenderFillRect(renderer, &destRect);
-					// For debugging: outline and "X" the tile instead of filling it.
+    int i = 0;
+    int windowHeight = tileRows * tileHeight;  // Need total height for y-coord calculation
+    
+    for (int row=0; row < tileRows; row++) {
+        // Calculate y position from bottom instead of top
+        int yPos = windowHeight - (row + 1) * tileHeight;
+        
+        for (int col=0; col < tileCols; col++) {
+            SDL_Rect destRect = { col*tileWidth, yPos, tileWidth, tileHeight };
+            if (textureInUse[i]) {
+                if (tileNeedsUpdate[i]) {
+                    void* pixels;
+                    int pitch;
+                    int err = SDL_LockTexture(tileTex[i], NULL, &pixels, &pitch);
+                    if (err) {
+                        printf("Error in SDL_LockTexture: %s\n", SDL_GetError());
+                        continue;
+                    }
+                    
+                    // Copy pixels in reverse row order to flip vertically
+                    Color* srcP = pixelCache[i].pixels + (tileHeight - 1) * tileWidth;
+                    Uint8* destP = (Uint8*)pixels;
+                    int bytesToCopy = tileWidth * 4;
+                    
+                    if (bytesToCopy == pitch) {
+                        for (int y = 0; y < tileHeight; y++) {
+                            memcpy(destP + y * pitch, srcP - y * tileWidth, bytesToCopy);
+                        }
+                    } else {
+                        for (int y = 0; y < tileHeight; y++) {
+                            memcpy(destP, srcP, bytesToCopy);
+                            srcP -= tileWidth;
+                            destP += pitch;
+                        }
+                    }
+                    
+                    SDL_UnlockTexture(tileTex[i]);
+                    tileNeedsUpdate[i] = false;
+                }
+                
+                SDL_RenderCopy(renderer, tileTex[i], NULL, &destRect);
+            } else {
+                Color c = tileColor[i];
+                if (c.a > 0) {
+                    SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
+                    SDL_RenderFillRect(renderer, &destRect);
+ 					// For debugging: outline and "X" the tile instead of filling it.
 //					SDL_RenderDrawRect(renderer, &destRect);
 //					SDL_RenderDrawLine(renderer, destRect.x, destRect.y, destRect.x+destRect.w, destRect.y+destRect.h);
 //					SDL_RenderDrawLine(renderer, destRect.x, destRect.y+destRect.h, destRect.x+destRect.w, destRect.y);
-				}
-			}
-			i++;
-		}
-	}
+               }
+            }
+            i++;
+        }
+    }
 }
+
 
 /// <summary>
 /// Get the range of tiles contained entirely within the given rectangle.
@@ -205,6 +218,23 @@ void PixelSurface::EnsureTextureInUse(int tileIndex) {
 	Color c = tileColor[tileIndex];
 	for (int i=0; i<pixPerTile; i++) *pixels++ = c;
 	textureInUse[tileIndex] = true;
+}
+
+// Set a single pixel of color in the surface, as quickly as possible.
+void PixelSurface::SetPixel(int x, int y, Color color) {
+	
+	if (x < 0 || y < 0 || x >= totalWidth || y >= totalHeight) return;
+	int col = x / tileWidth, row = y / tileHeight;
+	
+	int tileIndex = Index(col, row);
+	if (!EnsureTextureInUse(tileIndex, color)) return;
+	
+	int localX = x % tileWidth;
+	int localY = y % tileHeight;
+	Color* p = pixelCache[tileIndex].pixels + localY*tileWidth + localX;
+	if (*p == color) return;	// already the right color
+	*p = color;
+	tileNeedsUpdate[tileIndex] = true;
 }
 
 // Set a horizontal run of pixels to the given color.

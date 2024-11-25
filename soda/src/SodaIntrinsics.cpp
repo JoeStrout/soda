@@ -607,6 +607,7 @@ static Intrinsic *i_pixelDisplay_clear = nullptr;
 static Intrinsic *i_pixelDisplay_width = nullptr;
 static Intrinsic *i_pixelDisplay_height = nullptr;
 static Intrinsic *i_pixelDisplay_color = nullptr;
+static Intrinsic *i_pixelDisplay_setPixel = nullptr;
 static Intrinsic *i_pixelDisplay_fillRect = nullptr;
 static Intrinsic *i_pixelDisplay_fillEllipse = nullptr;
 
@@ -638,6 +639,20 @@ static IntrinsicResult intrinsic_pixelDisplay_color(Context *context, IntrinsicR
 	// Note: for now, we'll just always access the main pixel display.
 	// When we support multiple pixel displays, we'll need to be more discriminating.
 	return IntrinsicResult(SdlGlue::mainPixelDisplay->drawColor.ToString());
+}
+
+static IntrinsicResult intrinsic_pixelDisplay_setPixel(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	// Note: for now, we'll just always access the main pixel display.
+	// When we support multiple pixel displays, we'll need to be more discriminating.
+	int x = GetInt(context, "x");
+	int y = GetInt(context, "y");
+	Value colorVal = context->GetVar("color");
+	Color color;
+	if (!colorVal.IsNull()) color = ToColor(colorVal.ToString());
+	else color = SdlGlue::mainPixelDisplay->drawColor;
+	SdlGlue::mainPixelDisplay->SetPixel(x, y, color);
+	return IntrinsicResult::Null;
 }
 
 static IntrinsicResult intrinsic_pixelDisplay_fillRect(Context *context, IntrinsicResult partialResult) {
@@ -703,6 +718,13 @@ static IntrinsicResult intrinsic_pixelDisplayClass(Context *conpixel, IntrinsicR
 		i_pixelDisplay_color->code = &intrinsic_pixelDisplay_color;
 		pixelDisplayClass.SetValue("color", i_pixelDisplay_color->GetFunc());
 		
+		i_pixelDisplay_setPixel = Intrinsic::Create("");
+		i_pixelDisplay_setPixel->AddParam("x", 0);
+		i_pixelDisplay_setPixel->AddParam("y", 0);
+		i_pixelDisplay_setPixel->AddParam("color");
+		i_pixelDisplay_setPixel->code = &intrinsic_pixelDisplay_setPixel;
+		pixelDisplayClass.SetValue("setPixel", i_pixelDisplay_setPixel->GetFunc());
+				
 		i_pixelDisplay_fillRect = Intrinsic::Create("");
 		i_pixelDisplay_fillRect->AddParam("left", 0);
 		i_pixelDisplay_fillRect->AddParam("bottom", 0);

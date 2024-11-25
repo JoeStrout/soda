@@ -26,6 +26,7 @@ public:
 	void Clear(Color color = Color(0,0,0,0));
 	void Render();
 
+	void SetPixel(int x, int y, Color color);
 	void FillRect(SDL_Rect *rect, Color color);
 	void FillEllipse(SDL_Rect* rect, Color color);
 
