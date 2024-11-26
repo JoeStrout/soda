@@ -23,14 +23,14 @@ static void Swap(int& a, int& b) {
     b = temp;
 }
 
-static bool IsPointWithinEllipse(float x, float y, SDL_Rect* ellipse) {
-    float halfWidth = ellipse->w/2;
-    float dx = x - (ellipse->x + halfWidth);
-    float term1 = (dx * dx) / (halfWidth * halfWidth);
+static bool IsPointWithinEllipse(double x, double y, SDL_Rect* ellipse) {
+    double halfWidth = ellipse->w * 0.5;
+    double dx = x - (ellipse->x + halfWidth);
+    double term1 = (dx * dx) / (halfWidth * halfWidth);
     
-    float halfHeight = ellipse->h/2;
-    float dy = y - (ellipse->y + halfHeight);
-    float term2 = (dy * dy) / (halfHeight * halfHeight);
+    double halfHeight = ellipse->h * 0.5;
+    double dy = y - (ellipse->y + halfHeight);
+    double term2 = (dy * dy) / (halfHeight * halfHeight);
     
     return term1 + term2 <= 1;
 }
@@ -45,8 +45,8 @@ public:
 	}
 
 	const SimpleVector<Vector2>& polygon;	// (valid only as long as polygon remains)
-	SimpleVector<float> constants;
-	SimpleVector<float> multiples;	
+	SimpleVector<double> constants;
+	SimpleVector<double> multiples;	
 };
 
 static PointInPolyPrecalc* PrecalcPointInPoly(const SimpleVector<Vector2>& polygon) {
@@ -67,11 +67,11 @@ static PointInPolyPrecalc* PrecalcPointInPoly(const SimpleVector<Vector2>& polyg
 	return result;
 }
 
-static bool PointInPoly(const PointInPolyPrecalc* precalc, float x, float y) {
-	int polyCorners = precalc->polygon.size();
+static bool PointInPoly(const PointInPolyPrecalc* precalc, double x, double y) {
+	unsigned long polyCorners = precalc->polygon.size();
 	bool oddNodes = false;
 	bool current = precalc->polygon[polyCorners-1].y > y;
-	for (int i=0; i < polyCorners; i++) {
+	for (unsigned long i=0; i < polyCorners; i++) {
 		bool previous = current;
 		current = precalc->polygon[i].y > y; 
 		if (current != previous) oddNodes ^= y * precalc->multiples[i] + precalc->constants[i] < x; 
@@ -79,24 +79,24 @@ static bool PointInPoly(const PointInPolyPrecalc* precalc, float x, float y) {
 	return oddNodes;
 }
 
-static float LineSegIntersectFraction(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4) {
+static double LineSegIntersectFraction(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4) {
 	// Look for an intersection between line p1-p2 and line p3-p4.
 	// Return the fraction of the way from p1 to p2 where this
 	// intersection occurs.  If the two lines are parallel, and
 	// there is no intersection, then this returns NaN.
 	// Reference: http://paulbourke.net/geometry/lineline2d/
-	float num = (p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x);
-	float denom=(p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
+	double num = (p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x);
+	double denom=(p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
 	if (denom == 0.0f) return 0.0f / 0.0f;
 	return num / denom;
 }
 
 static bool LineSegmentsIntersect(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4) {
 	// Return whether the line segment p1-p2 intersects segment p3-p4.
-	float ua = LineSegIntersectFraction(p1, p2, p3, p4);
+	double ua = LineSegIntersectFraction(p1, p2, p3, p4);
 	if (std::isnan(ua)) return false;  // the line segments are parallel
 	if (ua < 0.0f || ua > 1.0f) return false;  // intersection out of bounds
-	float ub = LineSegIntersectFraction(p3, p4, p1, p2);
+	double ub = LineSegIntersectFraction(p3, p4, p1, p2);
 	if (ub < 0.0f || ub > 1.0f) return false;  // intersection out of bounds
 	return true;
 }
@@ -296,13 +296,13 @@ void PixelDisplay::SetPixelRun(int x0, int x1, int y, Color color) {
     }
 }
 
-void PixelDisplay::DrawLine(int x1, int y1, int x2, int y2, Color color, float width) {
+void PixelDisplay::DrawLine(int x1, int y1, int x2, int y2, Color color, double width) {
 	if (width < 1.01f) {
 		DrawThinLine(x1, y1, x2, y2, color);
 	} else {
 		// Draw a thick line, by computing a polygon.
 		Vector2 tangent(y2-y1, x1-x2);
-		float tm = tangent.Magnitude();
+		double tm = tangent.Magnitude();
 		if (tm == 0) return;
 		tangent = tangent * width * 0.5f / tm;
 		SimpleVector<Vector2> points(4);
@@ -448,14 +448,14 @@ void PixelDisplay::FillEllipse(int left, int bottom, int width, int height, Colo
         }
     }
     
-    float r = rect.h * 0.5f;
-    float rsqr = r*r;
-    float aspect = (float)rect.w / rect.h;
-    float rectCenterX = rect.x + rect.w * 0.5f;
-    float rectCenterY = rect.y + rect.h * 0.5f;
+    double r = rect.h * 0.5f;
+    double rsqr = r*r;
+    double aspect = (double)rect.w / rect.h;
+    double rectCenterX = rect.x + rect.w * 0.5f;
+    double rectCenterY = rect.y + rect.h * 0.5f;
     for (int y=y0; y<y1; y++) {
-        float cy = rectCenterY - y - 0.5f;
-        float cx = sqrt(rsqr - cy*cy) * aspect;
+        double cy = rectCenterY - y - 0.5f;
+        double cx = sqrt(rsqr - cy*cy) * aspect;
         int x0 = (rectCenterX - cx + 0.5f);
         if (x0 < 0) x0 = 0; else if (x0 >= totalWidth) x0 = totalWidth;
         int x1 = (rectCenterX + cx + 0.5f);
@@ -470,7 +470,7 @@ void PixelDisplay::FillPolygon(const SimpleVector<Vector2>& points, Color color)
 	int* nodeX = new int[points.size()];
 
     // Find the bounding box of the polygon (constrained to our dimensions)
-    float minY = points[0].y, maxY = minY, minX = points[0].x, maxX = minX;
+    double minY = points[0].y, maxY = minY, minX = points[0].x, maxX = minX;
     for (unsigned long i = 1; i < points.size(); i++) {
         if (points[i].y < minY) minY = points[i].y;
         if (points[i].y > maxY) maxY = points[i].y;

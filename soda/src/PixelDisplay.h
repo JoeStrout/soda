@@ -42,7 +42,7 @@ public:
     int Width() { return totalWidth; }
     
     void SetPixel(int x, int y, Color color);
-    void DrawLine(int x1, int y1, int x2, int y2, Color color, float width=1);
+    void DrawLine(int x1, int y1, int x2, int y2, Color color, double width=1);
     void FillRect(int left, int bottom, int width, int height, Color color);
     void FillEllipse(int left, int bottom, int width, int height, Color color);
  	void FillPolygon(const SimpleVector<Vector2>& points, Color color);

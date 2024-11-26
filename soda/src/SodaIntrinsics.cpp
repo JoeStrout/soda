@@ -55,6 +55,32 @@ static float GetFloat(Context *context, const char *varName) {
 	return value.FloatValue();
 }
 
+static Vector2 ToVector2(Value item) {
+	Vector2 pos(0,0);
+	if (item.type == ValueType::List) {
+		ValueList itemVals = item.GetList();
+		if (itemVals.Count() > 0) pos.x = itemVals[0].DoubleValue();
+		if (itemVals.Count() > 1) pos.y = itemVals[1].DoubleValue();
+	} else if (item.type == ValueType::Map) {
+		ValueDict map = item.GetDict();
+		pos.x = map.Lookup(xStr, Value::zero).DoubleValue();
+		pos.y = map.Lookup(yStr, Value::zero).DoubleValue();
+	} else if (item.type != ValueType::Null) {
+		pos.x = item.DoubleValue();
+	}
+	return pos;
+}
+
+static void ToVector2List(Value value, SimpleVector<Vector2>* outList) {
+	if (value.type == ValueType::List) {
+		ValueList itemVals = value.GetList();
+		long count = itemVals.Count();
+		outList->resize(count);
+		for (long i=0; i<count; i++) (*outList)[i] = ToVector2(itemVals[i]);
+	} else {
+		outList->deleteAll();
+	}
+}
 
 //--------------------------------------------------------------------------------
 // Bounds class
@@ -616,6 +642,7 @@ static Intrinsic *i_pixelDisplay_setPixel = nullptr;
 static Intrinsic *i_pixelDisplay_drawLine = nullptr;
 static Intrinsic *i_pixelDisplay_fillRect = nullptr;
 static Intrinsic *i_pixelDisplay_fillEllipse = nullptr;
+static Intrinsic *i_pixelDisplay_fillPoly = nullptr;
 
 static IntrinsicResult intrinsic_pixelDisplay_clear(Context *context, IntrinsicResult partialResult) {
 	Value self = context->GetVar("self");
@@ -710,6 +737,20 @@ static IntrinsicResult intrinsic_pixelDisplay_fillEllipse(Context *context, Intr
 	return IntrinsicResult::Null;
 }
 
+static IntrinsicResult intrinsic_pixelDisplay_fillPoly(Context *context, IntrinsicResult partialResult) {
+	Value self = context->GetVar("self");
+	// Note: for now, we'll just always access the main pixel display.
+	// When we support multiple pixel displays, we'll need to be more discriminating.
+	SimpleVector<Vector2> points;
+	ToVector2List(context->GetVar("points"), &points);
+	Value colorVal = context->GetVar("color");
+	Color color;
+	if (!colorVal.IsNull()) color = ToColor(colorVal.ToString());
+	else color = SdlGlue::mainPixelDisplay->drawColor;
+	SdlGlue::mainPixelDisplay->FillPolygon(points, color);
+	return IntrinsicResult::Null;
+}
+
 static bool pixelDisplayAssignOverride(ValueDict& map, MiniScript::Value key, Value value) {
 	// If the value hasn't changed, do nothing.
 	Value curVal = map.Lookup(key, Value::null);
@@ -775,6 +816,13 @@ static IntrinsicResult intrinsic_pixelDisplayClass(Context *conpixel, IntrinsicR
 		i_pixelDisplay_fillEllipse->AddParam("color");
 		i_pixelDisplay_fillEllipse->code = &intrinsic_pixelDisplay_fillEllipse;
 		pixelDisplayClass.SetValue("fillEllipse", i_pixelDisplay_fillEllipse->GetFunc());
+
+		i_pixelDisplay_fillPoly = Intrinsic::Create("");
+		i_pixelDisplay_fillPoly->AddParam("points");
+		i_pixelDisplay_fillPoly->AddParam("color");
+		i_pixelDisplay_fillPoly->code = &intrinsic_pixelDisplay_fillPoly;
+		pixelDisplayClass.SetValue("fillPoly", i_pixelDisplay_fillPoly->GetFunc());
+
 	}
 	return IntrinsicResult(pixelDisplayClass);
 }
