@@ -103,7 +103,7 @@ void Shutdown() {
 	IMG_Quit();
 	ShutdownAudio();
 	ShutdownTextDisplay();
-	ShutdownPixelSurface();
+	ShutdownPixelDisplay();
 	VecIterate(i, gameControllers) SDL_GameControllerClose(gameControllers[i]);
 	gameControllers.deleteAll();
 	SDL_Quit();

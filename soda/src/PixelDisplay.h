@@ -15,7 +15,6 @@
 
 #include "Color.h"
 #include "SimpleVector.h"
-#include "PixelSurface.h"
 
 struct SDL_Renderer;
 
@@ -25,25 +24,53 @@ void SetupPixelDisplay(SDL_Renderer* renderer);
 void ShutdownPixelDisplay();
 void RenderPixelDisplay();
 
+struct CachedPixels {
+    Color* pixels;
+};
+
 class PixelDisplay {
 public:
-	PixelDisplay();
-	~PixelDisplay();
-	void Clear(Color color=Color(0,0,0,0));
-	void Render();
-	
-	int Height() { return surf->totalHeight; }
-	int Width() { return surf->totalWidth; }
-	
-	void SetPixel(int x, int y, Color color);
-	void DrawLine(int x1, int y1, int x2, int y2, Color color);
-	void FillRect(int left, int bottom, int width, int height, Color color);
-	void FillEllipse(int left, int bottom, int width, int height, Color color);
-	
-	Color drawColor;
+    PixelDisplay();
+    ~PixelDisplay();
+    void Clear(Color color=Color(0,0,0,0));
+    void Render();
+    
+    int Height() { return totalHeight; }
+    int Width() { return totalWidth; }
+    
+    void SetPixel(int x, int y, Color color);
+    void DrawLine(int x1, int y1, int x2, int y2, Color color);
+    void FillRect(int left, int bottom, int width, int height, Color color);
+    void FillEllipse(int left, int bottom, int width, int height, Color color);
+    
+    Color drawColor;
 
 private:
-	PixelSurface *surf;
+    // width and height of each tile, in pixels
+    int tileWidth = 64;
+    int tileHeight = 64;
+    
+    // total surface size, in pixels
+    int totalWidth = 384;
+    int totalHeight = 256;
+    
+    // how many rows and columns of tiles we have
+    int tileRows;
+    int tileCols;
+    
+    SDL_Texture* *tileTex;
+    bool *textureInUse;
+    Color *tileColor;
+    bool *tileNeedsUpdate;
+    CachedPixels *pixelCache;
+    
+    void AllocArrays();
+    void DeallocArrays();
+    bool EnsureTextureInUse(int tileIndex, Color unlessColor);
+    void EnsureTextureInUse(int tileIndex);
+    void SetPixelRun(int x0, int x1, int y, Color color);
+    bool TileRangeWithin(SDL_Rect *rect, int* tileCol0, int* tileCol1, int* tileRow0, int* tileRow1);
+    bool IsTileWithinEllipse(int col, int row, SDL_Rect* ellipse);
 };
 
 extern PixelDisplay* mainPixelDisplay;
