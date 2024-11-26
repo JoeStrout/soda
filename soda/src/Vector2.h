@@ -3,6 +3,11 @@
 //  Represents a 2d vector in Soda.
 //
 
+#ifndef __VECTOR2__
+#define __VECTOR2__
+
+#include <math.h>
+
 struct Vector2 {
     Vector2() : Vector2(0, 0) {}
     explicit Vector2(double xy) : x(xy), y(xy) {}
@@ -35,6 +40,9 @@ struct Vector2 {
 	double SqrMagnitude() {
 		return x * x + y * y;
 	}
+	double Magnitude() {
+		return sqrt(x * x + y * y);
+	}
 	
     // Factory function
 	static Vector2 Zero() { return Vector2(0.0, 0.0); }
@@ -59,3 +67,5 @@ inline Vector2 operator* (const Vector2& v1, float scalar) {
 inline Vector2 operator/ (const Vector2& v1, float scalar) {
 	return Vector2(v1.x / scalar, v1.y / scalar);
 }
+
+#endif // __VECTOR2__

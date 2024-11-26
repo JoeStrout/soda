@@ -1,4 +1,8 @@
 // Line-drawing test
+
+gfx.line 10,10, window.width-10, window.height-10, "#FFFF00", 15
+gfx.line 10,window.height-10, window.width-10, 10, "#00FFFF", 15
+
 gfx.color = "#00FF00"
 for x in range(0, window.width, 9)
 	gfx.line x, 0, window.width - x, window.height

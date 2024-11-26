@@ -39,7 +39,6 @@
 		83D55DFF26B3907B00C76F4E /* SodaIntrinsics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83D55DFD26B3907B00C76F4E /* SodaIntrinsics.cpp */; };
 		83D55E0226B391BC00C76F4E /* SdlGlue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83D55E0026B391BC00C76F4E /* SdlGlue.cpp */; };
 		83E2A858274A8A49009E7FCE /* SimpleString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83E2A857274A8A49009E7FCE /* SimpleString.cpp */; };
-		83E356242CF514EB00DB90F6 /* PixelSurface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83E356202CF514EA00DB90F6 /* PixelSurface.cpp */; };
 		83E356252CF514EB00DB90F6 /* PixelDisplay.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83E356222CF514EA00DB90F6 /* PixelDisplay.cpp */; };
 /* End PBXBuildFile section */
 
@@ -136,10 +135,8 @@
 		83DC8CB42916FE0600125256 /* SdlUtils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SdlUtils.h; sourceTree = "<group>"; };
 		83E2A856274A8A49009E7FCE /* SimpleString.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SimpleString.h; sourceTree = "<group>"; };
 		83E2A857274A8A49009E7FCE /* SimpleString.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SimpleString.cpp; sourceTree = "<group>"; };
-		83E356202CF514EA00DB90F6 /* PixelSurface.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PixelSurface.cpp; sourceTree = "<group>"; };
 		83E356212CF514EA00DB90F6 /* PixelDisplay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PixelDisplay.h; sourceTree = "<group>"; };
 		83E356222CF514EA00DB90F6 /* PixelDisplay.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PixelDisplay.cpp; sourceTree = "<group>"; };
-		83E356232CF514EB00DB90F6 /* PixelSurface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PixelSurface.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -200,7 +197,6 @@
 				837C4C0926C474F100D741B6 /* Color.cpp */,
 				83D55DE226B38F2F00C76F4E /* OstreamSupport.cpp */,
 				83E356222CF514EA00DB90F6 /* PixelDisplay.cpp */,
-				83E356202CF514EA00DB90F6 /* PixelSurface.cpp */,
 				8328CE2626B72E5300E32E12 /* SdlAudio.cpp */,
 				83D55E0026B391BC00C76F4E /* SdlGlue.cpp */,
 				83D55DB426B38F2F00C76F4E /* ShellIntrinsics.cpp */,
@@ -213,7 +209,6 @@
 				837C4C0A26C474F100D741B6 /* Color.h */,
 				83D55DE426B38F2F00C76F4E /* OstreamSupport.h */,
 				83E356212CF514EA00DB90F6 /* PixelDisplay.h */,
-				83E356232CF514EB00DB90F6 /* PixelSurface.h */,
 				83DC8CB42916FE0600125256 /* SdlUtils.h */,
 				8328CE2726B72E5300E32E12 /* SdlAudio.h */,
 				83D55E0126B391BC00C76F4E /* SdlGlue.h */,
@@ -363,7 +358,6 @@
 				83A4250026D45BB900881BD3 /* BoundingBox.cpp in Sources */,
 				83D55DE826B38F2F00C76F4E /* editline.c in Sources */,
 				83D55DF526B38F2F00C76F4E /* MiniscriptKeywords.cpp in Sources */,
-				83E356242CF514EB00DB90F6 /* PixelSurface.cpp in Sources */,
 				83D55DE626B38F2F00C76F4E /* complete.c in Sources */,
 				83D55DF626B38F2F00C76F4E /* UnitTest.cpp in Sources */,
 				83D55DF026B38F2F00C76F4E /* UnicodeUtil.cpp in Sources */,

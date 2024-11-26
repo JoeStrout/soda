@@ -50,6 +50,11 @@ static int GetInt(Context *context, const char *varName) {
 	return value.IntValue();
 }
 
+static float GetFloat(Context *context, const char *varName) {
+	Value value = context->GetVar(varName);
+	return value.FloatValue();
+}
+
 
 //--------------------------------------------------------------------------------
 // Bounds class
@@ -664,11 +669,12 @@ static IntrinsicResult intrinsic_pixelDisplay_drawLine(Context *context, Intrins
 	int y1 = GetInt(context, "y1");
 	int x2 = GetInt(context, "x2");
 	int y2 = GetInt(context, "y2");
+	float width = GetFloat(context, "width");
 	Value colorVal = context->GetVar("color");
 	Color color;
 	if (!colorVal.IsNull()) color = ToColor(colorVal.ToString());
 	else color = SdlGlue::mainPixelDisplay->drawColor;
-	SdlGlue::mainPixelDisplay->DrawLine(x1, y1, x2, y2, color);
+	SdlGlue::mainPixelDisplay->DrawLine(x1, y1, x2, y2, color, width);
 	return IntrinsicResult::Null;
 }
 
@@ -748,6 +754,7 @@ static IntrinsicResult intrinsic_pixelDisplayClass(Context *conpixel, IntrinsicR
 		i_pixelDisplay_drawLine->AddParam("x2", 100);
 		i_pixelDisplay_drawLine->AddParam("y2", 100);
 		i_pixelDisplay_drawLine->AddParam("color");
+		i_pixelDisplay_drawLine->AddParam("width", 1);
 		i_pixelDisplay_drawLine->code = &intrinsic_pixelDisplay_drawLine;
 		pixelDisplayClass.SetValue("line", i_pixelDisplay_drawLine->GetFunc());
 				

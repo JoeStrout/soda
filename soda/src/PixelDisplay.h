@@ -15,6 +15,7 @@
 
 #include "Color.h"
 #include "SimpleVector.h"
+#include "Vector2.h"
 
 struct SDL_Renderer;
 
@@ -28,6 +29,8 @@ struct CachedPixels {
     Color* pixels;
 };
 
+class PointInPolyPrecalc;
+
 class PixelDisplay {
 public:
     PixelDisplay();
@@ -39,10 +42,11 @@ public:
     int Width() { return totalWidth; }
     
     void SetPixel(int x, int y, Color color);
-    void DrawLine(int x1, int y1, int x2, int y2, Color color);
+    void DrawLine(int x1, int y1, int x2, int y2, Color color, float width=1);
     void FillRect(int left, int bottom, int width, int height, Color color);
     void FillEllipse(int left, int bottom, int width, int height, Color color);
-    
+ 	void FillPolygon(const SimpleVector<Vector2>& points, Color color);
+   
     Color drawColor;
 
 private:
@@ -69,8 +73,10 @@ private:
     bool EnsureTextureInUse(int tileIndex, Color unlessColor);
     void EnsureTextureInUse(int tileIndex);
     void SetPixelRun(int x0, int x1, int y, Color color);
+	void DrawThinLine(int x1, int y1, int x2, int y2, Color color);
     bool TileRangeWithin(SDL_Rect *rect, int* tileCol0, int* tileCol1, int* tileRow0, int* tileRow1);
     bool IsTileWithinEllipse(int col, int row, SDL_Rect* ellipse);
+	bool IsTileWithinPolygon(int col, int row, const PointInPolyPrecalc* precalc);
 };
 
 extern PixelDisplay* mainPixelDisplay;

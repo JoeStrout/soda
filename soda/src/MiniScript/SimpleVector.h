@@ -17,6 +17,7 @@
 
 #include "QA.h"
 
+#include <algorithm>
 #include <iostream> // HACK for debugging
 
 template <class T>
@@ -52,7 +53,6 @@ class SimpleVector {
 	inline T& item(long idx) const;		// get item at index with wrap-around
 	inline void setItem(long idx, const T& item); 
 	
-	
 	// treating it like a stack
 	inline void push_back(const T& item);		// push onto end of the vector
 	inline T pop_back();						// get last item, remove from vector
@@ -75,7 +75,7 @@ class SimpleVector {
     
     // major mutators               
     inline void reverse();          // reverses the elements in the array in place.
-    
+    inline void sort();				// sorts items
     
   protected:
 	T *mBuf;						// array of items
@@ -463,6 +463,11 @@ inline void SimpleVector<T>::reverse() {
         low++;
         high--;
     }
+}
+
+template <class T>
+inline void SimpleVector<T>::sort() {
+	std::sort(mBuf, mBuf + mQtyItems);
 }
 
 #endif

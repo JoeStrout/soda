@@ -2,6 +2,7 @@
 #include "SdlUtils.h"
 #include "SdlGlue.h"
 #include "Color.h"
+#include <cmath>
 
 using namespace MiniScript;
 using namespace SdlGlue;
@@ -32,6 +33,72 @@ static bool IsPointWithinEllipse(float x, float y, SDL_Rect* ellipse) {
     float term2 = (dy * dy) / (halfHeight * halfHeight);
     
     return term1 + term2 <= 1;
+}
+
+// Little class of precomputed data used for point-in-polygon tests.
+class PointInPolyPrecalc {
+public:
+	PointInPolyPrecalc(const SimpleVector<Vector2>& inPoly) 
+	: polygon(inPoly) {
+		constants.resizeBuffer(polygon.size());
+		multiples.resizeBuffer(polygon.size());
+	}
+
+	const SimpleVector<Vector2>& polygon;	// (valid only as long as polygon remains)
+	SimpleVector<float> constants;
+	SimpleVector<float> multiples;	
+};
+
+static PointInPolyPrecalc* PrecalcPointInPoly(const SimpleVector<Vector2>& polygon) {
+	PointInPolyPrecalc* result = new PointInPolyPrecalc(polygon);
+
+	int j = polygon.size() - 1;
+	for (int i=0; i<polygon.size(); i++) {
+		if (polygon[j].y == polygon[i].y) {
+			result->constants.push_back(polygon[i].x);
+			result->multiples.push_back(0);
+		} else {
+			result->constants.push_back(polygon[i].x-(polygon[i].y*polygon[j].x)/(polygon[j].y-polygon[i].y)+(polygon[i].y*polygon[i].x)/(polygon[j].y-polygon[i].y));
+			result->multiples.push_back((polygon[j].x-polygon[i].x)/(polygon[j].y-polygon[i].y)); 
+		}
+		j=i;
+	}
+
+	return result;
+}
+
+static bool PointInPoly(const PointInPolyPrecalc* precalc, float x, float y) {
+	int polyCorners = precalc->polygon.size();
+	bool oddNodes = false;
+	bool current = precalc->polygon[polyCorners-1].y > y;
+	for (int i=0; i < polyCorners; i++) {
+		bool previous = current;
+		current = precalc->polygon[i].y > y; 
+		if (current != previous) oddNodes ^= y * precalc->multiples[i] + precalc->constants[i] < x; 
+	}
+	return oddNodes;
+}
+
+static float LineSegIntersectFraction(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4) {
+	// Look for an intersection between line p1-p2 and line p3-p4.
+	// Return the fraction of the way from p1 to p2 where this
+	// intersection occurs.  If the two lines are parallel, and
+	// there is no intersection, then this returns NaN.
+	// Reference: http://paulbourke.net/geometry/lineline2d/
+	float num = (p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x);
+	float denom=(p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
+	if (denom == 0.0f) return 0.0f / 0.0f;
+	return num / denom;
+}
+
+static bool LineSegmentsIntersect(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4) {
+	// Return whether the line segment p1-p2 intersects segment p3-p4.
+	float ua = LineSegIntersectFraction(p1, p2, p3, p4);
+	if (std::isnan(ua)) return false;  // the line segments are parallel
+	if (ua < 0.0f || ua > 1.0f) return false;  // intersection out of bounds
+	float ub = LineSegIntersectFraction(p3, p4, p1, p2);
+	if (ub < 0.0f || ub > 1.0f) return false;  // intersection out of bounds
+	return true;
 }
 
 PixelDisplay::PixelDisplay() {
@@ -229,7 +296,25 @@ void PixelDisplay::SetPixelRun(int x0, int x1, int y, Color color) {
     }
 }
 
-void PixelDisplay::DrawLine(int x1, int y1, int x2, int y2, Color color) {
+void PixelDisplay::DrawLine(int x1, int y1, int x2, int y2, Color color, float width) {
+	if (width < 1.01f) {
+		DrawThinLine(x1, y1, x2, y2, color);
+	} else {
+		// Draw a thick line, by computing a polygon.
+		Vector2 tangent(y2-y1, x1-x2);
+		float tm = tangent.Magnitude();
+		if (tm == 0) return;
+		tangent = tangent * width * 0.5f / tm;
+		SimpleVector<Vector2> points(4);
+		points.push_back(Vector2(x1-tangent.x, y1-tangent.y));
+		points.push_back(Vector2(x1+tangent.x, y1+tangent.y));
+		points.push_back(Vector2(x2+tangent.x, y2+tangent.y));
+		points.push_back(Vector2(x2-tangent.x, y2-tangent.y));
+		FillPolygon(points, color);		
+	}
+}
+
+void PixelDisplay::DrawThinLine(int x1, int y1, int x2, int y2, Color color) {
     int dx = x2 - x1;
     int dy = y2 - y1;
     int absDx = dx < 0 ? -dx : dx;
@@ -304,6 +389,40 @@ bool PixelDisplay::IsTileWithinEllipse(int col, int row, SDL_Rect* ellipse) {
         && IsPointWithinEllipse(x, y + tileHeight, ellipse);
 }
 
+/// <summary>
+/// Figure out whether the given tile is completely contained
+/// in the given polygon.
+/// </summary>
+/// <param name="col">tile column</param>
+/// <param name="row">tile row</param>
+/// <param name="point">points defining a polygon</param>
+/// <returns>true if tile is within poly; false otherwise</returns>
+bool PixelDisplay::IsTileWithinPolygon(int col, int row, const PointInPolyPrecalc* precalc) {
+	// First check the corners; if they're not in it, the tile is definitely not.
+	if (!PointInPoly(precalc, col * tileWidth, row * tileHeight)) return false;
+	if (!PointInPoly(precalc, (col+1) * tileWidth-1, row * tileHeight)) return false;
+	if (!PointInPoly(precalc, (col+1) * tileWidth-1, (row+1) * tileHeight - 1)) return false;
+	if (!PointInPoly(precalc, col * tileWidth, (row+1) * tileHeight - 1)) return false;
+	
+	// OK, since it passed those tests,  we now need to check whether any
+	// polygon edge intersects any edge of the tile.
+	Vector2 t0(col * tileWidth, row * tileHeight);
+	Vector2 t1((col+1) * tileWidth-1, row * tileHeight);
+	Vector2 t2((col+1) * tileWidth-1, (row+1) * tileHeight - 1);
+	Vector2 t3(col * tileWidth, (row+1) * tileHeight - 1);
+	for (int i=0; i<precalc->polygon.size(); i++) {
+		Vector2 p0 = precalc->polygon[i];
+		Vector2 p1 = precalc->polygon[i>0 ? i-1 : precalc->polygon.size()-1];
+		if (LineSegmentsIntersect(p0, p1, t0, t1)) return false;
+		if (LineSegmentsIntersect(p0, p1, t1, t2)) return false;
+		if (LineSegmentsIntersect(p0, p1, t2, t3)) return false;
+		if (LineSegmentsIntersect(p0, p1, t3, t0)) return false;
+	}
+	
+	// all tests passed!
+	return true;
+}
+
 void PixelDisplay::FillEllipse(int left, int bottom, int width, int height, Color color) {
     SDL_Rect rect = {left, bottom, width, height};
     if (rect.w <= 2 || rect.h <= 2) {
@@ -342,6 +461,70 @@ void PixelDisplay::FillEllipse(int left, int bottom, int width, int height, Colo
         int x1 = (rectCenterX + cx + 0.5f);
         if (x1 < 0) x1 = 0; else if (x1 >= totalWidth) x1 = totalWidth;
         SetPixelRun(x0, x1, y, color);
+    }
+}
+
+void PixelDisplay::FillPolygon(const SimpleVector<Vector2>& points, Color color) {
+    // Reference: http://alienryderflex.com/polygon_fill/
+    if (points.size() < 3) return;
+	int* nodeX = new int[points.size()];
+
+    // Find the bounding box of the polygon (constrained to our dimensions)
+    float minY = points[0].y, maxY = minY, minX = points[0].x, maxX = minX;
+    for (unsigned long i = 1; i < points.size(); i++) {
+        if (points[i].y < minY) minY = points[i].y;
+        if (points[i].y > maxY) maxY = points[i].y;
+        if (points[i].x < minX) minX = points[i].x;
+        if (points[i].x > maxX) maxX = points[i].x;
+    }
+    
+    if (minY < 0) minY = 0;
+    if (maxY >= totalHeight) maxY = totalHeight - 1;
+    if (minX < 0) minX = 0;
+    if (maxX >= totalWidth) maxX = totalWidth - 1;
+
+    // Fill any complete tiles within the polygon
+    int tileCol0, tileCol1, tileRow0, tileRow1;
+    SDL_Rect rect = {(int)minX, (int)minY, (int)(maxX - minX), (int)(maxY - minY)};
+    if (TileRangeWithin(&rect, &tileCol0, &tileCol1, &tileRow0, &tileRow1)) {
+        PointInPolyPrecalc* precalc = PrecalcPointInPoly(points);
+        for (int tileRow = tileRow0; tileRow <= tileRow1; tileRow++) {
+            for (int tileCol = tileCol0; tileCol <= tileCol1; tileCol++) {
+                if (IsTileWithinPolygon(tileCol, tileRow, precalc)) {
+					int tileIndex = tileRow * tileCols + tileCol;
+					textureInUse[tileIndex] = false;
+					tileColor[tileIndex] = color;
+                }
+            }
+        }
+        delete precalc;
+    }
+
+    for (int pixelY = static_cast<int>(minY); pixelY <= static_cast<int>(maxY); pixelY++) {
+        // Build a list of nodes (points where polygon edges cross this Y value)
+        int nodes = 0;
+        unsigned long j = points.size() - 1;
+        
+        for (unsigned long i = 0; i < points.size(); i++) {
+            if ((points[i].y < pixelY && points[j].y >= pixelY)
+             || (points[j].y < pixelY && points[i].y >= pixelY)) {
+				nodeX[nodes++] = static_cast<int>(points[i].x + (pixelY - points[i].y) /
+					 (points[j].y - points[i].y) * (points[j].x - points[i].x));
+            }
+            j = i;
+        }
+
+        // Sort the nodes (by X position)
+		std::sort(nodeX, nodeX + nodes);
+        
+        // Fill the pixels between node pairs
+        for (int i = 0; i < nodes; i += 2) {
+            if (nodeX[i] >= totalWidth) continue;
+            if (nodeX[i + 1] <= 0) continue;
+            if (nodeX[i] < 0) nodeX[i] = 0;
+            if (nodeX[i + 1] > totalWidth) nodeX[i + 1] = totalWidth;
+            SetPixelRun(nodeX[i], nodeX[i + 1], pixelY, color);
+        }
     }
 }
 

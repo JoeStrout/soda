@@ -57,6 +57,10 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "tests/lines.ms"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "tests/issue004.ms"
             isEnabled = "NO">
          </CommandLineArgument>

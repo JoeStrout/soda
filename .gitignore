@@ -38,3 +38,4 @@ Build
 SDL2_image.framework
 SDL2.framework
 *.xcuserstate
+*.xcbkptlist
