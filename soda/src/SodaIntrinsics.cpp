@@ -157,7 +157,7 @@ static BoundingBox* BoundingBoxFromMap(Value map) {
 			bb->center.x = map.Lookup(xStr).DoubleValue();
 			bb->center.y = map.Lookup(yStr).DoubleValue();
 			bb->halfSize.x = map.Lookup(widthStr).DoubleValue()/2;
-			bb->halfSize.y = map.Lookup(widthStr).DoubleValue()/2;
+			bb->halfSize.y = map.Lookup(heightStr).DoubleValue()/2;
 			bb->rotation = map.Lookup(rotationStr).DoubleValue() * 57.29578;
 //			printf("Freshened BB with center %lf,%lf, halfSize %lf,%lf, rotation %lf\n",
 //				   bb->center.x, bb->center.y, bb->halfSize.x, bb->halfSize.y, bb->rotation);

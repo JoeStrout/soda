@@ -33,7 +33,7 @@ static bool spriteAssignOverride(ValueDict& spriteMap, MiniScript::Value key, Va
 		MiniScript::Value handle = spriteMap.Lookup(SdlGlue::magicHandle, Value::null);
 		SpriteHandleData *data = nullptr;
 		if (handle.type == ValueType::Handle) {
-			// ToDo: how do we be sure the data is specifically a SoundStorage?
+			// ToDo: how do we be sure the data is specifically a SpriteHandleData?
 			// Do we need to enable RTTI, or use some common base class?
 			data = ((SpriteHandleData*)(handle.data.ref));
 		}
