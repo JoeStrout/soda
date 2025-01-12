@@ -10,12 +10,12 @@ CFLAGS=-c -g -Wno-switch -fsigned-char
 CPPFLAGS=-std=c++11 $(CFLAGS)
 
 # Linker flags
-# (None needed if you've installed sdl2 and sdl2_image
+# (None needed if you've installed sdl2, sdl2_image, and sdl2_mixer
 # using homebrew, which was the only way I could make this work.) 
 LFLAGS=
 
 # Libraries
-LIBS=-lstdc++ -lm -lSDL2_image -lSDL2
+LIBS=-lstdc++ -lm -lSDL2_image -lSDL2_mixer -lSDL2
 
 # Include paths: note that we expect to find the SDL2 headers to be found
 # in a directory (or symlink to a directory) called SDL2, somewhere in
