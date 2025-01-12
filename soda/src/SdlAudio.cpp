@@ -117,7 +117,7 @@ void SetupAudio() {
 	}
 
 	// Open SDL_mixer audio
-	if (Mix_OpenAudio(desiredSpec.freq, AUDIO_S16SYS, desiredSpec.channels, desiredSpec.samples) == -1) {
+	if (Mix_OpenAudio(44100, AUDIO_S16SYS, desiredSpec.channels, desiredSpec.samples) == -1) {
 		printf("Mix_OpenAudio error: %s\n", Mix_GetError());
 	}
 	
