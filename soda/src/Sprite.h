@@ -22,7 +22,7 @@ public:
 	// transformChanged flag will be set.
 	float x;
 	float y;
-	float scale;
+	float scaleX, scaleY;
 	float rotation;
 	
 	// Flag set to true whenever the MiniScript properties corresponding

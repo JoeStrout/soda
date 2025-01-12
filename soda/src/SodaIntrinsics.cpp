@@ -27,6 +27,9 @@
 
 using namespace MiniScript;
 
+#define DEGREES_TO_RADIANS 0.0174532925
+#define RADIANS_TO_DEGREES 57.2957795131
+
 Value spriteList = ValueList();
 Value white("#FFFFFF");
 Value xStr("x");
@@ -134,7 +137,7 @@ static BoundingBox* BoundingBoxFromMap(Value map) {
 	MiniScript::Value handle = map.Lookup(SdlGlue::magicHandle);
 	BoundingBoxStorage *storage = nullptr;
 	if (handle.type == ValueType::Handle) {
-		// ToDo: how do we be sure the data is specifically a SoundStorage?
+		// ToDo: how do we be sure the data is specifically a BoundingBoxStorage?
 		// Do we need to enable RTTI, or use some common base class?
 		storage = ((BoundingBoxStorage*)(handle.data.ref));
 	}
@@ -146,7 +149,7 @@ static BoundingBox* BoundingBoxFromMap(Value map) {
 		Value rotation = map.Lookup(rotationStr);
 		BoundingBox *bb = new BoundingBox(Vector2(x.DoubleValue(), y.DoubleValue()),
 										  Vector2(width.DoubleValue()/2, height.DoubleValue()/2),
-										  rotation.DoubleValue() * 57.29578);
+										  rotation.DoubleValue() * DEGREES_TO_RADIANS);
 		handle = Value::NewHandle(new BoundingBoxStorage(bb));
 		map.SetElem(SdlGlue::magicHandle, handle);
 		map.GetDict().SetAssignOverride(boundsAssignOverride);
@@ -158,7 +161,7 @@ static BoundingBox* BoundingBoxFromMap(Value map) {
 			bb->center.y = map.Lookup(yStr).DoubleValue();
 			bb->halfSize.x = map.Lookup(widthStr).DoubleValue()/2;
 			bb->halfSize.y = map.Lookup(heightStr).DoubleValue()/2;
-			bb->rotation = map.Lookup(rotationStr).DoubleValue() * 57.29578;
+			bb->rotation = map.Lookup(rotationStr).DoubleValue() * DEGREES_TO_RADIANS;
 //			printf("Freshened BB with center %lf,%lf, halfSize %lf,%lf, rotation %lf\n",
 //				   bb->center.x, bb->center.y, bb->halfSize.x, bb->halfSize.y, bb->rotation);
 			bb->Freshen();
@@ -442,8 +445,8 @@ static Value GetWorldBounds(Value sprite) {
 	}
 	data->worldBounds.SetElem(xStr, data->x + localBbox->center.x);
 	data->worldBounds.SetElem(yStr, data->y + localBbox->center.y);
-	data->worldBounds.SetElem(widthStr, data->scale * localBbox->halfSize.x * 2);
-	data->worldBounds.SetElem(heightStr, data->scale * localBbox->halfSize.y * 2);
+	data->worldBounds.SetElem(widthStr, data->scaleX * localBbox->halfSize.x * 2);
+	data->worldBounds.SetElem(heightStr, data->scaleY * localBbox->halfSize.y * 2);
 	data->worldBounds.SetElem(rotationStr, data->rotation + localBbox->rotation);
 	return data->worldBounds;
 }

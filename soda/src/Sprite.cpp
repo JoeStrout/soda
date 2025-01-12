@@ -58,7 +58,7 @@ SpriteHandleData* GetSpriteHandleData(MiniScript::Value spriteMap) {
 		spriteMap.SetElem(SdlGlue::magicHandle, handle);
 		spriteMap.GetDict().SetAssignOverride(spriteAssignOverride);
 	} else {
-		// ToDo: how do we be sure the data is specifically a SoundStorage?
+		// ToDo: how do we be sure the data is specifically a SpriteHandleData?
 		// Do we need to enable RTTI, or use some common base class?
 		data = (SpriteHandleData*)(handle.data.ref);
 	}
@@ -66,7 +66,15 @@ SpriteHandleData* GetSpriteHandleData(MiniScript::Value spriteMap) {
 		// Update the data with current values from the map.
 		data->x = spriteMap.Lookup(xStr).DoubleValue();
 		data->y = spriteMap.Lookup(yStr).DoubleValue();
-		data->scale = spriteMap.Lookup(scaleStr).DoubleValue();
+		data->scaleX = data->scaleY = 1;
+		Value scaleVal = spriteMap.Lookup("scale");
+		if (scaleVal.type == ValueType::List) {
+			ValueList list = scaleVal.GetList();
+			if (list.Count() > 0) data->scaleX = list[0].DoubleValue();
+			if (list.Count() > 1) data->scaleY = list[1].DoubleValue();
+		} else {
+			data->scaleX = data->scaleY = scaleVal.DoubleValue();
+		}
 		data->rotation = spriteMap.Lookup(rotationStr).DoubleValue();
 		data->transformChanged = false;
 	}

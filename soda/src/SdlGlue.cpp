@@ -15,6 +15,7 @@
 #include "Color.h"
 #include "TextDisplay.h"
 #include "PixelDisplay.h"
+#include "Sprite.h"
 
 using namespace MiniScript;
 
@@ -546,10 +547,24 @@ void DrawSprites() {
 	for (int i=0; i<sprites.Count(); i++) {
 		Value sprite = sprites[i];
 		if (sprite.type != MiniScript::ValueType::Map) continue;
-		double x = round(sprite.Lookup("x").DoubleValue());
-		double y = round(sprite.Lookup("y").DoubleValue());
-		double scale = sprite.Lookup("scale").DoubleValue();
-		double rotation = sprite.Lookup("rotation").DoubleValue();
+
+		SpriteHandleData *data = GetSpriteHandleData(sprite);
+		double x = data->x, y = data->y;
+		double scaleX = data->scaleX, scaleY = data->scaleY;
+		double rotation = data->rotation;		
+// 		double x = round(sprite.Lookup("x").DoubleValue());
+// 		double y = round(sprite.Lookup("y").DoubleValue());
+// 		double scaleX = 0, scaleY = 0;
+// 		Value scaleVal = sprite.Lookup("scale");
+// 		if (scaleVal.type == ValueType::List) {
+// 			ValueList list = scaleVal.GetList();
+// 			if (list.Count() > 0) scaleX = list[0].DoubleValue();
+// 			if (list.Count() > 1) scaleY = list[1].DoubleValue();
+// 		} else {
+// 			scaleX = scaleY = scaleVal.DoubleValue();
+// 		}
+// 		double rotation = sprite.Lookup("rotation").DoubleValue();
+
 		Color c = ToColor(sprite.Lookup("tint").ToString());
 
 		MiniScript::Value image = sprite.Lookup("image");
@@ -570,13 +585,13 @@ void DrawSprites() {
 			SDL_SetTextureBlendMode(storage->texture, SDL_BLENDMODE_BLEND);
 			SDL_SetTextureScaleMode(storage->texture, SDL_ScaleModeNearest);
 		}
-		double w = storage->surface->w*scale, h = storage->surface->h*scale;
+		double w = storage->surface->w * scaleX, h = storage->surface->h * scaleY;
 		
 		SDL_Rect destRect = { RoundToInt(x-w/2), windowHeight-RoundToInt(y+h/2), RoundToInt(w), RoundToInt(h) };
 
 		SDL_SetTextureColorMod(storage->texture, c.r, c.g, c.b);
 		SDL_SetTextureAlphaMod(storage->texture, c.a);
-		SDL_RenderCopyEx(mainRenderer, storage->texture, NULL, &destRect, rotation, NULL, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(mainRenderer, storage->texture, NULL, &destRect, -rotation, NULL, SDL_FLIP_NONE);
 	}
 }
 
