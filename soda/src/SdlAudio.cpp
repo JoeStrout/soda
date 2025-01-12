@@ -104,8 +104,8 @@ void SetupAudio() {
 	if (deviceId == 0) {
 		printf("Unable to open audio output; error = %s\n", SDL_GetError());
 	} else {
-		printf("Opened audio output with device ID %d\n", deviceId);
-		printf("freq: %d  channels: %d  samples: %d\n", audioSpec.freq, audioSpec.channels, audioSpec.samples);
+// 		printf("Opened audio output with device ID %d\n", deviceId);
+// 		printf("freq: %d  channels: %d  samples: %d\n", audioSpec.freq, audioSpec.channels, audioSpec.samples);
 		
 		SDL_PauseAudioDevice(deviceId, 0);
 	}
@@ -121,7 +121,7 @@ void SetupAudio() {
 		printf("Mix_OpenAudio error: %s\n", Mix_GetError());
 	}
 	
-	printf("Done with SetupAudio()");
+// 	printf("Done with SetupAudio()\n");
 }
 
 void ShutdownAudio() {
