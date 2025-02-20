@@ -24,9 +24,9 @@ if defined VSCMD_ARG_TGT_ARCH (
 
 :build
 	echo %VCToolsInstallDir% is BuildTools installed path.
-	echo this prompt calls %VSCMD_ARG_TGT_ARCH% build application.
+	echo this prompt calls %VSCMD_ARG_TGT_ARCH% build applications.
 	echo If you are told that a library or include file does not exist, 
-	echo please check the "include" and "lib" in the above path.
+	echo please check the "include" and "lib" folders in the above path.
 
 	echo -------- move folder. --------
 	rem move to src folder.
@@ -51,6 +51,7 @@ if defined VSCMD_ARG_TGT_ARCH (
 			rem 64bit exe file.
 			move soda.exe ../soda_x64.exe
 		) else (
+			rem other build arch.(I think that is not existed)
 			move soda.exe ../soda.exe
 		)
 	) else (

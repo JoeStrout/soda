@@ -321,8 +321,11 @@ void RunIntegrationTests(String path) {
 	Print("\nIntegration tests complete.\n");
 }
 
-
-void PrepareShellArgs(int argc, char* argv[], int startingAt) {
+#if _WIN32 || _WIN64
+	void PrepareShellArgs(int argc, char* argv[], int startingAt) {
+#else
+	void PrepareShellArgs(int argc, const char* argv[], int startingAt) {
+#endif
 	ValueList args;
 	for (int i=startingAt; i<argc; i++) {
 		args.Add(String(argv[i]));
@@ -330,7 +333,13 @@ void PrepareShellArgs(int argc, char* argv[], int startingAt) {
 	shellArgs = args;
 }
 
-int main(int argc, char * argv[]) {
+#if _WIN32 || _WIN64
+	int main(int argc, char * argv[]) {
+#else
+	int main(int argc, const char * argv[]) {
+#endif
+
+		
 #if(DEBUG)
 	std::cout << "StringStorage instances at start (from static keywords, etc.): " << StringStorage::instanceCount << std::endl;
 	std::cout << "total RefCountedStorage instances at start (from static keywords, etc.): " << RefCountedStorage::instanceCount << std::endl;
