@@ -10,7 +10,13 @@
 // some platforms but not others.
 
 #include <SDL2/SDL.h>
-#include <SDL_image.h>
+
+#if _WIN32 || _WIN64
+	#include <SDL2/SDL_image.h>
+#else
+	#include <SDL_image.h>
+#endif
+
 #include <SDL2/SDL_gamecontroller.h>
 
 #include "QA.h"
