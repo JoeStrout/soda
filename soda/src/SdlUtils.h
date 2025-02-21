@@ -10,7 +10,17 @@
 // some platforms but not others.
 
 #include <SDL2/SDL.h>
-#include <SDL_image.h>
+
+#if _WIN32 || _WIN64
+	#include <SDL2/SDL_image.h>
+#else
+	// In some cases, this path may not be accessible on other platforms, 
+	// so please rewrite the path correctly.
+	// (This may also be the case for other Linux versions. Confirmed on Ubuntu.)
+	// Or add OS information in a branching format like the directive command above.
+	#include <SDL_image.h>
+#endif
+
 #include <SDL2/SDL_gamecontroller.h>
 
 #include "QA.h"

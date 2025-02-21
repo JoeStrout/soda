@@ -13,7 +13,7 @@ CPPFLAGS=-std=c++11 $(CFLAGS)
 LFLAGS=
 
 # Libraries
-LIBS=-lstdc++ -lm -lSDL2_image -lSDL2
+LIBS=-lstdc++ -lm -lSDL2_image -lSDL2 -lSDL2_mixer
 
 # Include paths: note that we expect to find the SDL2 directory (containing
 # all SDL2 headers), or a symlink to it, at /usr/include/SDL2.  If you
