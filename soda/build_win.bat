@@ -37,7 +37,7 @@ if defined VSCMD_ARG_TGT_ARCH (
 	rem compile command.
 	echo -------- compile programs. --------
 	@echo on
-	cl -I . -I MiniScript -I compiledData -I SDL2 /EHsc /wd4068 /source-charset:utf-8 /execution-charset:utf-8 ./*.cpp ./MiniScript/*.cpp ./compiledData/*.c /Fesoda.exe SDL2.lib SDL2main.lib SDL2_image.lib SDL2_mixer.lib Shell32.lib /link /SUBSYSTEM:console
+	cl -I . -I MiniScript -I compiledData -I SDL2 /EHsc /wd4068 /source-charset:utf-8 /execution-charset:utf-8 ./*.cpp ./MiniScript/*.cpp ./compiledData/*.c /Fesoda.exe /link /LIBPATH:./SDL2/SDL2_2/lib/%VSCMD_ARG_TGT_ARCH% /LIBPATH:./SDL2/SDL2_image/lib/%VSCMD_ARG_TGT_ARCH% /LIBPATH:./SDL2/SDL2_mixer/lib/%VSCMD_ARG_TGT_ARCH% SDL2.lib SDL2main.lib SDL2_image.lib SDL2_mixer.lib Shell32.lib /SUBSYSTEM:console
 	@echo off
 	
 	rem move executable file to upper folder.
