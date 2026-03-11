@@ -22,6 +22,8 @@ You can build just about any 80s-style game with this feature set!  However it's
 * pixel-level drawing
 * networking
 
+**HOWEVER**, the current Soda code is built on SDL, which has proven more difficult than expected.  So we have decided (as of early 2026) to rewrite Soda using [raylib-miniscript](https://github.com/JoeStrout/raylib-miniscript).  This is expected to occur by the end of 2026.  The result will be more performant, more feature-rich, and easier to build.
+
 ### Documentation
 
 Want to write your first Soda game?  That's great!  Be sure you have the [MiniScript Quick Reference](https://miniscript.org/files/MiniScript-QuickRef.pdf), and then see the [Soda category at the MiniScript wiki](https://miniscript.org/wiki/Category:Soda) for information about the additional functions used with Soda.
