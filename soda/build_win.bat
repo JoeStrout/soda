@@ -27,6 +27,8 @@ if defined VSCMD_ARG_TGT_ARCH (
 	echo this prompt calls %VSCMD_ARG_TGT_ARCH% build applications.
 	echo If you are told that a library or include file does not exist, 
 	echo please check the "include" and "lib" folders in the above path.
+	echo Alternatively, you may want to store your include and library files in "soda/src".
+	echo In either case, the include files should be placed in the SDL2 folder.
 
 	echo -------- move folder. --------
 	rem move to src folder.
