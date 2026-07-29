@@ -1,5 +1,5 @@
 # Welcome to Soda
-![Soda logo](soda/images/soda-128.png)
+![Soda logo](assets/images/soda-128.png)
 
 The Soda Game Engine is an open-source cross-platform game engine built around the [MiniScript](https://miniscript.org) programming language.
 
@@ -7,7 +7,21 @@ Soda is intended to be _easy_ and _fun_, just like MiniScript itself.
 
 ### Status
 
-Soda is in the "early prototype" stage.  It works, but building it requires a fair bit of expertise.  Current functionality is good enough to start building sprite-based games, including:
+**Soda is being rewritten.**
+
+The original Soda was a C++ program built on SDL, which proved more difficult
+than expected — hard to build, hard to extend, and hard to ship.  As of 2026 we
+are rebuilding Soda as a library of MiniScript files running on
+[raylib-miniscript](https://github.com/JoeStrout/raylib-miniscript), a
+MiniScript host with raylib bindings.  The result will be more feature-rich,
+far easier to build, and easier to contribute to — a bug in the sprite system
+is now a bug in a `.ms` file you can edit and re-run instantly.
+
+The SDL implementation has moved to [archive/](archive/) and no longer builds.
+The rewrite is just beginning; `lib/` is where it lives, and the scripts in
+[tests/](tests/) define the API it has to reproduce.
+
+The feature set we are rebuilding toward, all of which the SDL version reached:
 
 * loading sprite images or sheets from disk
 * sprite scaling, rotation, tint
@@ -16,13 +30,8 @@ Soda is in the "early prototype" stage.  It works, but building it requires a fa
 * window size, background color, and fullscreen switch
 * sounds/music, including volume, pitch, stereo pan, and looping
 
-You can build just about any 80s-style game with this feature set!  However it's worth pointing out the major features still on the [To-Do list](TODO.md):
-
-* tile display
-* pixel-level drawing
-* networking
-
-**HOWEVER**, the current Soda code is built on SDL, which has proven more difficult than expected.  So we have decided (as of early 2026) to rewrite Soda using [raylib-miniscript](https://github.com/JoeStrout/raylib-miniscript).  This is expected to occur by the end of 2026.  The result will be more performant, more feature-rich, and easier to build.
+...plus the major features still on the [To-Do list](TODO.md): tile display,
+pixel-level drawing, and networking.
 
 ### Documentation
 
@@ -43,7 +52,10 @@ Because Soda is so new, documentation is a bit thin.  So check out the community
 
 ### Underlying Technologies
 
-Soda is built on top of SDL, the same framework used in many commercial games.
+Soda is written in MiniScript itself, on top of
+[raylib-miniscript](https://github.com/JoeStrout/raylib-miniscript) — MiniScript
+bindings for [raylib](https://www.raylib.com), a well-supported game library
+covering graphics, audio, and input across desktop and the web.
 
 ### How to Help
 
