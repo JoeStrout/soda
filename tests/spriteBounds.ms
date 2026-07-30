@@ -3,11 +3,6 @@
 // sprite a localBounds, and then test the automatically-updated
 // worldBounds.
 
-// Note: THIS TEST DOES NOT WORK AS OF JUL 29 2026, because it
-// tests a non-uniform scale (sp1.scale = [3, 0.5]), which our
-// Sprite class does not yet support.  That's a real defect in
-// our new Sprite implementation, which should be fixed.
-
 import "soda"
 
 fileInFolder = function(folderName, fileName)
@@ -56,15 +51,11 @@ sp2.localBounds.width = sp2.image.width
 sp2.localBounds.height = sp2.image.height
 
 assert sp1.worldBounds != null, "sp1.worldBounds != null"
-if sp1.worldBounds.width == null then
-	print "The worldBounds width is null because our scale is " + sp1.scale
-	print "ToDo: FIX THAT!"
-	exit
-end if
 print "sp1.worldBounds: " + sp1.worldBounds
-w = sp1.image.width; h = sp1.image.height
+w = sp1.image.width * sp1.scale[0]
+h = sp1.image.height * sp1.scale[1]
 print "sp1.worldBounds.width: " + sp1.worldBounds.width
-print "w: " + w
+print "w: " + w + "    h: " + h
 assert sp1.worldBounds.width == w, "sp1.worldBounds.width == w"
 assert sp1.worldBounds.height == h, "sp1.worldBounds.height == h"
 
@@ -72,11 +63,14 @@ assert sp2.worldBounds.x == sp2.x, "sp2.worldBounds.x == sp2.x"
 assert sp2.worldBounds.y == sp2.y, "sp2.worldBounds.y == sp2.y"
 assert sp2.worldBounds.rotation == sp2.rotation, "sp2.worldBounds.rotation == sp2.rotation"
 
-sp1.x = 100
+sp1.x = 500
+sp1.y = 100
+print "sp1 is at: " + sp1.x + ", " + sp1.y
 
-assert sp1.contains(131, 31), "sp1.contains(131, 31)"
-assert not sp1.contains(132, 31), "not sp1.contains(132, 31)"
-assert not sp1.contains(131, 32), "not sp1.contains(131, 32)"
+assert sp1.contains(500, 100), "sp1.contains(500, 100)"
+assert sp1.contains(596, 116), "sp1.contains(596, 116)"
+assert not sp1.contains(596, 117), "not sp1.contains(596, 117)"
+assert not sp1.contains(597, 116), "not sp1.contains(597, 116)"
 
 
 print "Checks:   " + checkCount
@@ -92,6 +86,7 @@ while not key.pressed("escape")
 	if key.pressed("q") then sp1.rotation = sp1.rotation + 5
 	if key.pressed("e") then sp1.rotation = sp1.rotation - 5
 
+	window.setTitle "Mouse: " + mouse.x + ", " + mouse.y
 	sp1.scale = [3 + 0.5 * sp1.contains(mouse), 0.5]
 	sp2.scale = 1 + 0.5 * sp2.contains(mouse)
 

@@ -75,7 +75,7 @@ end function
 
 globals.Sprite = {}
 Sprite.x = 0
-Sprite.y = 320
+Sprite.y = 0
 Sprite.rotation = 0
 Sprite.scale = 1
 Sprite.image = null
@@ -121,8 +121,13 @@ Sprite.draw = function(offsetX=0, offsetY=0)
 	else
 		srcRect = [0, 0, self.image.width, self.image.height]
 	end if
-	destWidth = srcRect[2] * self.scale
-	destHeight = srcRect[3] * self.scale
+	if self.scale isa list then
+		destWidth = srcRect[2] * self.scale[0]
+		destHeight = srcRect[3] * self.scale[1]
+	else
+		destWidth = srcRect[2] * self.scale
+		destHeight = srcRect[3] * self.scale
+	end if
 	h = raylib.GetScreenHeight()
 	destRect = [self.x + offsetX, h - self.y - offsetY, destWidth, destHeight]
 	origin = [destWidth * 0.5, destHeight * 0.5]
@@ -134,10 +139,17 @@ Sprite.worldBounds = function
 	lb = self.localBounds
 	if lb == null then return null
 	b = new Bounds
-	b.x = self.x + lb.x * self.scale
-	b.y = self.y + lb.y * self.scale
-	b.width = lb.width * self.scale
-	b.height = lb.height * self.scale
+	if self.scale isa list then
+		sx = self.scale[0]
+		sy = self.scale[1]
+	else
+		sx = self.scale
+		sy = sx
+	end if
+	b.x = self.x + lb.x * sx
+	b.y = self.y + lb.y * sy
+	b.width = lb.width * sx
+	b.height = lb.height * sy
 	b.rotation = self.rotation + lb.rotation
 	return b
 end function
@@ -145,6 +157,11 @@ end function
 Sprite.contains = function(x, y)
 	if self.localBounds == null then return false
 	return self.worldBounds.contains(x, y)
+end function
+
+Sprite.overlaps = function(other)
+	if other isa Sprite then other = other.worldBounds
+	return self.worldBounds.overlaps(other)
 end function
 
 SpriteDisplay = new Display

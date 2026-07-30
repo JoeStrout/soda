@@ -21,6 +21,7 @@ Display.Initialize
 // Mini Micro exposes window.width/height/fullScreen as assignable properties,
 // but MiniScript 2 has no assignment hook, so the setters are methods here.
 globals.window = {}
+window.title = "raylib-miniscript"
 
 window.width = function
 	return raylib.GetScreenWidth
@@ -36,6 +37,11 @@ end function
 
 window.setSize = function(w=960, h=640)
 	raylib.SetWindowSize w, h
+end function
+
+window.setTitle = function(title="")
+	raylib.SetWindowTitle title
+	self.title = title
 end function
 
 // Raylib only offers a toggle, so compare with the current state first.
