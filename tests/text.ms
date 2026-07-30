@@ -2,17 +2,18 @@
 
 import "soda"
 
-// `print` is not yet hooked up to the text display by default.
-// Work-around for now:
+// `print` is not hooked up to the text display by default.
+// Let's make our own print function that prints to both
+// the default text display, and to the console.
 print = function(s="", delimiter=null)
-	intrinsics.print s, delimiter
-	display(3).print s, delimiter
+	intrinsics.print s, delimiter  // prints to the console
+	text.print s, delimiter  // prints to the TextDisplay
 end function
 
 print "Hello world!"
 print "This text is printed with the `print` command."
 tab = char(9)
-print "A" + tab + "B" + tab + "C"
+print "A" + tab + "B" + tab + "C" + tab + char(57875) + "♥"
 print
 print "Press Return to clear the screen."
 
