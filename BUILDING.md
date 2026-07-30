@@ -36,27 +36,52 @@ this repo and follow its README — it needs a `MiniScript2` symlink, the raylib
 submodule, and a transpile step, then `scripts/build-desktop.sh`. Once
 `build/raylib-miniscript` exists, `./soda` will offer to link it for you.
 
-## Why `lib/` has to sit next to your game
+## Why `lib/` sits next to your game
 
-The host's import search path is fixed at startup and cannot be overridden from
-the shell or from script. It is:
+The host's import search path lives in the `MS_IMPORT_PATH` environment
+variable, a colon-separated list of directories. By default it is:
 
 1. `$MS_SCRIPT_DIR` — the directory of the script being run
 2. `$MS_SCRIPT_DIR/lib`
 3. `$MS_EXE_DIR/assets/lib`
 
-So `import "soda"` resolves only when `lib/` is a sibling of the running
-script. `demos/` and `tests/` each hold a `lib` symlink back to `../lib` for
-this reason, and a distribution package ships `lib/` alongside the game. If you
-start a game in a new directory, give it a `lib` symlink too.
+The `$VAR` references are expanded at import time, not at startup, so they
+track the script currently being run.
 
-**Watch out for name collisions.** Because entry 1 comes first, a script
+With that default, `import "soda"` resolves only when `lib/` is a sibling of
+the running script. `demos/` and `tests/` each hold a `lib` symlink back to
+`../lib` for this reason, and a distribution package ships `lib/` alongside the
+game. If you start a game in a new directory, give it a `lib` symlink too —
+that remains the simplest arrangement.
+
+### Overriding the search path
+
+If a symlink doesn't suit you, `MS_IMPORT_PATH` can be set two ways. Setting it
+in the shell replaces the default entirely:
+
+```sh
+MS_IMPORT_PATH='/path/to/soda/lib:$MS_SCRIPT_DIR' ./raylib-miniscript mygame.ms
+```
+
+Note the single quotes: `$MS_SCRIPT_DIR` is expanded by the host at import
+time, so it must survive your shell intact.
+
+Or a script can read and extend it before the first `import`:
+
+```
+env.MS_IMPORT_PATH = env.MS_IMPORT_PATH + ":" + env.MS_SCRIPT_DIR + "/../lib"
+import "soda"
+```
+
+
+**Watch out for name collisions.** Because `$MS_SCRIPT_DIR` comes first, a script
 sitting next to your game *shadows* the engine module of the same name. A file
 called `mouse.ms` in `tests/` means that every `import "mouse"` anywhere in the
 engine gets your test instead of `lib/mouse.ms` — and the failure surfaces
 somewhere else entirely, as an undefined identifier deep in an unrelated
 module.  (This is why the key and mouse tests are named `testKey.ms` and
-`testMouse.ms`.)  Don't name a demo or test after a module in `lib/`.
+`testMouse.ms`.)  Don't name a demo or test after a module in `lib/`, unless 
+you actually intend to override the standard module.
 
 You will also see one `WARNING: FILEIO: ... Failed to open text file` per
 import, for the miss on entry 1 before the hit on entry 2. That is normal and
