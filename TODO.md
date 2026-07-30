@@ -1,3 +1,10 @@
+**Note:** this list predates the rewrite onto raylib-miniscript, and the
+strikethroughs below record what the retired SDL implementation achieved — not
+what the MiniScript rewrite has reproduced so far.  Several build-related items
+(manual builds per platform, a simpler build system, X11-free Linux builds, web
+builds) are now largely handled by the host rather than by us.  This file needs
+re-prioritizing once the rewrite has a floor under it.
+
 Our current goal is to get Soda to a state where it can be used to create real 2D games, probably retro-style arcade games that rely entirely on sprites, as quickly as possible.  The High Priority features below will get us there.  The subsequent Medium and Low priority features are ones we want to have, but are less urgent.
 
 Note that **all APIs should mimic [Mini Micro](https://miniscript.org/wiki/Mini_Micro)** wherever possible.

@@ -1,0 +1,128 @@
+#!/bin/bash
+#
+# soda -- development launcher for the Soda Game Engine.
+#
+# Soda is a library of MiniScript files (in lib/) running on the
+# raylib-miniscript host.  This script finds that host and runs your game
+# with it, so that during development the command is the same one users will
+# eventually type against a single prebuilt `soda` binary:
+#
+#     ./soda demos/mygame.ms
+#
+# The host is located through the `raylib-miniscript` symlink next to this
+# script, which points directly at the host executable.  If it is missing or
+# broken, we offer to set it up.
+
+set -u
+
+SODA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HOST_LINK="$SODA_DIR/raylib-miniscript"
+
+# Sibling checkout we expect on a developer's machine, per BUILDING.md.
+SIBLING_REPO="$SODA_DIR/../raylib-miniscript"
+SIBLING_HOST="$SIBLING_REPO/build/raylib-miniscript"
+
+#--------------------------------------------------------------------------------
+# Host setup (used only when the symlink is missing or broken)
+#--------------------------------------------------------------------------------
+
+# Point HOST_LINK at $1, replacing any existing link.
+link_host() {
+	local target="$1"
+	if [ ! -x "$target" ]; then
+		echo "Not an executable file: $target" >&2
+		return 1
+	fi
+	rm -f "$HOST_LINK"
+	ln -s "$target" "$HOST_LINK"
+	echo "Linked $HOST_LINK -> $target"
+}
+
+# Report the platform we would download a host build for.
+host_platform() {
+	local os arch
+	case "$(uname -s)" in
+		Darwin) os="macos" ;;
+		Linux)  os="linux" ;;
+		MINGW*|MSYS*|CYGWIN*) os="windows" ;;
+		*) os="unknown" ;;
+	esac
+	case "$(uname -m)" in
+		x86_64|amd64) arch="x64" ;;
+		arm64|aarch64) arch="arm64" ;;
+		*) arch="unknown" ;;
+	esac
+	echo "$os-$arch"
+}
+
+# TODO: fetch a prebuilt host from the raylib-miniscript releases page and
+# link it.  Until that exists, explain and fail.
+download_host() {
+	echo
+	echo "Downloading prebuilt hosts is not implemented yet."
+	echo "Your platform would be: $(host_platform)"
+	echo "For now, build from source (option 3) or link an existing binary (option 1)."
+	return 1
+}
+
+# Build the host from the sibling raylib-miniscript checkout, then link it.
+build_host() {
+	if [ ! -d "$SIBLING_REPO" ]; then
+		echo "No raylib-miniscript checkout found at $SIBLING_REPO" >&2
+		echo "Clone it next to this repo, then try again." >&2
+		return 1
+	fi
+	echo "Building raylib-miniscript in $SIBLING_REPO ..."
+	"$SIBLING_REPO/scripts/build-desktop.sh" || return 1
+	link_host "$SIBLING_HOST"
+}
+
+setup_host() {
+	echo "Soda needs the raylib-miniscript host executable, but"
+	if [ -L "$HOST_LINK" ]; then
+		echo "  $HOST_LINK points at something that isn't there:"
+		echo "    -> $(readlink "$HOST_LINK")"
+	else
+		echo "  $HOST_LINK does not exist."
+	fi
+	echo
+	echo "How would you like to proceed?"
+	echo "  1) Link to a raylib-miniscript binary I already have"
+	echo "  2) Download a prebuilt binary for this system"
+	if [ -d "$SIBLING_REPO" ]; then
+		echo "  3) Build it from $SIBLING_REPO"
+	fi
+	echo "  q) Quit"
+	echo
+	read -r -p "Choice: " choice
+	case "$choice" in
+		1)
+			read -r -p "Path to raylib-miniscript executable: " path
+			# Expand a leading ~ the way the shell would have.
+			path="${path/#\~/$HOME}"
+			link_host "$path"
+			;;
+		2) download_host ;;
+		3) build_host ;;
+		*) echo "Cancelled."; return 1 ;;
+	esac
+}
+
+#--------------------------------------------------------------------------------
+# Main
+#--------------------------------------------------------------------------------
+
+if [ $# -eq 0 ]; then
+	echo "Usage: ./soda <script.ms> [args...]"
+	echo
+	echo "Runs a MiniScript game with the Soda engine.  Your script can"
+	echo "\`import \"soda\"\` as long as lib/ sits next to it (demos/ and tests/"
+	echo "have a lib symlink for exactly this reason)."
+	exit 1
+fi
+
+if [ ! -x "$HOST_LINK" ]; then
+	setup_host || exit 1
+fi
+
+exec "$HOST_LINK" "$@"

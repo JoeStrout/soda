@@ -1,3 +1,19 @@
+# Symlink to the raylib-miniscript host executable.  Machine-specific; the
+# ./soda launcher creates it (see BUILDING.md).
+/raylib-miniscript
+
+# Distribution packages built by scripts/build-dist.sh
+/dist
+
+# Mac stuff
+.DS_Store
+*.xcuserstate
+*.xcbkptlist
+
+#--------------------------------------------------------------------------------
+# Below here: leftovers from the archived SDL implementation (archive/).
+#--------------------------------------------------------------------------------
+
 # Prerequisites
 *.d
 
@@ -16,10 +32,6 @@
 *.dylib
 *.dll
 
-# Fortran module files
-*.mod
-*.smod
-
 # Compiled Static libraries
 *.lai
 *.la
@@ -32,10 +44,8 @@
 *.app
 Build
 
-
-# Mac stuff
-.DS_Store
 SDL2_image.framework
 SDL2.framework
-*.xcuserstate
-*.xcbkptlist
+
+# Local Claude Code settings
+.claude/settings.local.json
