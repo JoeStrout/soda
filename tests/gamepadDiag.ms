@@ -1,6 +1,7 @@
 // Gamepad diagnostic: talks directly to raylib, bypassing lib/key.ms, to work
 // out whether a problem is in Soda's layer or underneath it.
-// Run with:  ./soda tests/gamepadDiag.ms      (Esc or Q to quit)
+//
+// Reference: https://github.com/JoeStrout/raylib-miniscript/issues/17
 
 import "soda"
 clear

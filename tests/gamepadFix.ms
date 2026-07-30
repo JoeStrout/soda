@@ -5,7 +5,7 @@
 // The "USB,2-axis 8-button gamepad" (vendor 0x0583, product 0x2060) has an
 // entry in GLFW's built-in table, but tagged platform:Windows only.
 //
-// Run with:  ./soda tests/gamepadFix.ms      (Esc or Q to quit)
+// Reference: https://github.com/JoeStrout/raylib-miniscript/issues/17
 
 import "soda"
 clear
