@@ -18,6 +18,28 @@ Display.mode = 0
 Display.index = null
 Display.render = null
 
+// The screen: the region of the window that displays draw into.  Here that is
+// the whole window, but a host that frames the screen in a bezel (Mini Micro)
+// overrides all four of these with the rect inside it, and translates its
+// rendering by screenLeft/screenTop to match.  Displays must size and position
+// themselves against these rather than asking raylib for the window size, or
+// they will disagree about where the screen is: some are anchored to the bottom
+// and some are centered, and a bezel's insets are not symmetrical.
+//
+// screenLeft/screenTop are in raylib window coordinates (y down from the top);
+// width and height are functions here so they track a resized window, but a
+// host with a fixed screen size can just as well overwrite them with numbers.
+Display.screenLeft = 0
+Display.screenTop = 0
+
+Display.screenWidth = function
+	return raylib.GetScreenWidth
+end function
+
+Display.screenHeight = function
+	return raylib.GetScreenHeight
+end function
+
 // _installed: an internal list of the displays currently associated
 // with each slot.  For slot s, Display._installed[s][0] is the currently
 // active display; any others in the Display._installed[s] list are

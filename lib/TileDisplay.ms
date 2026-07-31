@@ -99,7 +99,7 @@ TileDisplay._tileGeometry = function(x, y, idx)
 	worldY = y * spacing + oy - self.scrollY
 
 	screenX = worldX + self.cellSize * 0.5
-	screenY = raylib.GetScreenHeight - worldY - self.cellSize * 0.5
+	screenY = Display.screenHeight - worldY - self.cellSize * 0.5
 	destRect = [screenX, screenY, self.cellSize, self.cellSize]
 	origin = [self.cellSize * 0.5, self.cellSize * 0.5]
 	return {"srcRect": srcRect, "destRect": destRect, "origin": origin, "rotation": rotation}
@@ -186,7 +186,7 @@ if locals == globals then
 	positionPanel = function(td, left, top)
 		spacing = td.cellSize - td.overlap
 		td.scrollX = -left
-		td.scrollY = top + td.cellSize - raylib.GetScreenHeight + (td._rows - 1) * spacing
+		td.scrollY = top + td.cellSize - Display.screenHeight + (td._rows - 1) * spacing
 	end function
 
 	caption = function(text, top)

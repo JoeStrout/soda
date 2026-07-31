@@ -128,7 +128,7 @@ Sprite.draw = function(offsetX=0, offsetY=0)
 		destWidth = srcRect[2] * self.scale
 		destHeight = srcRect[3] * self.scale
 	end if
-	h = raylib.GetScreenHeight()
+	h = Display.screenHeight
 	destRect = [self.x + offsetX, h - self.y - offsetY, destWidth, destHeight]
 	origin = [destWidth * 0.5, destHeight * 0.5]
 	raylib.DrawTexturePro self.image.texture, srcRect, destRect,

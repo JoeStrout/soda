@@ -99,12 +99,12 @@ TextDisplay.setSize = function(newCols, newRows)
 	self.updateOffsets
 end function
 
-// Center the grid on the screen.  (The C++ version hardcodes an offset that
-// accounts for its window bezel; here the display fills the window, so we
-// just split the leftover pixels evenly.)
+// Center the grid on the screen, splitting the leftover pixels evenly.  Note
+// that this centers on Display's screen rect, not on the window: under a host
+// with a bezel those differ, and the bezel's insets need not be symmetrical.
 TextDisplay.updateOffsets = function
-	self.offsetX = floor((rl.GetScreenWidth - self.columns * self.colSpacing) / 2)
-	self.offsetY = floor((rl.GetScreenHeight - self.rows * self.rowSpacing) / 2)
+	self.offsetX = floor((Display.screenWidth - self.columns * self.colSpacing) / 2)
+	self.offsetY = floor((Display.screenHeight - self.rows * self.rowSpacing) / 2)
 end function
 
 TextDisplay.setCellSpacing = function(colSp, rowSp)
@@ -394,7 +394,11 @@ end function
 
 // All TextDisplays share one font texture by default; loadFont on a
 // particular display gives that display its own.
-TextDisplay.font = ScreenFont.Make("lib/ScreenFont.png")
+if version.hostName == "Mini Micro" then
+	TextDisplay.font = ScreenFont.Make("/hw/images/ScreenFont.png")
+else
+	TextDisplay.font = ScreenFont.Make("lib/ScreenFont.png")
+end if
 
 if locals == globals then
 	ensureImport "qa"

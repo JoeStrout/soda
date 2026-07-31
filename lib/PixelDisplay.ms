@@ -249,7 +249,7 @@ PixelDisplay.render = function
 	src = [0, 0, self.width, -self.height]
 	w = self.width * self.scale
 	h = self.height * self.scale
-	top = rl.GetScreenHeight - h
+	top = Display.screenHeight - h
 	dest = [-self.scrollX, top + self.scrollY, w, h]
 	rl.DrawTexturePro self._renderTex.texture, src, dest, [0, 0], 0, [255, 255, 255, 255]
 end function
