@@ -145,25 +145,158 @@ PixelDisplay.fillEllipse = function(left=0, bottom=0, width=100, height=100, col
 end function
 
 
-// Draw a polygon outline from a list of [x,y] points.
+// Convert a list of polygon points -- each either an [x,y] list or a map
+// with "x" and "y" keys -- into display coordinates (y flipped).
+PixelDisplay._polyPoints = function(points)
+	result = []
+	for pt in points
+		if pt isa map then
+			result.push [pt.x, self.height - pt.y]
+		else
+			result.push [pt[0], self.height - pt[1]]
+		end if
+	end for
+	return result
+end function
+
+// Twice the signed area of a polygon (positive if counter-clockwise).
+_signedArea2 = function(pts)
+	sum = 0
+	prev = pts[-1]
+	for p in pts
+		sum = sum + prev[0] * p[1] - p[0] * prev[1]
+		prev = p
+	end for
+	return sum
+end function
+
+_pointInTri = function(p, a, b, c)
+	d1 = (p[0]-b[0]) * (a[1]-b[1]) - (a[0]-b[0]) * (p[1]-b[1])
+	d2 = (p[0]-c[0]) * (b[1]-c[1]) - (b[0]-c[0]) * (p[1]-c[1])
+	d3 = (p[0]-a[0]) * (c[1]-a[1]) - (c[0]-a[0]) * (p[1]-a[1])
+	return not ((d1 < 0 or d2 < 0 or d3 < 0) and (d1 > 0 or d2 > 0 or d3 > 0))
+end function
+
+// Cross product at corner i, times sgn: positive means a convex corner.
+_cornerCross = function(v, i, sgn)
+	a = v[i - 1]
+	b = v[i]
+	c = v[(i + 1) % v.len]
+	return sgn * ((b[0]-a[0]) * (c[1]-a[1]) - (c[0]-a[0]) * (b[1]-a[1]))
+end function
+
+// Ear-clipping triangulation of a simple (but possibly concave) polygon.
+// Returns a list of [a,b,c] point triples.
+_triangulate = function(pts)
+	// Drop repeated points: a zero-area corner is never an ear, and would
+	// otherwise stall the clipping (callers duplicate endpoints readily).
+	v = []
+	for p in pts
+		if v and abs(p[0] - v[-1][0]) < 1e-9 and abs(p[1] - v[-1][1]) < 1e-9 then continue
+		v.push p
+	end for
+	while v.len > 1 and abs(v[0][0] - v[-1][0]) < 1e-9 and abs(v[0][1] - v[-1][1]) < 1e-9
+		v.pop
+	end while
+	if v.len < 3 then return []
+	sgn = 1
+	if _signedArea2(v) < 0 then sgn = -1
+
+	// Corner convexity, maintained incrementally: clipping a vertex changes
+	// only its two neighbors, so we never rescan the whole polygon.
+	cross = []
+	for i in range(0, v.len - 1)
+		cross.push _cornerCross(v, i, sgn)
+	end for
+
+	tris = []
+	while v.len > 2
+		n = v.len
+		earIdx = -1
+		bestIdx = 0
+		bestCross = 0
+		for i in range(0, n - 1)
+			if cross[i] <= 0 then continue		// reflex corner
+			if cross[i] > bestCross then
+				bestCross = cross[i]
+				bestIdx = i
+			end if
+			iNext = (i + 1) % n
+			a = v[i - 1]
+			b = v[i]
+			c = v[iNext]
+			minX = a[0]; maxX = a[0]; minY = a[1]; maxY = a[1]
+			for q in [b, c]
+				if q[0] < minX then minX = q[0] else if q[0] > maxX then maxX = q[0]
+				if q[1] < minY then minY = q[1] else if q[1] > maxY then maxY = q[1]
+			end for
+			isEar = true
+			// Only a reflex vertex can poke into a candidate ear.
+			for j in range(0, n - 1)
+				if cross[j] > 0 or j == i or j == iNext or j == (i + n - 1) % n then continue
+				q = v[j]
+				if q[0] < minX or q[0] > maxX or q[1] < minY or q[1] > maxY then continue
+				if _pointInTri(q, a, b, c) then
+					isEar = false
+					break
+				end if
+			end for
+			if isEar then
+				earIdx = i
+				break
+			end if
+		end for
+		// No ear at all means the input isn't a simple polygon; clip the
+		// sharpest corner anyway, so we always terminate having covered it.
+		if earIdx < 0 then earIdx = bestIdx
+		tris.push [v[earIdx - 1], v[earIdx], v[(earIdx + 1) % n]]
+		v.remove earIdx
+		cross.remove earIdx
+		if v.len > 2 then
+			k = earIdx % v.len
+			cross[k] = _cornerCross(v, k, sgn)
+			cross[k - 1] = _cornerCross(v, k - 1, sgn)
+		end if
+	end while
+	return tris
+end function
+
+// Draw a polygon outline.  Points may be [x,y] lists or maps with x and y.
 PixelDisplay.drawPoly = function(points, color=null, penSize=1)
 	if points == null or points.len < 2 then return
 	if color == null then color = self.color
 	color = colorToList(color)
+	pts = self._polyPoints(points)
 	self._beginDraw
 	h = 0.5
-	prev = points[-1]
-	for pt in points
-		rl.DrawLineEx([prev[0]+h, self.height-prev[1]+h], [pt[0]+h, self.height-pt[1]+h], penSize, color)
+	prev = pts[-1]
+	for pt in pts
+		rl.DrawLineEx([prev[0]+h, prev[1]-h], [pt[0]+h, pt[1]-h], penSize, color)
 		prev = pt
 	end for
 	self._endDraw
 end function
 
+// Fill a polygon.  Points may be [x,y] lists or maps with x and y.
+PixelDisplay.fillPoly = function(points, color=null)
+	if points == null or points.len < 3 then return
+	if color == null then color = self.color
+	color = colorToList(color)
+	tris = _triangulate(self._polyPoints(points))
+	self._beginDraw
+	rl.rlDisableBackfaceCulling		// so triangle winding doesn't matter
+	for t in tris
+		rl.DrawTriangle t[0], t[1], t[2], color
+	end for
+	rl.rlDrawRenderBatchActive		// flush before restoring culling state
+	rl.rlEnableBackfaceCulling
+	self._endDraw
+end function
+
 // Print a string using a built-in font.  Compatible with the Mini Micro
 // PixelDisplay.print API: https://miniscript.org/wiki/PixelDisplay.print
+// ToDo: replace this with use of our prerendered screen fonts.
 PixelDisplay._fontSizes = {"small":14, "medium":20, "normal":24, "large":32}
-
 PixelDisplay.print = function(str="", x=0, y=0, color=null, fontName="normal")
 	if color == null then color = self.color
 	color = colorToList(color)
