@@ -195,7 +195,7 @@ PixelDisplay.getImage = function(left=0, bottom=0, width, height)
 	return Image.FromRaylibImage(subImg)
 end function
 
-PixelDisplay._drawTexture = function(tex, left, bottom, width=null, height=null, srcLeft=0, srcBottom=0, srcWidth=null, srcHeight=null)
+PixelDisplay._drawTexture = function(tex, left, bottom, width=null, height=null, srcLeft=0, srcBottom=0, srcWidth=null, srcHeight=null, tint="#FFFFFF")
 	if width == null then width = tex.width
 	if height == null then height = tex.height
 	if srcWidth == null then srcWidth = tex.width
@@ -207,15 +207,15 @@ PixelDisplay._drawTexture = function(tex, left, bottom, width=null, height=null,
 	dest = [left, self.height - bottom - height, width, height]
 
 	self._beginDraw true  // (alpha blend)
-	rl.DrawTexturePro tex, src, dest, [0, 0], 0, [255, 255, 255, 255]
+	rl.DrawTexturePro tex, src, dest, [0, 0], 0, tint
 	self._endDraw
 end function
 
 // Draw an Image onto this PixelDisplay.
-PixelDisplay.drawImage = function(img, left, bottom, width=null, height=null, srcLeft=0, srcBottom=0, srcWidth=null, srcHeight=null)
+PixelDisplay.drawImage = function(img, left, bottom, width=null, height=null, srcLeft=0, srcBottom=0, srcWidth=null, srcHeight=null, tint="#FFFFFF")
 	tex = rl.LoadTextureFromImage(img._img)
 	rl.SetTextureFilter tex, rl.TEXTURE_FILTER_POINT
-	self._drawTexture tex, left, bottom, width, height, srcLeft, srcBottom, srcWidth, srcHeight
+	self._drawTexture tex, left, bottom, width, height, srcLeft, srcBottom, srcWidth, srcHeight, tint
 	rl.UnloadTexture tex
 end function
 
@@ -251,6 +251,10 @@ PixelDisplay.render = function
 	h = self.height * self.scale
 	top = Display.screenHeight - h
 	dest = [-self.scrollX, top + self.scrollY, w, h]
+	if self._renderTex == null then
+		print "NULL _renderTex!"
+		print self
+	end if
 	rl.DrawTexturePro self._renderTex.texture, src, dest, [0, 0], 0, [255, 255, 255, 255]
 end function
 

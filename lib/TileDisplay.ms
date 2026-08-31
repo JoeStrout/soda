@@ -1,5 +1,33 @@
 import "importUtil"
-ensureImport ["Display", "color", "listUtil", "qa"]
+ensureImport ["Display", "color", "qa"]
+
+// List factories -- we don't import listUtil here because that
+// would silently alter the `list` map, which the user may or
+// may not want.
+_list_init = function(size, initialValue)
+	if @initialValue isa funcRef then
+		result = []
+		for i in range(1, size)
+			result.push initialValue
+		end for
+		return result
+	else
+		return [initialValue] * size
+	end if
+end function
+
+// init2d: build a 2D array, composed as a list of lists.
+// (Note that the math functions here in listUtil probably do not do what
+// you would want for a 2D array of numbers; if you want to do matrix math,
+// use matrixUtil instead.)
+_list_init2d = function(rows, columns, initialValue)
+	result = []
+	for a in range(1, rows)
+		result.push _list_init(columns, @initialValue)
+	end for
+	return result
+end function
+
 
 TileDisplay = new Display
 TileDisplay.mode = displayMode.tile
@@ -31,9 +59,9 @@ end function
 TileDisplay.setExtent = function(columns, rows)
 	self._cols = columns
 	self._rows = rows
-	self._idx = list.init2d(rows, columns, null)
-	self._tint = list.init2d(rows, columns, null)
-	self._xform = list.init2d(rows, columns, 0)
+	self._idx = _list_init2d(rows, columns, null)
+	self._tint = _list_init2d(rows, columns, null)
+	self._xform = _list_init2d(rows, columns, 0)
 end function
 
 TileDisplay.extent = function

@@ -7,9 +7,24 @@
 //   * Support scrolling.
 
 import "importUtil"
-ensureImport ["Display", "ScreenFont", "color", "listUtil"]
+ensureImport ["Display", "ScreenFont", "color" ]
 
 rl = raylib
+
+// List factory -- we don't import listUtil here because that
+// would silently alter the `list` map, which the user may or
+// may not want.
+_list_init = function(size, initialValue)
+	if @initialValue isa funcRef then
+		result = []
+		for i in range(1, size)
+			result.push initialValue
+		end for
+		return result
+	else
+		return [initialValue] * size
+	end if
+end function
 
 // TextDisplay loads a font texture as soon as this module loads, so (unlike
 // most Display subclasses) it needs a live GL context up front.  Normally
@@ -75,6 +90,11 @@ TextDisplay.delimiter = char(13)	// printed after every `print`, by default
 TextDisplay.font = null			// a ScreenFont
 TextDisplay._cells = null		// _cells[row][col] -> TextDisplayCell
 
+// Bumped by every scroll.  Anything holding a screen position across a write
+// (the console's input line, for one) can diff this to see how far its own
+// coordinates have moved.  Cheaper and less fragile than a callback.
+TextDisplay.scrollCount = 0
+
 TextDisplay.Make = function
 	noob = new TextDisplay
 	noob.setSize noob.columns, noob.rows
@@ -86,9 +106,9 @@ end function
 TextDisplay.setSize = function(newCols, newRows)
 	self.columns = newCols
 	self.rows = newRows
-	self._cells = list.init(newRows, null)
+	self._cells = _list_init(newRows, null)
 	for row in range(0, newRows - 1, 1)
-		cellRow = list.init(newCols, null)
+		cellRow = _list_init(newCols, null)
 		for col in range(0, newCols - 1, 1)
 			cellRow[col] = TextDisplayCell.Make(self.color, self.backColor)
 		end for
@@ -125,7 +145,8 @@ end function
 //----------------------------------------------------------------------
 // Cell access.  These take x (column) and y (row), matching the Mini Micro
 // TextDisplay API.  Note that _cellAt, and everything ported directly from
-// the C++, takes (row, col) instead.
+// the C++, takes (row, col) instead.  ToDo: clean up that mess and make
+// everything (including setCursor) take (col, row).
 //----------------------------------------------------------------------
 
 // Get the cell map at the given row and column, or null if out of range.
@@ -141,8 +162,21 @@ TextDisplay.cell = function(x, y)
 end function
 
 TextDisplay.setCell = function(x, y, character)
-	c = self._cellAt(y, x)
-	if c != null then c.character = character
+	if x isa number and y isa number then
+		// fast path
+		c = self._cellAt(y, x)
+		if c != null then c.character = character
+	else
+		// flexible path
+		if not x isa list then x = [x]
+		if not y isa list then y = [y]
+		for _y in y
+			for _x in x
+				c = self._cellAt(_y, _x)
+				if c != null then c.character = character
+			end for
+		end for
+	end if
 end function
 
 TextDisplay.cellColor = function(x, y)
@@ -163,8 +197,14 @@ TextDisplay.cellBackColor = function(x, y)
 end function
 
 TextDisplay.setCellBackColor = function(x, y, backColor)
-	c = self._cellAt(y, x)
-	if c != null then c.backColor = backColor
+	if x isa list then cols = x else cols = [x]
+	if y isa list then rows = y else rows = [y]
+	for _y in rows
+		for _x in cols
+			c = self._cellAt(_y, _x)
+			if c != null then c.backColor = backColor
+		end for
+	end for
 end function
 
 // Store a character (with colors) at the given row and column.  Colors
@@ -200,6 +240,7 @@ TextDisplay.fillRow = function(row, character=" ")
 		c.backColor = self.backColor
 		c.inverse = self.inverse
 	end for
+	self._cursorSavedColor = null	// the cursor's cell went with it
 end function
 
 TextDisplay.clearRow = function(row)
@@ -310,24 +351,29 @@ TextDisplay.scroll = function
 
 	if self.row < self.rows - 1 then self.row += 1
 	self.clearRow 0
+	self.scrollCount += 1
 end function
 
 // Move the cursor, clamping to the grid.  (Assigning to .row and .column
 // directly works too, but skips the clamping and the cursor bookkeeping.)
-TextDisplay.setCursor = function(row, col)
+TextDisplay.setCursor = function(row=null, col=null)
 	wasShown = self.cursorShown
 	if self.cursorShown then self.hideCursor
 
-	self.column = col
-	if self.column < 0 then
-		self.column = 0
-	else if self.column >= self.columns then
-		self.column = self.columns - 1
+	if col != null then
+		self.column = col
+		if self.column < 0 then
+			self.column = 0
+		else if self.column >= self.columns then
+			self.column = self.columns - 1
+		end if
 	end if
-
-	self.row = row
-	if self.row < 0 then self.row = 0
-	if self.row >= self.rows then self.row = self.rows - 1
+	
+	if row != null then
+		self.row = row
+		if self.row < 0 then self.row = 0
+		if self.row >= self.rows then self.row = self.rows - 1
+	end if
 
 	if wasShown then self.showCursor
 end function
@@ -336,13 +382,39 @@ end function
 // Hardware cursor
 //----------------------------------------------------------------------
 
-// Internal: un-invert the cell the cursor is on, without changing the
-// "cursor is on" state.  Used before anything that moves the cursor or
+// The cursor is a cell drawn inverted, so the block takes its color from the
+// *cell* -- which was set when that cell was last written, and so is stale the
+// moment self.color changes.  (Classic symptom: type at a fresh prompt and the
+// cursor is still the color the screen was cleared in.)  So the cell's color is
+// forced to the current one while the cursor sits on it, and put back after.
+//
+// Mini Micro 1 does the same fix in TextDisplay.ShowCursor, but guesses the
+// original back by lerping toward the background; that is right only for the
+// faded autocomplete text it was written for, and rewrites the colors of
+// anything else the cursor passes over.  Remembering is cheaper and exact.
+TextDisplay._cursorSavedColor = null
+
+// Internal: invert the cell the cursor is on, without changing the "cursor is
+// on" state.  Used by the blink, which is driven by the console.
+TextDisplay._showCursorVisual = function
+	c = self._cellAt(self.row, self.column)
+	if c == null then return
+	// Keyed on the save rather than on c.inverse: the console inverts cells for
+	// its selection too, so "already inverted" does not mean "already saved".
+	if self._cursorSavedColor == null then self._cursorSavedColor = c.color
+	c.color = self.color
+	c.inverse = true
+end function
+
+// Internal: un-invert it again.  Used before anything that moves the cursor or
 // writes to the screen.
 TextDisplay._hideCursorVisual = function
 	if not self.cursorShown then return
 	c = self._cellAt(self.row, self.column)
-	if c != null then c.inverse = false
+	if c == null then return
+	if c.inverse and self._cursorSavedColor != null then c.color = self._cursorSavedColor
+	self._cursorSavedColor = null
+	c.inverse = false
 end function
 
 TextDisplay.hideCursor = function
@@ -352,8 +424,7 @@ TextDisplay.hideCursor = function
 end function
 
 TextDisplay.showCursor = function
-	c = self._cellAt(self.row, self.column)
-	if c != null then c.inverse = true
+	self._showCursorVisual
 	self._cursorTime = 0
 	self.cursorShown = true
 end function
@@ -568,6 +639,19 @@ if locals == globals then
 	td.hideCursor
 	qa.assert not td._cellAt(1, 2).inverse, "hideCursor should un-invert the cell"
 	qa.assert not td.cursorShown, "hideCursor should clear cursorShown"
+
+	print "the cursor takes the current color, and gives the cell's back"
+	td.setSize 10, 4
+	td.color = color.yellow
+	td.setCursor 1, 2
+	td._set 1, 2, "x"				// a cell written while the color is yellow
+	td.color = color.orange			// ...and now the color changes under it
+	td.showCursor
+	qa.assertEqual td._cellAt(1, 2).color, color.orange,
+	  "the cursor should be the current color, not the color the cell was written in"
+	td.hideCursor
+	qa.assertEqual td._cellAt(1, 2).color, color.yellow,
+	  "hiding the cursor should give the cell its own color back"
 
 	print "the shared font loaded"
 	qa.assert TextDisplay.font != null and TextDisplay.font.isLoaded, "ScreenFont.png should load"

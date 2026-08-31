@@ -4,6 +4,9 @@
 //	(If you need to work with 2D arrays of numbers, you should probably
 //	consider matrixUtil instead.)
 
+print "Importing listUtil now."
+for s in stackTrace; print " - " + s; end for
+
 // contains: return true if this list contains the given element.
 list.contains = function(item)
 	return self.indexOf(@item) != null

@@ -101,6 +101,47 @@ _nameToRaylib["end"] = raylib.KEY_END
 _nameToRaylib["page up"] = raylib.KEY_PAGE_UP
 _nameToRaylib["page down"] = raylib.KEY_PAGE_DOWN
 
+// The table above names keys by physical position, because that is what
+// raylib's KEY_* constants are: KEY_E means "the key where E sits on a US
+// QWERTY board", which under Dvorak is the key that types ".".  We want the
+// logical key, so key.pressed("e") is true when the user presses whatever key
+// their layout types an "e" with.  Ask the platform where each printable
+// character actually lives and rewrite those entries.
+//
+// GetKeyName is unimplemented on some backends (notably web), where it returns
+// "" and we are stuck with the QWERTY assumption above.
+_layoutSensitiveKeys = range(raylib.KEY_A, raylib.KEY_Z) +
+   range(raylib.KEY_ZERO, raylib.KEY_NINE) +
+   [raylib.KEY_APOSTROPHE, raylib.KEY_COMMA, raylib.KEY_MINUS, raylib.KEY_PERIOD,
+    raylib.KEY_SLASH, raylib.KEY_SEMICOLON, raylib.KEY_EQUAL,
+    raylib.KEY_LEFT_BRACKET, raylib.KEY_BACKSLASH, raylib.KEY_RIGHT_BRACKET,
+    raylib.KEY_GRAVE]
+
+// Re-read the keyboard layout, returning true if the platform told us anything.
+// Called once as this module loads, which requires the window to already
+// exist; call it again if the layout can change while the app runs.
+applyKeyboardLayout = function
+	if not raylib.IsWindowReady then return false
+	gotAny = false
+	for keyCode in _layoutSensitiveKeys
+		name = raylib.GetKeyName(keyCode)
+		if name == "" then continue
+		_nameToRaylib[name] = keyCode
+		gotAny = true
+	end for
+	return gotAny
+end function
+
+applyKeyboardLayout
+
+// The raylib key code for the named key under the current layout, or null if
+// there is no such key.  Callers that must poll raylib directly (the console,
+// for its control chords) need this to avoid re-deriving the layout.
+codeForName = function(keyName)
+	if not _nameToRaylib.hasIndex(keyName) then return null
+	return _nameToRaylib[keyName]
+end function
+
 // How many gamepad slots to scan when a caller doesn't name a specific one.
 _maxGamepads = 4
 
@@ -213,8 +254,12 @@ get = function
 	end while
 end function
 
+// Empty the queue in place: other code (Mini Micro's Console) holds a
+// reference to this very list, and rebinding would leave it holding the old one.
 clear = function
-	outer.keyQueue = []
+	while keyQueue.len
+		keyQueue.pop
+	end while
 end function
 
 // Axis names:
