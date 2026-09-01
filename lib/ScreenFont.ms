@@ -19,6 +19,7 @@ ScreenFont = {}
 ScreenFont.texture = null
 ScreenFont.charWidth = 0
 ScreenFont.charHeight = 0
+ScreenFont.kerning = 2		// how much adjacent glyph cells overlap horizontally
 
 // The shader (and its uniform locations) is shared by all ScreenFont
 // instances, mirroring the static members of the C++ class.  It lives at
@@ -39,36 +40,36 @@ _lastBack = null
 // GLSL 100 (OpenGL ES 2 / web).  We let raylib supply the vertex shader,
 // since the one the C++ version ships is identical to raylib's default.
 _fragShader330 = [
-"#version 330",
-"in vec2 fragTexCoord;",
-"in vec4 fragColor;",
-"uniform sampler2D texture0;",
-"uniform vec4 colDiffuse;",
-"uniform vec4 foreColor;",
-"uniform vec4 backColor;",
-"out vec4 finalColor;",
-"void main()",
-"{",
-"    vec4 texelColor = texture(texture0, fragTexCoord);",
-"    float mask = texelColor.a;",
-"    finalColor = mix(backColor, foreColor, mask);",
-"}"].join(char(10))
+	"#version 330",
+	"in vec2 fragTexCoord;",
+	"in vec4 fragColor;",
+	"uniform sampler2D texture0;",
+	"uniform vec4 colDiffuse;",
+	"uniform vec4 foreColor;",
+	"uniform vec4 backColor;",
+	"out vec4 finalColor;",
+	"void main()",
+	"{",
+	"    vec4 texelColor = texture(texture0, fragTexCoord);",
+	"    float mask = texelColor.a;",
+	"    finalColor = mix(backColor, foreColor, mask);",
+	"}"].join(char(10))
 
 _fragShader100 = [
-"#version 100",
-"precision mediump float;",
-"varying vec2 fragTexCoord;",
-"varying vec4 fragColor;",
-"uniform sampler2D texture0;",
-"uniform vec4 colDiffuse;",
-"uniform vec4 foreColor;",
-"uniform vec4 backColor;",
-"void main()",
-"{",
-"    vec4 texelColor = texture2D(texture0, fragTexCoord);",
-"    float mask = texelColor.a;",
-"    gl_FragColor = mix(backColor, foreColor, mask);",
-"}"].join(char(10))
+	"#version 100",
+	"precision mediump float;",
+	"varying vec2 fragTexCoord;",
+	"varying vec4 fragColor;",
+	"uniform sampler2D texture0;",
+	"uniform vec4 colDiffuse;",
+	"uniform vec4 foreColor;",
+	"uniform vec4 backColor;",
+	"void main()",
+	"{",
+	"    vec4 texelColor = texture2D(texture0, fragTexCoord);",
+	"    float mask = texelColor.a;",
+	"    gl_FragColor = mix(backColor, foreColor, mask);",
+	"}"].join(char(10))
 
 // Internal: try one fragment shader source.  Returns true if it compiled
 // *and* actually exposes our custom uniforms.  (raylib quietly hands back

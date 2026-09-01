@@ -3,7 +3,7 @@
 // Backed by a raylib RenderTexture.
 
 import "importUtil"
-ensureImport ["color", "Display"]
+ensureImport ["color", "Display", "ScreenFont", "Image"]
 
 colorToList = @color.toList
 colorFromList = @color.fromList
@@ -28,6 +28,13 @@ end function
 // Begin drawing to the render texture in "replace" blend mode,
 // so that drawn colors fully overwrite the destination (matching
 // Mini Micro behavior, where alpha < 255 does not blend).
+//
+// Note that this binds a framebuffer, and a host that time-slices the script
+// can suspend it between any two statements -- including between here and
+// _endDraw.  Anything such a host draws in that window lands in this render
+// texture, so its frame loop must check raylib.rlGetActiveFramebuffer and skip
+// the frame when a bracket is open.  (Mini Micro 2's main.ms does; Soda, which
+// runs the script to completion each frame, never sees the case.)
 PixelDisplay._beginDraw = function(alphaBlend = false)
 	rl.BeginTextureMode self._renderTex
 	if self._clip != null then
@@ -293,24 +300,56 @@ PixelDisplay.fillPoly = function(points, color=null)
 	self._endDraw
 end function
 
-// Print a string using a built-in font.  Compatible with the Mini Micro
-// PixelDisplay.print API: https://miniscript.org/wiki/PixelDisplay.print
-// ToDo: replace this with use of our prerendered screen fonts.
-PixelDisplay._fontSizes = {"small":14, "medium":20, "normal":24, "large":32}
+// Print a string using the Mini Micro screen font.  Compatible with the
+// Mini Micro PixelDisplay.print API:
+// https://miniscript.org/wiki/PixelDisplay.print
+// ToDo: support custom fonts.
+PixelDisplay._fonts = {}		// ScreenFonts by name, shared by all PixelDisplays
+
+PixelDisplay._fontFiles = {"small": "ScreenFontSmall", "medium": "ScreenFontMedium",
+   "normal": "ScreenFont", "large": "ScreenFontLarge"}
+
+// Overlap between adjacent glyph cells; column spacing is charWidth - kerning,
+// i.e. 8, 11, 14, and 20 pixels for the four sizes.
+PixelDisplay._fontKerning = {"small": 2, "medium": 2, "normal": 2, "large": 4}
+
+PixelDisplay._loadFont = function(fontName="normal")
+	if not PixelDisplay._fontFiles.hasIndex(fontName) then fontName = "normal"
+	if PixelDisplay._fonts.hasIndex(fontName) then return PixelDisplay._fonts[fontName]
+	if version.hostName == "Mini Micro" then
+		dir = "/hw/images/"
+	else
+		dir = "lib/"
+	end if
+	font = ScreenFont.Make(dir + PixelDisplay._fontFiles[fontName] + ".png")
+	if font.isLoaded then
+		font.kerning = PixelDisplay._fontKerning[fontName]
+	else if fontName != "normal" then
+		// Not every host ships the alternate sizes; fall back to normal.
+		font = PixelDisplay._loadFont("normal")
+	end if
+	PixelDisplay._fonts[fontName] = font
+	return font
+end function
+
 PixelDisplay.print = function(str="", x=0, y=0, color=null, fontName="normal")
 	if color == null then color = self.color
-	color = colorToList(color)
-	fontSize = self._fontSizes.normal
-	if self._fontSizes.hasIndex(fontName) then fontSize = self._fontSizes[fontName]
-	font = rl.GetFontDefault
-	measured = rl.MeasureTextEx(font, str, fontSize, 1)
-	self._beginDraw true  // (alpha blend, so anti-aliased glyph edges don't punch holes)
-	rl.DrawTextEx font, str, [x, self.height - y - measured.y], fontSize, 1, color
+	font = PixelDisplay._loadFont(fontName)
+	if not font.isLoaded then return
+	str = str + ""
+	// y is the bottom of the text; raylib's y grows downward.
+	destY = self.height - y - font.charHeight
+	back = "#00000000"
+	colSpacing = font.charWidth - font.kerning
+	self._beginDraw true  // (alpha blend, so glyph edges don't punch holes)
+	for ch in str
+		if ch != " " then font.drawChar ch.code, x, destY, color, back
+		x = x + colSpacing
+	end for
 	self._endDraw
 end function
 
 // Get a rectangular region of the display as an Image.
-// Requires the Image module.
 PixelDisplay.getImage = function(left=0, bottom=0, width, height)
 	fullImg = rl.LoadImageFromTexture(self._renderTex.texture)
 	// Render texture data is vertically flipped; flip it so y=0 is at the
