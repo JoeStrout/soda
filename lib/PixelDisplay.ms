@@ -206,6 +206,29 @@ _triangulate = function(pts)
 		v.pop
 	end while
 	if v.len < 3 then return []
+
+	// Drop collinear corners.  A zero cross reads as reflex below, so such a
+	// corner can never be clipped, yet it still counts as a blocker -- and a
+	// polygon with several points along one ray (a visibility fan, say) then
+	// has no ear at all, falling back to overlapping triangles.  A collinear
+	// corner adds nothing to the shape, so remove it up front.  Removing one
+	// can make a neighbor collinear in turn, hence the repeat.
+	changed = true
+	while changed and v.len > 3
+		changed = false
+		i = 0
+		while i < v.len
+			a = v[i-1]; b = v[i]; c = v[(i+1) % v.len]
+			if abs((b[0]-a[0]) * (c[1]-a[1]) - (c[0]-a[0]) * (b[1]-a[1])) < 1e-9 then
+				v.remove i
+				changed = true
+			else
+				i = i + 1
+			end if
+		end while
+	end while
+	if v.len < 3 then return []
+
 	sgn = 1
 	if _signedArea2(v) < 0 then sgn = -1
 
@@ -428,6 +451,69 @@ PixelDisplay.render = function
 		print self
 	end if
 	rl.DrawTexturePro self._renderTex.texture, src, dest, [0, 0], 0, [255, 255, 255, 255]
+end function
+
+// Unit tests.  These cover the pure geometry helpers only -- nothing here
+// touches raylib -- so they can be run headlessly:  tests/triangulate.ms
+PixelDisplay.runUnitTests = function
+	print "Unit testing: PixelDisplay"
+	errorCount = 0
+
+	// A correct triangulation covers the polygon exactly: the triangles add
+	// up to its area, with no gap and no overlap.
+	cases = [
+	  [[[0,0], [60,0], [60,60], [0,60]], "square"],
+	  // Concave, so ear clipping has to skip the reflex corner.
+	  [[[0,0], [60,0], [60,20], [20,20], [20,60], [0,60]], "L-shape"],
+	  // Winding shouldn't matter.
+	  [[[0,60], [20,60], [20,20], [60,20], [60,0], [0,0]], "L-shape reversed"],
+	  // Extra points along a straight edge must not stop the clipper from
+	  // finding an ear.
+	  [[[0,0], [20,0], [40,0], [60,0], [60,60], [30,60], [0,60]], "collinear edge points"],
+	  // Regression, from /sys/demo/2dVis: the square is traced, revisits its
+	  // first point, and trails a zero-area spike out to (80,590).  Before
+	  // collinear corners were dropped, no ear was found and the fallback
+	  // emitted triangles covering four times the real area.
+	  [[[120,390], [120,330], [180,330], [180,390], [120,390], [80,590]],
+	    "2dVis fan with a zero-area spike"]]
+
+	for c in cases
+		pts = c[0]
+		expected = abs(_signedArea2(pts)) / 2
+		got = 0
+		for t in _triangulate(pts)
+			got = got + abs((t[1][0]-t[0][0]) * (t[2][1]-t[0][1]) -
+			                (t[2][0]-t[0][0]) * (t[1][1]-t[0][1])) / 2
+		end for
+		if abs(got - expected) > 0.001 * expected + 1e-9 then
+			print "Unit test failure (" + c[1] + "): polygon area " + expected +
+			  ", triangles cover " + got
+			errorCount = errorCount + 1
+		end if
+	end for
+
+	// A convex quad is exactly two triangles.
+	n = _triangulate([[0,0], [60,0], [60,60], [0,60]]).len
+	if n != 2 then
+		print "Unit test failure (square triangle count): expected 2, got " + n
+		errorCount = errorCount + 1
+	end if
+
+	// Degenerate inputs yield no triangles rather than an error.
+	for bad in [[[0,0], [10,10]], [[5,5], [5,5], [5,5]]]
+		n = _triangulate(bad).len
+		if n != 0 then
+			print "Unit test failure (degenerate input): expected 0 triangles, got " + n
+			errorCount = errorCount + 1
+		end if
+	end for
+
+	if errorCount == 0 then
+		print "All tests passed.  Woot!"
+	else
+		print errorCount + " error" + "s" * (errorCount != 1) + " found."
+	end if
+	return errorCount
 end function
 
 return PixelDisplay
