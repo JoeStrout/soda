@@ -112,11 +112,19 @@ PixelDisplay.line = function(x1=0, y1=0, x2=960, y2=640, color, penSize=1)
 end function
 
 // Draw a axis-aligned rectangle outline on the pixel display.
-PixelDisplay.drawRect = function(left=0, bottom=0, width=100, height=100, color=null)
+// A thick pen is centered on the rect's bounds, as in Mini Micro 1.
+PixelDisplay.drawRect = function(left=0, bottom=0, width=100, height=100, color=null, penSize=1)
+	if width == 0 or height == 0 then return
 	if color == null then color = self.color
 	color = colorToList(color)
 	self._beginDraw
-	rl.DrawRectangleLines left, self.height - bottom - height, width, height, color
+	if penSize <= 1 then
+		rl.DrawRectangleLines left, self.height - bottom - height, width, height, color
+	else
+		hw = penSize / 2
+		rec = [left - hw, self.height - bottom - height - hw, width + penSize, height + penSize]
+		rl.DrawRectangleLinesEx rec, penSize, color
+	end if
 	self._endDraw
 end function
 
@@ -130,13 +138,39 @@ PixelDisplay.fillRect = function(left=0, bottom=0, width=100, height=100, color=
 end function
 
 // Draw a axis-aligned ellipse outline on the pixel display.
-PixelDisplay.drawEllipse = function(left=0, bottom=0, width=100, height=100, color=null)
+// A thick pen is centered on the ellipse's bounds, as in Mini Micro 1.
+PixelDisplay.drawEllipse = function(left=0, bottom=0, width=100, height=100, color=null, penSize=1)
+	if width == 0 or height == 0 then return
 	if color == null then color = self.color
 	color = colorToList(color)
 	self._beginDraw
-	wOver2 = floor(width/2)
-	rl.DrawEllipseLines floor(left) + wOver2, self.height - floor(bottom) - ceil(height/2),
-	   wOver2, floor(height/2), color
+	if penSize <= 1 then
+		wOver2 = floor(width/2)
+		rl.DrawEllipseLines floor(left) + wOver2, self.height - floor(bottom) - ceil(height/2),
+		   wOver2, floor(height/2), color
+	else
+		// raylib has no thick ellipse, so strip a ring between two ellipses.
+		cx = left + width/2
+		cy = self.height - bottom - height/2
+		hw = penSize / 2
+		outerX = width/2 + hw; outerY = height/2 + hw
+		innerX = width/2 - hw; innerY = height/2 - hw
+		if innerX < 0 then innerX = 0
+		if innerY < 0 then innerY = 0
+		segments = ceil(outerX + outerY)
+		if segments < 36 then segments = 36
+		pts = []
+		for i in range(0, segments)
+			a = 2 * pi * i / segments
+			c = cos(a); s = sin(a)
+			pts.push [cx + outerX * c, cy + outerY * s]
+			pts.push [cx + innerX * c, cy + innerY * s]
+		end for
+		rl.rlDisableBackfaceCulling
+		rl.DrawTriangleStrip pts, color
+		rl.rlDrawRenderBatchActive
+		rl.rlEnableBackfaceCulling
+	end if
 	self._endDraw
 end function
 

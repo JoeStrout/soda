@@ -115,6 +115,9 @@ end function
 
 // Get the display currently installed in the given slot.
 globals.display = function(index)
+	if not (index isa number) or index < 0 or index >= Display._installed.len then
+		return err("display(index): index must be a number from 0 to " + (Display._installed.len-1))
+	end if
 	return Display._installed[index][0]
 end function
 
