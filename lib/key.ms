@@ -116,6 +116,7 @@ _layoutSensitiveKeys = range(raylib.KEY_A, raylib.KEY_Z) +
     raylib.KEY_SLASH, raylib.KEY_SEMICOLON, raylib.KEY_EQUAL,
     raylib.KEY_LEFT_BRACKET, raylib.KEY_BACKSLASH, raylib.KEY_RIGHT_BRACKET,
     raylib.KEY_GRAVE]
+freeze _layoutSensitiveKeys
 
 // Re-read the keyboard layout, returning true if the platform told us anything.
 // Called once as this module loads, which requires the window to already
@@ -166,6 +167,7 @@ _joyButtonToRaylib[11] = raylib.GAMEPAD_BUTTON_LEFT_FACE_UP		// D-pad up
 _joyButtonToRaylib[12] = raylib.GAMEPAD_BUTTON_LEFT_FACE_DOWN	// D-pad down
 _joyButtonToRaylib[13] = raylib.GAMEPAD_BUTTON_LEFT_FACE_LEFT	// D-pad left
 _joyButtonToRaylib[14] = raylib.GAMEPAD_BUTTON_LEFT_FACE_RIGHT	// D-pad right
+freeze _joyButtonToRaylib
 
 // Analog sticks rarely rest at exactly zero, so ignore small deflections.
 axisDeadZone = 0.1
@@ -314,6 +316,7 @@ _extraKeys[raylib.KEY_END] = 5
 _extraKeys[raylib.KEY_ESCAPE] = 27
 _extraKeys[raylib.KEY_ENTER] = 10
 _extraKeys[raylib.KEY_KP_ENTER] = 10
+freeze _extraKeys
 
 
 // In order to make all keys work properly, including ones that Raylib

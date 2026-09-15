@@ -311,6 +311,9 @@ end function
 _escapeFrom = ["\", """", ":", ";", "{", "}", char(8), char(9), char(10), char(12), char(13)]
 _escapeTo = ["\\", "\""", "\:", "\;", "\{", "\}", "\b","\t","\n","\f","\r"]
 _escapeIndexes = _escapeFrom.indexes
+freeze _escapeFrom
+freeze _escapeTo
+freeze _escapeIndexes
 _eol = char(10)
 
 //----------------------------------------------------------------------

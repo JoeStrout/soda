@@ -296,10 +296,14 @@ for i in range(0,15)
 		_hexDigitMap[char(87+i)] = i	// (uppercase hex digit)
 	end if
 end for
+freeze _hexDigitMap
 
 _escapeFrom = ["\", """", char(8), char(9), char(10), char(12), char(13)]
 _escapeTo = ["\\", "\""", "\b","\t","\n","\f","\r"]
 _escapeIndexes = _escapeFrom.indexes
+freeze _escapeFrom
+freeze _escapeTo
+freeze _escapeIndexes
 
 //----------------------------------------------------------------------
 // Unit tests (run when you load & run this script directly).

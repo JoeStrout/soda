@@ -195,6 +195,7 @@ ScreenFont._specialPositions = {
 	174: 174,		// registered symbol
 	176: 176,		// degree symbol
 	181: 181 }		// micro
+freeze ScreenFont._specialPositions
 
 ScreenFont.UNKNOWN_CHAR_POS = 21
 

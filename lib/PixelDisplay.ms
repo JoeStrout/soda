@@ -13,6 +13,7 @@ rl = raylib
 PixelDisplay = new Display
 PixelDisplay.mode = displayMode.pixel
 PixelDisplay.color = [255, 255, 255, 255]
+freeze PixelDisplay.color	// (shared by every instance that hasn't set its own)
 PixelDisplay.scale = 1
 PixelDisplay.scrollX = 0
 PixelDisplay.scrollY = 0
@@ -369,6 +370,8 @@ PixelDisplay._fontFiles = {"small": "ScreenFontSmall", "medium": "ScreenFontMedi
 // Overlap between adjacent glyph cells; column spacing is charWidth - kerning,
 // i.e. 8, 11, 14, and 20 pixels for the four sizes.
 PixelDisplay._fontKerning = {"small": 2, "medium": 2, "normal": 2, "large": 4}
+freeze PixelDisplay._fontFiles
+freeze PixelDisplay._fontKerning
 
 PixelDisplay._loadFont = function(fontName="normal")
 	if not PixelDisplay._fontFiles.hasIndex(fontName) then fontName = "normal"

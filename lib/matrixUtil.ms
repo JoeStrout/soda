@@ -25,13 +25,18 @@ Matrix.elem = null
 Matrix.rowRange = function
 	// We cache the range() result, overriding this method on the instance
 	// with the resulting value.  This is valid because matrices should
-	// never change their size.
-	self.rowRange = range(0, self.rows-1)
-	return self.rowRange
+	// never change their size.  The cached list is frozen, since every
+	// later call returns that same list.
+	r = range(0, self.rows-1)
+	freeze r
+	self.rowRange = r
+	return r
 end function
 Matrix.colRange = function
-	self.colRange = range(0, self.columns-1)
-	return self.colRange
+	r = range(0, self.columns-1)
+	freeze r
+	self.colRange = r
+	return r
 end function
 
 

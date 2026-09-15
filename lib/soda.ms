@@ -8,10 +8,12 @@
 // Identify ourselves in the `version` map, so that code shared between Soda
 // and other hosts built on this library (Mini Micro, notably) can tell them
 // apart with version.hostName.  The built-in map is frozen, so we shadow it
-// with a global carrying the same keys -- unless the host application already
-// did exactly that, in which case its identity wins.
+// with a global carrying the same keys (frozen too, like the original) --
+// unless the host application already did exactly that, in which case its
+// identity wins.
 if not globals.hasIndex("version") then
 	globals.version = version + {"hostName": "Soda"}
+	freeze globals.version
 end if
 
 raylib.SetTraceLogLevel raylib.LOG_WARNING

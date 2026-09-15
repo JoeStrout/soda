@@ -64,8 +64,11 @@ TileDisplay.setExtent = function(columns, rows)
 	self._xform = _list_init2d(rows, columns, 0)
 end function
 
+// Returned frozen: changing it would not resize the grid (use setExtent).
 TileDisplay.extent = function
-	return [self._cols, self._rows]
+	result = [self._cols, self._rows]
+	freeze result
+	return result
 end function
 
 TileDisplay.clear = function(toIndex=null)

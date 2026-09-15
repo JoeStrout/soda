@@ -35,7 +35,12 @@ TTFont._font = null  // Raylib font
 TTFont._size = 0	 // loaded point size
 TTFont.ascent = 0    // font ascent (best estimate)
 
-TTFont.emoji = {}  // key: character or string; value: Emoji object
+// emoji: key: character or string; value: Emoji object.  Each font gets its
+// own map in Load; this empty one on the class is frozen, so that adding
+// emoji to a font not made by Load fails loudly instead of adding them to
+// every font at once.
+TTFont.emoji = {}
+freeze TTFont.emoji
 
 TTFont.Load = function(path, size=24)
 	// ToDo: provide a way to load more (non-ASCII) characters, perhaps
@@ -43,6 +48,7 @@ TTFont.Load = function(path, size=24)
 	font = new TTFont
 	font._font = rl.LoadFontEx(path, size)
 	font._size = size
+	font.emoji = {}
 	if not font._font or not rl.IsFontValid(font._font) then
 		print "ERROR: TTFont: unable to load font at " + path
 		font._font = null

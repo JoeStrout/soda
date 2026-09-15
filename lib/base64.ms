@@ -7,6 +7,7 @@ for i in range(0, idxToChar.len-1)
 	charToIdx[idxToChar[i]] = i
 end for
 //charToIdx["="] = 0  // Safe padding
+freeze charToIdx
 
 // Encode a RawData as Base64
 toBase64 = function(raw)

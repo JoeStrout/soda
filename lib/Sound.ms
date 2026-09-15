@@ -138,6 +138,13 @@ Sound.triangleWave = [1, -1, 1]
 // Sound.sawtoothWave: a slightly buzzy, retro tone.
 Sound.sawtoothWave = [1, -1]
 
+// Sounds store these lists themselves, not copies (Sound.init defaults to
+// sawtoothWave), so freeze them: changing one would change every sound using it.
+freeze Sound.sineWave
+freeze Sound.squareWave
+freeze Sound.triangleWave
+freeze Sound.sawtoothWave
+
 // Sound.noiseWave: returns a list of random values, approximating white
 // noise.  Uses its own generator, so it does not disturb the sequence of
 // numbers produced by `rnd`.

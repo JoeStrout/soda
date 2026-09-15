@@ -12,6 +12,7 @@ globals.displayMode = {
 displayMode.str = function(modeNum)
 	return displayMode.indexOf(modeNum)
 end function
+freeze displayMode
 
 Display = {}
 Display.mode = 0
@@ -125,6 +126,7 @@ end function
 // never assign to on specific display instances; they should
 // only be set on the class.
 Display._protectedKeys = ["mode"]
+freeze Display._protectedKeys
 _checkGuardedKeys = function
 	for slot in range(0, 7)
 		for d in Display._installed[slot]
