@@ -75,6 +75,8 @@ end function
 // rgb: same as rgba, but with alpha defaulting to fully opaque (255).
 rgb = @rgba
 
-lerp = function(c1, c2, t)
+// Interpolate between two colors: t <= 0 gives c1, t >= 1 gives c2, and
+// anything between mixes them.  t defaults to halfway, as in Mini Micro 1.
+lerp = function(c1, c2, t=0.5)
 	return fromList(raylib.ColorLerp(c1, c2, t))
 end function

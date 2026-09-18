@@ -182,10 +182,14 @@ SpriteDisplay.clear = function
 	self.scrollY = 0
 end function
 
-SpriteDisplay.render = function
-	for sp in self.sprites
-		sp.draw self.scrollX, self.scrollY
+SpriteDisplay._renderSprites = function(spriteList)
+	for sp in spriteList
+		if sp isa list then self._renderSprites sp else sp.draw self.scrollX, self.scrollY
 	end for
+end function
+
+SpriteDisplay.render = function
+	self._renderSprites self.sprites
 end function
 
 testBounds = function
