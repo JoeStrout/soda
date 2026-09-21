@@ -86,7 +86,7 @@ while not key.pressed("escape")
 	if key.pressed("q") then sp1.rotation = sp1.rotation + 5
 	if key.pressed("e") then sp1.rotation = sp1.rotation - 5
 
-	window.setTitle "Mouse: " + mouse.x + ", " + mouse.y
+	window.title = "Mouse: " + mouse.x + ", " + mouse.y
 	sp1.scale = [3 + 0.5 * sp1.contains(mouse), 0.5]
 	sp2.scale = 1 + 0.5 * sp2.contains(mouse)
 

@@ -196,8 +196,9 @@ end function
 //	hitSnd.init 1, 100, [1, 0], Sound.noiseWave
 //	hitSnd.play
 // Note that the samples are not actually generated until the sound is first
-// played.  If you change duration, freq, envelope, waveform, fadeIn, fadeOut,
-// or sampleRate afterwards, call `unload` to force it to be regenerated.
+// played.  Changing duration, freq, envelope, waveform, fadeIn, fadeOut,
+// sampleRate, or mixes afterwards discards them, so the next `play`
+// synthesizes the sound anew (as in Mini Micro).
 Sound.init = function(duration=1, freq=440, envelope=null, waveform=null)
 	if self.isPlaying then self.stop
 	self.unload
@@ -311,6 +312,57 @@ _waveLength = function(freq, fracDone, duration)
 	f = _lookupLUT(freq, fracDone)
 	if f <= 0 then return duration
 	return 1 / f
+end function
+
+// Assigning to any of the synthesis parameters invalidates whatever we
+// generated from them, so that the sound is built again on the next play.
+// (Mini Micro does this with an assignOverride on the sound; here each
+// parameter gets a property setter.)  We lose the ability to adjust or stop
+// what is currently playing along with the generated sound, so stop it first.
+Sound._invalidate = function
+	if self._sound == null and self._music == null then return
+	if self.isPlaying then self.stop
+	self.unload
+end function
+
+Sound["duration="] = function(value)
+	self._invalidate
+	super.duration = value
+end function
+
+Sound["freq="] = function(value)
+	self._invalidate
+	super.freq = value
+end function
+
+Sound["envelope="] = function(value)
+	self._invalidate
+	super.envelope = value
+end function
+
+Sound["waveform="] = function(value)
+	self._invalidate
+	super.waveform = value
+end function
+
+Sound["fadeIn="] = function(value)
+	self._invalidate
+	super.fadeIn = value
+end function
+
+Sound["fadeOut="] = function(value)
+	self._invalidate
+	super.fadeOut = value
+end function
+
+Sound["sampleRate="] = function(value)
+	self._invalidate
+	super.sampleRate = value
+end function
+
+Sound["mixes="] = function(value)
+	self._invalidate
+	super.mixes = value
 end function
 
 // Generate the raylib sound for a synthesized Sound.

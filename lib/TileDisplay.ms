@@ -49,26 +49,44 @@ TileDisplay._xform = null   // grid[row][col] -> transform 0-7
 
 TileDisplay.Make = function
 	td = new TileDisplay
-	td.setExtent 10, 10
+	td.extent = [10, 10]
 	return td
 end function
 
-// Resize the grid.  This is the explicit stand-in for Mini Micro's
-// "assigning to .extent resizes the grid" trick, which relies on
-// native property interception we don't have available here.
-TileDisplay.setExtent = function(columns, rows)
+// Returned frozen: mutating it would not resize the grid.  To resize,
+// assign a new extent (see below).
+TileDisplay.extent = function
+	result = [self._cols, self._rows]
+	freeze result
+	return result
+end function
+
+// Assigning to .extent resizes the grid, discarding its contents.  As in
+// Mini Micro, the value may be [columns, rows], an {"x","y"} map, or a
+// single number for a square grid; anything else is ignored.
+TileDisplay["extent="] = function(value)
+	if value isa number then
+		columns = value
+		rows = value
+	else if value isa list and value.len > 1 then
+		columns = value[0]
+		rows = value[1]
+	else if value isa map and value.hasIndex("x") and value.hasIndex("y") then
+		columns = value.x
+		rows = value.y
+	else
+		return
+	end if
+	if not (columns isa number) or not (rows isa number) then return
+	columns = round(columns)
+	rows = round(rows)
+	if columns <= 0 or rows <= 0 then return
+	if columns == self._cols and rows == self._rows then return
 	self._cols = columns
 	self._rows = rows
 	self._idx = _list_init2d(rows, columns, null)
 	self._tint = _list_init2d(rows, columns, null)
 	self._xform = _list_init2d(rows, columns, 0)
-end function
-
-// Returned frozen: changing it would not resize the grid (use setExtent).
-TileDisplay.extent = function
-	result = [self._cols, self._rows]
-	freeze result
-	return result
 end function
 
 TileDisplay.clear = function(toIndex=null)
@@ -153,9 +171,9 @@ end function
 if locals == globals then
 	print "== Pure logic tests (no rendering needed) =="
 
-	print "setExtent allocates a grid of the right shape"
+	print "assigning .extent allocates a grid of the right shape"
 	td = TileDisplay.Make
-	td.setExtent 5, 3
+	td.extent = [5, 3]
 	ext = td.extent
 	qa.assert ext[0] == 5 and ext[1] == 3, "extent should report [5,3]"
 	qa.assert td.cell(4, 2) == null, "new grid should be empty"
@@ -247,7 +265,7 @@ if locals == globals then
 	palette.tileSet = tileset
 	palette.tileSetTileSize = tileSize
 	palette.cellSize = 32
-	palette.setExtent tilesPerRow, tileRows
+	palette.extent = [tilesPerRow, tileRows]
 	for i in range(0, tileCount - 1)
 		palette.setCell i % tilesPerRow, floor(i / tilesPerRow), i
 	end for
@@ -261,7 +279,7 @@ if locals == globals then
 	tintDemo.tileSet = tileset
 	tintDemo.tileSetTileSize = tileSize
 	tintDemo.cellSize = 32
-	tintDemo.setExtent tintColors.len, 1
+	tintDemo.extent = [tintColors.len, 1]
 	for i in range(0, tintColors.len - 1)
 		tintDemo.setCell i, 0, demoTile
 		tintDemo.setCellTint i, 0, tintColors[i]
@@ -278,7 +296,7 @@ if locals == globals then
 	transformDemo.tileSet = tileset
 	transformDemo.tileSetTileSize = tileSize
 	transformDemo.cellSize = 32
-	transformDemo.setExtent 15, 1
+	transformDemo.extent = [15, 1]
 	for t in range(0, 7)
 		transformDemo.setCell t * 2, 0, demoTile
 		transformDemo.setCellTransform t * 2, 0, t
@@ -293,7 +311,7 @@ if locals == globals then
 	overlapDemo.tileSetTileSize = tileSize
 	overlapDemo.cellSize = 32
 	overlapDemo.overlap = 16
-	overlapDemo.setExtent 8, 1
+	overlapDemo.extent = [8, 1]
 	for i in range(0, 7)
 		overlapDemo.setCell i, 0, demoTile
 	end for
@@ -307,7 +325,7 @@ if locals == globals then
 	staggerDemo.tileSetTileSize = tileSize
 	staggerDemo.cellSize = 32
 	staggerDemo.oddColOffset = 0.5
-	staggerDemo.setExtent 6, 4
+	staggerDemo.extent = [6, 4]
 	for y in range(0, 3)
 		for x in range(0, 5)
 			staggerDemo.setCell x, y, demoTile

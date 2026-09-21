@@ -69,15 +69,16 @@ Display.FindOrMakeDisplay = function(slotNum, mode)
 	return d
 end function
 
-// Set the display mode (i.e. Display subclass) active in the slot
-// of this display.  Notice that this does not transmogrify or
-// mutate the current display; it just changes what object is
-// active in this slot.
-Display.setMode = function(newMode)
-	if self.index == null or self.index < 0 or self.index > 7 then
-		print "Error: Display.setMode called on display with no valid index"
-		print stackTrace
-		exit
+// Assigning to .mode sets the display mode (i.e. Display subclass) active
+// in the slot of this display.  Notice that this does not transmogrify or
+// mutate the current display; it just changes what object is active in
+// this slot.  Assigning to a display that is not installed in a slot (a
+// Display subclass, say, declaring the mode it implements) just stores the
+// value, as it always did.
+Display["mode="] = function(newMode)
+	if not (self.index isa number) or self.index < 0 or self.index > 7 then
+		super.mode = newMode
+		return
 	end if
 	d = Display.FindOrMakeDisplay(self.index, newMode)
 	disps = Display._installed[self.index]
@@ -122,31 +123,6 @@ globals.display = function(index)
 	return Display._installed[index][0]
 end function
 
-// "Protect" certain map keys as things that user code should
-// never assign to on specific display instances; they should
-// only be set on the class.
-Display._protectedKeys = ["mode"]
-freeze Display._protectedKeys
-_checkGuardedKeys = function
-	for slot in range(0, 7)
-		for d in Display._installed[slot]
-			for k in d.__isa._protectedKeys
-				if not d.hasIndex(k) then continue
-				msg = "Assigning to display(" + slot + ")." + k + 
-				  " has no effect in Mini Micro 2."
-				if k == "mode" then msg += "  Use display(" + slot +
-				  ").setMode instead."
-				display(0).setMode displayMode.text
-				display(0).textColor = color.red
-				display(0).backColor = "#000000AA"
-				display(0).clear
-				display(0).print msg
-				d.remove k				
-			end for
-		end for
-	end for
-end function
-
 // Initialize all our displays (and eight display slots).
 Display.Initialize = function
 	for slot in range(0,7)
@@ -161,7 +137,7 @@ end function
 clear = function
 	modes = [0, 0, 0, 2, 5, 3, 0, 1]
 	for i in range(0, 7)
-		display(i).setMode modes[i]
+		display(i).mode = modes[i]
 	end for
 	display(3).clear
 	display(4).clear
@@ -174,7 +150,6 @@ end function
 globals.clear = @clear
 
 Display.RenderAll = function
-	_checkGuardedKeys
 	for slot in range(7, 0)
 		Display._installed[slot][0].render
 	end for

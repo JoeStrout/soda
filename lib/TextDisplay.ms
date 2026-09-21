@@ -114,8 +114,8 @@ TextDisplay.setSize = function(newCols, newRows)
 		end for
 		self._cells[row] = cellRow
 	end for
-	self.column = 0
-	self.row = 0
+	super.column = 0
+	super.row = 0
 	self.updateOffsets
 end function
 
@@ -146,7 +146,7 @@ end function
 // Cell access.  These take x (column) and y (row), matching the Mini Micro
 // TextDisplay API.  Note that _cellAt, and everything ported directly from
 // the C++, takes (row, col) instead.  ToDo: clean up that mess and make
-// everything (including setCursor) take (col, row).
+// everything takes (col, row).
 //----------------------------------------------------------------------
 
 // Get the cell map at the given row and column, or null if out of range.
@@ -309,7 +309,7 @@ end function
 
 // Move the cursor one column right, wrapping to the next line at the edge.
 TextDisplay.advance = function
-	self.column += 1
+	super.column = self.column + 1
 	if self.column >= self.columns then self.nextLine
 end function
 
@@ -317,25 +317,25 @@ end function
 // above (i.e. the next higher row index).  Stops at the top-left corner.
 TextDisplay.backup = function
 	self._hideCursorVisual
-	self.column -= 1
+	super.column = self.column - 1
 	if self.column < 0 then
 		if self.row >= self.rows - 1 then
-			self.column = 0
+			super.column = 0
 			return
 		end if
-		self.row += 1
-		self.column = self.columns - 1
+		super.row = self.row + 1
+		super.column = self.columns - 1
 	end if
 end function
 
 // Move the cursor to the start of the next line down, scrolling if we've
 // run off the bottom.
 TextDisplay.nextLine = function
-	self.row -= 1
+	super.row = self.row - 1
 	while self.row < 0
 		self.scroll
 	end while
-	self.column = 0
+	super.column = 0
 end function
 
 // Scroll the contents up one row, clearing the bottom row.
@@ -349,32 +349,38 @@ TextDisplay.scroll = function
 	end for
 	self._cells[0] = recycled
 
-	if self.row < self.rows - 1 then self.row += 1
+	if self.row < self.rows - 1 then super.row = self.row + 1
 	self.clearRow 0
 	self.scrollCount += 1
 end function
 
-// Move the cursor, clamping to the grid.  (Assigning to .row and .column
-// directly works too, but skips the clamping and the cursor bookkeeping.)
-TextDisplay.setCursor = function(row=null, col=null)
+// Assigning to .row or .column moves the cursor, as in Mini Micro: the value
+// is clamped to the grid, and the hardware cursor (if shown) goes with it.
+// Internal code that wants the raw, unclamped store writes through `super`
+// instead.
+TextDisplay["column="] = function(value)
+	if value < 0 then
+		value = 0
+	else if value >= self.columns then
+		value = self.columns - 1
+	end if
+	if value == self.column then return
 	wasShown = self.cursorShown
-	if self.cursorShown then self.hideCursor
+	if wasShown then self.hideCursor
+	super.column = value
+	if wasShown then self.showCursor
+end function
 
-	if col != null then
-		self.column = col
-		if self.column < 0 then
-			self.column = 0
-		else if self.column >= self.columns then
-			self.column = self.columns - 1
-		end if
+TextDisplay["row="] = function(value)
+	if value < 0 then
+		value = 0
+	else if value >= self.rows then
+		value = self.rows - 1
 	end if
-	
-	if row != null then
-		self.row = row
-		if self.row < 0 then self.row = 0
-		if self.row >= self.rows then self.row = self.rows - 1
-	end if
-
+	if value == self.row then return
+	wasShown = self.cursorShown
+	if wasShown then self.hideCursor
+	super.row = value
 	if wasShown then self.showCursor
 end function
 
@@ -515,7 +521,8 @@ if locals == globals then
 
 	print "put writes at the cursor and advances the column"
 	td.setSize 10, 4
-	td.setCursor 2, 5
+	td.row = 2
+	td.column = 5
 	td.put "H"
 	td.put "i"
 	qa.assertEqual td.cell(5, 2), "H", "first char should land at the starting column"
@@ -525,14 +532,16 @@ if locals == globals then
 
 	print "advance wraps to the next line at the right edge"
 	td.setSize 10, 4
-	td.setCursor 2, 9
+	td.row = 2
+	td.column = 9
 	td.advance
 	qa.assertEqual td.column, 0, "advancing off the right edge should wrap to column 0"
 	qa.assertEqual td.row, 1, "...and drop to the next row down (one lower index)"
 
 	print "nextLine moves down a row, since row 0 is the bottom"
 	td.setSize 10, 4
-	td.setCursor 3, 4
+	td.row = 3
+	td.column = 4
 	td.nextLine
 	qa.assertEqual td.row, 2, "nextLine should decrement the row"
 	qa.assertEqual td.column, 0, "nextLine should return to column 0"
@@ -541,7 +550,8 @@ if locals == globals then
 	td.setSize 10, 4
 	td.setCell 0, 0, "B"		// bottom row
 	td.setCell 0, 1, "M"		// one up from the bottom
-	td.setCursor 0, 3
+	td.row = 0
+	td.column = 3
 	td.nextLine
 	qa.assertEqual td.row, 0, "cursor should stay pinned to the bottom row"
 	qa.assertEqual td.column, 0, "cursor should be at column 0"
@@ -554,7 +564,8 @@ if locals == globals then
 	for r in range(0, 3)
 		td.setCell 0, r, str(r)
 	end for
-	td.setCursor 3, 0		// already at the top, so scroll shouldn't move the cursor
+	td.row = 3
+	td.column = 0		// already at the top, so scroll shouldn't move the cursor
 	td.scroll
 	qa.assertEqual td.row, 3, "cursor at the top row should not move on scroll"
 	qa.assertEqual td.cell(0, 3), "2", "row 2 should have become row 3"
@@ -564,22 +575,26 @@ if locals == globals then
 
 	print "backup steps left, and wraps to the end of the line above"
 	td.setSize 10, 4
-	td.setCursor 1, 3
+	td.row = 1
+	td.column = 3
 	td.backup
 	qa.assertEqual td.column, 2, "backup should decrement the column"
 	qa.assertEqual td.row, 1, "backup within a line should not change the row"
-	td.setCursor 1, 0
+	td.row = 1
+	td.column = 0
 	td.backup
 	qa.assertEqual td.row, 2, "backing up past column 0 should go up a row"
 	qa.assertEqual td.column, 9, "...to the last column"
-	td.setCursor 3, 0		// top-left corner: nowhere left to go
+	td.row = 3
+	td.column = 0		// top-left corner: nowhere left to go
 	td.backup
 	qa.assertEqual td.row, 3, "backup at the top-left corner should stay put"
 	qa.assertEqual td.column, 0, "backup at the top-left corner should stay put"
 
 	print "print appends the delimiter (a carriage return) by default"
 	td.setSize 10, 4
-	td.setCursor 3, 0
+	td.row = 3
+	td.column = 0
 	td.print "Hi"
 	qa.assertEqual td.cell(0, 3), "H", "text should print at the cursor"
 	qa.assertEqual td.cell(1, 3), "i", "text should print at the cursor"
@@ -591,14 +606,17 @@ if locals == globals then
 
 	print "put handles tab, backspace, and the inverse on/off control codes"
 	td.setSize 12, 4
-	td.setCursor 3, 1
+	td.row = 3
+	td.column = 1
 	td.put char(9)
 	qa.assertEqual td.column, 4, "tab should advance to the next multiple of 4"
 	qa.assertEqual td.cell(1, 3), " ", "tab should blank the cells it passes over"
-	td.setCursor 3, 4
+	td.row = 3
+	td.column = 4
 	td.put char(9)
 	qa.assertEqual td.column, 8, "tab from a multiple of 4 should advance a full 4"
-	td.setCursor 3, 5
+	td.row = 3
+	td.column = 5
 	td.put char(8)
 	qa.assertEqual td.column, 4, "backspace should back the cursor up"
 	td.inverse = false
@@ -613,7 +631,8 @@ if locals == globals then
 	td.color = color.lime
 	td.backColor = color.clear
 	td.print "text to be wiped", ""
-	td.setCursor 2, 5
+	td.row = 2
+	td.column = 5
 	td.showCursor
 	qa.assert td.cursorShown, "showCursor should set cursorShown"
 	td.clear
@@ -622,18 +641,32 @@ if locals == globals then
 	qa.assertEqual td.row, 2, "clear should leave the cursor row alone"
 	qa.assertEqual td.column, 5, "clear should leave the cursor column alone"
 
-	print "setCursor clamps to the grid"
+	print "assigning to .row or .column moves the cursor, clamping to the grid"
 	td.setSize 10, 4
-	td.setCursor -5, -5
+	td.row = 2
+	td.column = 7
+	qa.assertEqual td.row, 2, "assigning .row should move the cursor"
+	qa.assertEqual td.column, 7, "assigning .column should move the cursor"
+	td.row = -5
+	td.column = -5
 	qa.assertEqual td.row, 0, "negative row should clamp to 0"
 	qa.assertEqual td.column, 0, "negative column should clamp to 0"
-	td.setCursor 99, 99
+	td.row = 99
+	td.column = 99
 	qa.assertEqual td.row, 3, "too-large row should clamp to rows-1"
 	qa.assertEqual td.column, 9, "too-large column should clamp to columns-1"
+	td.row = 2
+	td.column = 5
+	td.showCursor
+	td.row = 1
+	qa.assert not td._cellAt(2, 5).inverse, "moving by assignment should take the cursor with it"
+	qa.assert td._cellAt(1, 5).inverse, "...and show it in the new row"
+	td.hideCursor
 
 	print "showCursor / hideCursor invert the cell under the cursor"
 	td.setSize 10, 4
-	td.setCursor 1, 2
+	td.row = 1
+	td.column = 2
 	td.showCursor
 	qa.assert td._cellAt(1, 2).inverse, "showCursor should invert the cell"
 	td.hideCursor
@@ -643,7 +676,8 @@ if locals == globals then
 	print "the cursor takes the current color, and gives the cell's back"
 	td.setSize 10, 4
 	td.color = color.yellow
-	td.setCursor 1, 2
+	td.row = 1
+	td.column = 2
 	td._set 1, 2, "x"				// a cell written while the color is yellow
 	td.color = color.orange			// ...and now the color changes under it
 	td.showCursor
@@ -663,7 +697,8 @@ if locals == globals then
 	print "== Visual test (look at the app window) =="
 	t = display(3)		// soda's Display.Initialize puts a TextDisplay in slot 3
 	t.clear
-	t.setCursor t.rows - 1, 0
+	t.row = t.rows - 1
+	t.column = 0
 	t.color = color.white
 	t.backColor = color.clear
 	t.inverse = false

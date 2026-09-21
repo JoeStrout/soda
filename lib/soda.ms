@@ -28,11 +28,11 @@ ensureImport ["color", "Image", "Sound", "Display", "SolidColorDisplay", "PixelD
 
 Display.Initialize
 
-// window: query and control the application window.
-// Mini Micro exposes window.width/height/fullScreen as assignable properties,
-// but MiniScript 2 has no assignment hook, so the setters are methods here.
+// window: query and control the application window.  As in Soda 1 (and
+// Mini Micro), width, height, fullScreen and title are properties you read
+// and assign; the assignments are property setters, installed below.
 globals.window = {}
-window.title = "raylib-miniscript"
+window._title = "raylib-miniscript"
 
 window.width = function
 	return raylib.GetScreenWidth
@@ -46,19 +46,27 @@ window.fullScreen = function
 	return raylib.IsWindowFullscreen
 end function
 
-window.setSize = function(w=960, h=640)
-	raylib.SetWindowSize w, h
+window.title = function
+	return self._title
 end function
 
-window.setTitle = function(title="")
-	raylib.SetWindowTitle title
-	self.title = title
+window["width="] = function(value)
+	raylib.SetWindowSize value, raylib.GetScreenHeight
+end function
+
+window["height="] = function(value)
+	raylib.SetWindowSize raylib.GetScreenWidth, value
 end function
 
 // Raylib only offers a toggle, so compare with the current state first.
-window.setFullScreen = function(full=true)
-	if (full != 0) == (raylib.IsWindowFullscreen != 0) then return
+window["fullScreen="] = function(value)
+	if (value != 0) == (raylib.IsWindowFullscreen != 0) then return
 	raylib.ToggleFullscreen
+end function
+
+window["title="] = function(value)
+	raylib.SetWindowTitle value
+	self._title = value
 end function
 
 // updateCallbacks: a list of methods to call on every frame.  This includes standard

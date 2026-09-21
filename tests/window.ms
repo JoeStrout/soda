@@ -23,12 +23,12 @@ bg = display(7)
 
 while true
 	dw = key.axis("Horizontal") * 10
-	if dw != 0 then window.setSize(window.width + dw, window.height)
+	if dw != 0 then window.width = window.width + dw
 	dh = key.axis("Vertical") * 10
-	if dh != 0 then window.setSize(window.width, window.height + dh)
+	if dh != 0 then window.height = window.height + dh
 	if key.pressed("space") then
 		while key.pressed("space"); yield; end while	// (wait for key-up)
-		window.setFullScreen not window.fullScreen
+		window.fullScreen = not window.fullScreen
 	end if
 	
 	if key.pressed("r") then bg.color = "#FF8888"

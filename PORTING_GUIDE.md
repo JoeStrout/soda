@@ -14,13 +14,7 @@ But as for your older Soda code, it should pretty much "just work" in the new ve
 
 ## From Mini Micro
 
-The Soda implementation of the Mini Micro API is much more complete than it was prior to July 2026.  However, it's written in MiniScript 2, which doesn't support intercepting assignments to map keys.  So you'll need to make these adjustments:
-
-- Instead of setting `Display.mode = m`, call `Display.setMode m`.
-- Instead of setting `text.row` and/or `text.column`, call `text.setCursor row, col`.
-- Instead of setting `TileDisplay.extent`, call `TileDisplay.setExtent`.
-
-Unfortunately if you set those values instead of calling the proper setter methods, it will just silently fail to do what you wanted.  You might want to search for `.mode =`, `.row =`, `.column =`, and `.extent =` in your project and update them accordingly.
+The Soda implementation of the Mini Micro API is much more complete than it was prior to July 2026.  So code written for Mini Micro should mostly "just work" in Soda.
 
 ## From Some Other Game Engine
 
