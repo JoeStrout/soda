@@ -102,16 +102,34 @@ Parser = {}
 Parser.source = ""
 Parser._sourceLen = 0
 Parser._p = 0		// index of next character to consume in source
+Parser.error = null	// set to an error message if parsing fails
 
 Parser.init = function(source)
 	self.source = source
 	self._sourceLen = source.len
 end function
 
+// Record a parse error (position is included for context) and return null,
+// so callers can just "return self._fail(...)" from wherever they detect it.
+Parser._fail = function(message)
+	self.error = "JSON error at position " + self._p + ": " + message
+	return null
+end function
+
 Parser.parse = function(source=null)
 	if source != null then self.init source
 	self._p = 0
-	return self._parseElement
+	self.error = null
+	result = self._parseElement
+	if self.error == null then
+		self._skipWhitespace
+		if self._p < self._sourceLen then self._fail "unexpected trailing characters"
+	end if
+	if self.error != null then
+		print self.error
+		return null
+	end if
+	return result
 end function
 
 whitespace = " " + char(9) + char(10) + char(13)
@@ -128,6 +146,7 @@ end function
 
 Parser._parseValue = function
 	self._skipWhitespace
+	if self._p >= self._sourceLen then return self._fail("unexpected end of input")
 	c = self.source[self._p]
 	if c == """" then return self._parseString
 	if "0123456789-.".indexOf(c) != null then return self._parseNumber
@@ -145,67 +164,74 @@ Parser._parseValue = function
 		self._p = self._p + 4
 		return null
 	end if
+	return self._fail("unexpected character '" + c + "'")
 end function
 
 Parser._parseList = function
 	self._p = self._p + 1		// skip "["
 	self._skipWhitespace
 	result = []
-	while self._p < self._sourceLen
+	while true
+		if self._p >= self._sourceLen then return self._fail("unterminated array")
 		c = self.source[self._p]
-		if c == "]" then break
+		if c == "]" then
+			self._p = self._p + 1
+			return result
+		end if
 		result.push self._parseElement
+		if self.error != null then return null
 		self._skipWhitespace
 		// after an element, we should have either a comma or a ']'
+		if self._p >= self._sourceLen then return self._fail("unterminated array")
 		c = self.source[self._p]
 		if c == "," then
 			self._p = self._p + 1
 			self._skipWhitespace
+		else if c != "]" then
+			return self._fail("expected ',' or ']' in array")
 		end if
 	end while
-	self._p = self._p + 1
-	return result
 end function
 
 Parser._parseMap = function
 	self._p = self._p + 1		// skip "{"
 	self._skipWhitespace
 	result = {}
-	while self._p < self._sourceLen
+	while true
 		// grab the key (must be a string)
+		if self._p >= self._sourceLen then return self._fail("unterminated object")
 		c = self.source[self._p]
-		if c == "}" then break
-		if c != """" then
-			print "JSON error: object member key must be a string literal"	// ToDo: better error handling!
-			print "Error at position " + self._p + ": " + self.source[self._p-60 : self._p+60]
-			return null
+		if c == "}" then
+			self._p = self._p + 1
+			return result
 		end if
+		if c != """" then return self._fail("object member key must be a string literal")
 		key = self._parseString
+		if self.error != null then return null
 		self._skipWhitespace
-		
+
 		// next token must be a colon
-		if self.source[self._p] != ":" then
-			print "JSON error: colon expected"
-			print "Error at position " + self._p + ": " + self.source[self._p-60 : self._p+60]
-			return null
-		end if
+		if self._p >= self._sourceLen then return self._fail("unterminated object")
+		if self.source[self._p] != ":" then return self._fail("colon expected")
 		self._p = self._p + 1
 		self._skipWhitespace
-		
+
 		// grab the value (could be anything)
 		value = self._parseElement
+		if self.error != null then return null
 		result[key] = value
 		self._skipWhitespace
-		
-		// after a a key/value pair, we should have either a comma or a '}'
+
+		// after a key/value pair, we should have either a comma or a '}'
+		if self._p >= self._sourceLen then return self._fail("unterminated object")
 		c = self.source[self._p]
 		if c == "," then
 			self._p = self._p + 1
 			self._skipWhitespace
+		else if c != "}" then
+			return self._fail("expected ',' or '}' in object")
 		end if
 	end while
-	self._p = self._p + 1
-	return result
 end function
 
 // Get a string literal from the source.  Advance to the next
@@ -214,15 +240,20 @@ Parser._parseString = function
 	self._p = self._p + 1
 	startPos = self._p
 	anyEscape = false
+	closed = false
 	while self._p < self._sourceLen
 		c = self.source[self._p]
 		self._p = self._p + 1
-		if c == """" then break
+		if c == """" then
+			closed = true
+			break
+		end if
 		if c == "\" then
 			anyEscape = true
 			self._p = self._p + 1
 		end if
 	end while
+	if not closed then return self._fail("unterminated string literal")
 	result = self.source[startPos : self._p-1]
 	if anyEscape then result = unescape(result)
 	return result
