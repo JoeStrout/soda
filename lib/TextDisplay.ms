@@ -48,7 +48,7 @@ TextDisplayCell.backColor = "#000000"
 TextDisplayCell.inverse = false		// used for the hardware cursor
 
 TextDisplayCell.Make = function(fore, back)
-	noob = new TextDisplayCell
+	noob = new self
 	noob.character = " "
 	noob.color = fore
 	noob.backColor = back
@@ -96,7 +96,7 @@ TextDisplay._cells = null		// _cells[row][col] -> TextDisplayCell
 TextDisplay.scrollCount = 0
 
 TextDisplay.Make = function
-	noob = new TextDisplay
+	noob = new self
 	noob.setSize noob.columns, noob.rows
 	return noob
 end function

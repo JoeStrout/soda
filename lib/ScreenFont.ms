@@ -124,7 +124,7 @@ end function
 
 // Create a new ScreenFont, optionally loading a font texture right away.
 ScreenFont.Make = function(texturePath=null)
-	noob = new ScreenFont
+	noob = new self
 	if texturePath != null then noob.load texturePath
 	return noob
 end function

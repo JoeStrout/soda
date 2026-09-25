@@ -27,13 +27,13 @@ Sound.sampleRate = 10464
 
 // Wrap an existing raylib Sound or MusicStream map as a Sound instance.
 Sound.FromRaylibMusicStream = function(rMusicStream)
-	result = new Sound
+	result = new self
 	result._music = rMusicStream
 	return result
 end function
 
 Sound.FromRaylibSound = function(rSound)
-	result = new Sound
+	result = new self
 	result._sound = rSound
 	return result
 end function

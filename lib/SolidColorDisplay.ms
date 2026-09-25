@@ -5,7 +5,7 @@ SolidColorDisplay.width = 960
 SolidColorDisplay.height = 640
 
 SolidColorDisplay.Make = function(width=960, height=640, color="#000000FF")
-	result = new SolidColorDisplay
+	result = new self
 	result.width = width
 	result.height = height
 	result.color = color

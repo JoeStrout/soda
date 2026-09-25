@@ -48,7 +48,7 @@ TileDisplay._tint = null    // grid[row][col] -> color, or null (no tint)
 TileDisplay._xform = null   // grid[row][col] -> transform 0-7
 
 TileDisplay.Make = function
-	td = new TileDisplay
+	td = new self
 	td.extent = [10, 10]
 	return td
 end function

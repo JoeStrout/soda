@@ -437,7 +437,7 @@ SpriteDisplay.scrollY = 0
 SpriteDisplay.sprites = null
 
 SpriteDisplay.Make = function
-	sp = new SpriteDisplay
+	sp = new self
 	sp.clear
 	return sp
 end function

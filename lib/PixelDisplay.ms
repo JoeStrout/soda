@@ -22,10 +22,6 @@ PixelDisplay.height = 640
 PixelDisplay._renderTex = null
 PixelDisplay._clip = null  // [left, bottom, width, height] in display coords, or null
 
-PixelDisplay.Make = function
-	return new PixelDisplay
-end function
-
 // Begin drawing to the render texture in "replace" blend mode,
 // so that drawn colors fully overwrite the destination (matching
 // Mini Micro behavior, where alpha < 255 does not blend).
@@ -62,7 +58,7 @@ end function
 
 // Create a new PixelDisplay with the given size.
 PixelDisplay.Make = function(width=960, height=640, color="#00000000")
-	result = new PixelDisplay
+	result = new self
 	result.width = width
 	result.height = height
 	result._renderTex = rl.LoadRenderTexture(width, height)

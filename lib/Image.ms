@@ -50,7 +50,7 @@ Image.height = 0
 
 // Create a new Image filled with the given color.
 Image.create = function(width, height, color="#00000000")
-	result = new Image
+	result = new self
 	result._img = rl.GenImageColor(width, height, colorToRGBA(color))
 	result.width = width
 	result.height = height
@@ -59,7 +59,7 @@ end function
 
 // Wrap an existing raylib Image map as an Image instance.
 Image.FromRaylibImage = function(rImg)
-	result = new Image
+	result = new self
 	result._img = rImg
 	result.width = rImg.width
 	result.height = rImg.height
