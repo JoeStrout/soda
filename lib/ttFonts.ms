@@ -4,7 +4,7 @@
 
 rl = raylib
 
-import "miscUtil"
+import "importUtil"
 ensureImport "stringUtil"
 
 Emoji = {}

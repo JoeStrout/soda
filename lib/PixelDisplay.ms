@@ -62,7 +62,7 @@ end function
 
 // Create a new PixelDisplay with the given size.
 PixelDisplay.Make = function(width=960, height=640, color="#00000000")
-	result = new self
+	result = new PixelDisplay
 	result.width = width
 	result.height = height
 	result._renderTex = rl.LoadRenderTexture(width, height)
