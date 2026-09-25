@@ -4,8 +4,9 @@
 
 rl = raylib
 
-import "importUtil"
-ensureImport "stringUtil"
+if not globals.hasIndex("stringUtil") then
+	import "stringUtil"
+end if
 
 Emoji = {}
 Emoji.image = null	  // image to draw
