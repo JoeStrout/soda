@@ -1,19 +1,19 @@
 SolidColorDisplay = new Display
 SolidColorDisplay.mode = displayMode.solidColor
 SolidColorDisplay.color = "#000000FF"
-SolidColorDisplay.width = 960
-SolidColorDisplay.height = 640
 
-SolidColorDisplay.Make = function(width=960, height=640, color="#000000FF")
+SolidColorDisplay.Make = function(color="#000000FF")
 	result = new self
-	result.width = width
-	result.height = height
 	result.color = color
 	return result
 end function
 
+// Fill the whole screen with our color.  This is a rectangle rather than
+// ClearBackground so that a translucent color blends over the displays below
+// it, and so that it covers only the screen, not a host's bezel around it.
 SolidColorDisplay.render = function
-	raylib.DrawRectangle 0, 0, self.width, self.height, color.toList(self.color)
+	raylib.DrawRectangle self.screenLeft, self.screenTop,
+	  self.screenWidth, self.screenHeight, color.toList(self.color)
 end function
 
 return SolidColorDisplay
