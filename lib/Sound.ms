@@ -27,13 +27,17 @@ Sound.sampleRate = 10464
 
 // Wrap an existing raylib Sound or MusicStream map as a Sound instance.
 Sound.FromRaylibMusicStream = function(rMusicStream)
+	if rMusicStream == null then return err("Sound.FromRaylibMusicStream: rMusicStream is null")
 	result = new self
+	result.duration = raylib.GetMusicTimeLength(rMusicStream)
 	result._music = rMusicStream
 	return result
 end function
 
 Sound.FromRaylibSound = function(rSound)
+	if rMusicStream == null then return err("Sound.FromRaylibSound: rSound is null")
 	result = new self
+	result.duration = rSound.frameCount / rSound.sampleRate
 	result._sound = rSound
 	return result
 end function
@@ -388,7 +392,7 @@ end function
 
 file.loadSound = function(path, asMusicStream=null)
 	if asMusicStream == null then
-		asMusicStream = (path[-4] == ".ogg" or path[-4] == ".mp3")
+		asMusicStream = (path[-4:] == ".ogg" or path[-4:] == ".mp3")
 	end if
 	if asMusicStream then
 		result = Sound.FromRaylibMusicStream(rl.LoadMusicStream(path))
