@@ -35,7 +35,7 @@ Sound.FromRaylibMusicStream = function(rMusicStream)
 end function
 
 Sound.FromRaylibSound = function(rSound)
-	if rMusicStream == null then return err("Sound.FromRaylibSound: rSound is null")
+	if rSound == null then return err("Sound.FromRaylibSound: rSound is null")
 	result = new self
 	result.duration = rSound.frameCount / rSound.sampleRate
 	result._sound = rSound
