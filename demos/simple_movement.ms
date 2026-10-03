@@ -1,10 +1,6 @@
 import "soda"
 clear
 
-spd = new PixelDisplay
-spd.setMode 3
-spd.install 5
-
 obj = {}
 obj.x = 480
 obj.y = 320
