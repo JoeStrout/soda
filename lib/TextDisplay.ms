@@ -186,8 +186,14 @@ TextDisplay.cellColor = function(x, y)
 end function
 
 TextDisplay.setCellColor = function(x, y, foreColor)
-	c = self._cellAt(y, x)
-	if c != null then c.color = foreColor
+	if x isa list then cols = x else cols = [x]
+	if y isa list then rows = y else rows = [y]
+	for _y in rows
+		for _x in cols
+			c = self._cellAt(_y, _x)
+			if c != null then c.color = foreColor
+		end for
+	end for
 end function
 
 TextDisplay.cellBackColor = function(x, y)
@@ -231,6 +237,7 @@ end function
 
 // Fill one row with the given character, in the current colors.
 TextDisplay.fillRow = function(row, character=" ")
+	if row == null then row = self.row
 	if row < 0 or row >= self.rows then return
 	cellRow = self._cells[row]
 	for col in range(0, self.columns - 1, 1)

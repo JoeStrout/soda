@@ -383,17 +383,15 @@ Sprite.draw = function(offsetX=0, offsetY=0)
 		return
 	end if
 	if self.srcRect then
-		srcRect = self.srcRect
+		srcRect = self.srcRect[:]
 	else
 		srcRect = [0, 0, self.image.width, self.image.height]
 	end if
-	if self.scale isa list then
-		destWidth = srcRect[2] * self.scale[0]
-		destHeight = srcRect[3] * self.scale[1]
-	else
-		destWidth = srcRect[2] * self.scale
-		destHeight = srcRect[3] * self.scale
-	end if
+	s = self._scaleXY
+	destWidth = srcRect[2] * abs(s[0])
+	destHeight = srcRect[3] * abs(s[1])
+	if s[0] < 0 then srcRect[2] = -srcRect[2]
+	if s[1] < 0 then srcRect[3] = -srcRect[3]
 	h = Display.screenHeight
 	destRect = [self.x + offsetX, h - self.y - offsetY, destWidth, destHeight]
 	origin = [destWidth * 0.5, destHeight * 0.5]

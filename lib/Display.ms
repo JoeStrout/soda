@@ -54,7 +54,6 @@ Display.NewDisplayOfMode = function(mode)
 	if mode == displayMode.tile then return TileDisplay.Make
 	if mode == displayMode.sprite then return SpriteDisplay.Make
 	if mode == displayMode.text then return TextDisplay.Make
-	print "Not implemented yet: display mode " + mode
 	exit
 end function
 
