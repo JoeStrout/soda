@@ -2,6 +2,11 @@
 
 Build and packaging scripts.
 
+- **check-lib-sync.sh** — compare library modules that appear in more than
+  one of minimicro-sysdisk `sys/lib` (canonical), soda `lib`, and
+  raylib-miniscript `assets/lib`; report copies that differ, which is newest,
+  and a `bbdiff` command to compare them. Files in sync are listed first.
+
 Planned:
 
 - **build-dist.sh** — assemble a distribution package: pull a fresh
