@@ -3,7 +3,19 @@
 
 rl = raylib
 
+// Sounds being played, so that UpdateAll can feed music streams and restart
+// looping sounds.  A sound leaves this list when it stops, or finishes on its
+// own; until then the list keeps it from being garbage-collected (and its
+// raylib sound unloaded) mid-play.
 _playingSounds = []
+
+// A Sound owns the raylib sound or music stream it loads or synthesizes, and
+// flags it with autoUnload, so it is freed when the Sound is garbage-collected.
+// This passes null (a failed load) through unchanged.
+_owned = function(rResource)
+	if rResource == null then return null
+	return autoUnload(rResource)
+end function
 
 Sound = {}
 Sound._sound = null  // raylib Sound
@@ -25,7 +37,9 @@ Sound.mixes = null	// list of [sound, level] pairs (see Sound.mix)
 // This matches Mini Micro; raylib resamples to the device rate as needed.
 Sound.sampleRate = 10464
 
-// Wrap an existing raylib Sound or MusicStream map as a Sound instance.
+// Wrap an existing raylib Sound or MusicStream map as a Sound instance.  This
+// does not take ownership: the caller still unloads it, unless it calls
+// autoUnload on it.
 Sound.FromRaylibMusicStream = function(rMusicStream)
 	if rMusicStream == null then return err("Sound.FromRaylibMusicStream: rMusicStream is null")
 	result = new self
@@ -94,14 +108,16 @@ Sound.update = function
 	if not self.isPlaying then return
 	if self._music then
 		rl.UpdateMusicStream self._music
-	else if self.loop and not rl.IsSoundPlaying(self._sound) then
-		rl.PlaySound self._sound
+		if not rl.IsMusicStreamPlaying(self._music) then self.stop
+	else if not rl.IsSoundPlaying(self._sound) then
+		if self.loop then rl.PlaySound self._sound else self.stop
 	end if
 end function
 
 Sound.UpdateAll = function
-	for snd in _playingSounds
-		snd.update
+	// (backwards, since a sound that has finished removes itself from the list)
+	for i in range(_playingSounds.len - 1, 0, -1)
+		_playingSounds[i].update
 	end for
 end function
 
@@ -378,7 +394,7 @@ Sound._synthesize = function
 	snd = rl.LoadSoundFromWave(wave)
 	rl.UnloadWave wave
 	if snd == null or not rl.IsSoundValid(snd) then return null
-	return snd
+	return autoUnload(snd)
 end function
 
 // Make sure we have something to play, synthesizing it if needed.
@@ -395,9 +411,9 @@ file.loadSound = function(path, asMusicStream=null)
 		asMusicStream = (path[-4:] == ".ogg" or path[-4:] == ".mp3")
 	end if
 	if asMusicStream then
-		result = Sound.FromRaylibMusicStream(rl.LoadMusicStream(path))
+		result = Sound.FromRaylibMusicStream(_owned(rl.LoadMusicStream(path)))
 	else
-		result = Sound.FromRaylibSound(rl.LoadSound(path))
+		result = Sound.FromRaylibSound(_owned(rl.LoadSound(path)))
 	end if
 	return result
 end function

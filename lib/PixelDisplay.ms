@@ -61,7 +61,8 @@ PixelDisplay.Make = function(width=960, height=640, color="#00000000")
 	result = new self
 	result.width = width
 	result.height = height
-	result._renderTex = rl.LoadRenderTexture(width, height)
+	// Freed when this display is garbage-collected (or resized, by clear).
+	result._renderTex = autoUnload(rl.LoadRenderTexture(width, height))
 	result.fillRect 0, 0, width, height, color
 	return result
 end function
@@ -73,7 +74,7 @@ PixelDisplay.clear = function(color=null, width=960, height=640)
 		if self._renderTex != null then rl.UnloadRenderTexture self._renderTex
 		self.width = width
 		self.height = height
-		self._renderTex = rl.LoadRenderTexture(width, height)
+		self._renderTex = autoUnload(rl.LoadRenderTexture(width, height))
 	end if
 	if color == null then color = [0, 0, 0, 0]
 	self.fillRect 0, 0, width, height, color
@@ -420,7 +421,7 @@ PixelDisplay.getImage = function(left=0, bottom=0, width, height)
 		subImg = rl.ImageFromImage(fullImg, [left, ry, width, height])
 		rl.UnloadImage fullImg
 	end if
-	return Image.FromRaylibImage(subImg)
+	return Image.FromRaylibImage(autoUnload(subImg))
 end function
 
 PixelDisplay._drawTexture = function(tex, left, bottom, width=null, height=null, srcLeft=0, srcBottom=0, srcWidth=null, srcHeight=null, tint="#FFFFFF")

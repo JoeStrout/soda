@@ -55,6 +55,8 @@ TTFont.Load = function(path, size=24)
 		font._font = null
 		exit
 	end if
+	// Freed when this TTFont is garbage-collected (or sooner, by unload).
+	autoUnload font._font
 	info = rl.GetGlyphInfo(font._font, "M".code)
 	font.ascent = size - info.offsetY
 	
