@@ -60,13 +60,13 @@ Sound.play = function(volume=1, pan=0, speed=1)
 	if not self._ensureSound then return
 	if self._music then
 		rl.SetMusicVolume self._music, volume
-		rl.SetMusicPan self._music, (pan + 1) / 2
+		rl.SetMusicPan self._music, pan
 		rl.SetMusicPitch self._music, speed
 		self._music.looping = self.loop
 		rl.PlayMusicStream self._music
 	else
 		rl.SetSoundVolume self._sound, volume
-		rl.SetSoundPan self._sound, (pan + 1) / 2
+		rl.SetSoundPan self._sound, pan
 		rl.SetSoundPitch self._sound, speed
 		rl.PlaySound self._sound
 	end if
@@ -80,12 +80,12 @@ Sound.adjust = function(volume=1, pan=0, speed=1)
 	if self._sound == null and self._music == null then return
 	if self._music then
 		rl.SetMusicVolume self._music, volume
-		rl.SetMusicPan self._music, (pan + 1) / 2
+		rl.SetMusicPan self._music, pan
 		rl.SetMusicPitch self._music, speed
 		self._music.looping = self.loop
 	else
 		rl.SetSoundVolume self._sound, volume
-		rl.SetSoundPan self._sound, (pan + 1) / 2
+		rl.SetSoundPan self._sound, pan
 		rl.SetSoundPitch self._sound, speed
 	end if
 end function
