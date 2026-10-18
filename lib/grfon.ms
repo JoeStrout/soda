@@ -2,7 +2,7 @@
 //
 // GRFON is a simpler, gentler file format designed to be
 // especially human-editable.
-// https://app.assembla.com/wiki/show/grfon
+// https://github.com/JoeStrout/grfon
 
 // Flag to control whether strings "true" and "false" should be
 // returned as 1 or 0, or left as strings.
@@ -137,10 +137,11 @@ end function
 
 Parser._parseElement = function(asValue=false)
 	result = null
+	resultIsKeyedMap = false  // true only when result was built by the ":" branch
 	while true
 		self._skipWhitespace
 		if self._p >= self._sourceLen then return result
-		if self.source[self._p] == "}" then 
+		if self.source[self._p] == "}" then
 			// done with current collection
 			if not asValue then self._p += 1
 			return result
@@ -166,8 +167,10 @@ Parser._parseElement = function(asValue=false)
 			tok2 = self._parseElement(true)
 			if result == null then
 				result = {}
+				resultIsKeyedMap = true
 			else if result isa list then
 				result = {"_": result}
+				resultIsKeyedMap = true
 			end if
 			result[tok] = tok2
 			self._skipWhitespace
@@ -188,13 +191,15 @@ Parser._parseElement = function(asValue=false)
 				result = tok
 			else if result isa list then
 				result.push tok
-			else if result isa map then
+			else if result isa map and resultIsKeyedMap then
+				// Mixed keyed+unkeyed collection: accumulate unkeyed items under "_"
 				if result.hasIndex("_") then
 					result["_"].push tok
 				else
 					result["_"] = [tok]
 				end if
 			else
+				// result is a primitive or an unkeyed sub-collection — make a list
 				result = [result, tok]
 			end if
 			if next == "" then return result
@@ -436,6 +441,24 @@ runUnitTests = function
 	s = toGRFON("a {b} c")
 	assertEqual s, "a \{b\} c"
 	assertEqual parse(s), "a {b} c"
+
+	// Multiple newline-separated unkeyed sub-collections should return a list,
+	// not merge the first sub-collection's keys into the parent.
+	d = parse([
+		"systems: {",
+		"  {",
+		"    name: Reactor",
+		"    maxPower: 8",
+		"  }",
+		"  {",
+		"    name: Doors",
+		"    maxPower: 1",
+		"  }",
+		"}"])
+	assertEqual d.systems isa list, true
+	assertEqual d.systems.len, 2
+	assertEqual d.systems[0].name, "Reactor"
+	assertEqual d.systems[1].name, "Doors"
 
 	if errorCount == 0 then
 		print "All tests passed.  Fus Ro Dah!"

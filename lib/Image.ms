@@ -42,6 +42,9 @@ end function
 
 // --- Image class ---
 
+// An Image owns its raylib Image and Texture, and flags them with autoUnload,
+// so they are freed when the Image is garbage-collected, as in Mini Micro.
+// (release frees them sooner, if you know you are done.)
 Image = {}
 Image._img = null	// raylib Image map
 Image._tex = null	// cached raylib Texture
@@ -51,13 +54,14 @@ Image.height = 0
 // Create a new Image filled with the given color.
 Image.create = function(width, height, color="#00000000")
 	result = new self
-	result._img = rl.GenImageColor(width, height, colorToRGBA(color))
+	result._img = autoUnload(rl.GenImageColor(width, height, colorToRGBA(color)))
 	result.width = width
 	result.height = height
 	return result
 end function
 
-// Wrap an existing raylib Image map as an Image instance.
+// Wrap an existing raylib Image map as an Image instance.  This does not take
+// ownership: the caller still unloads rImg, unless it calls autoUnload on it.
 Image.FromRaylibImage = function(rImg)
 	result = new self
 	result._img = rImg
@@ -80,7 +84,7 @@ end function
 // Get a Raylib Texture (and cache for future use)
 Image.texture = function
 	if self._tex == null then
-		self._tex = raylib.LoadTextureFromImage(self._img)
+		self._tex = autoUnload(raylib.LoadTextureFromImage(self._img))
 	end if
 	return self._tex
 end function
@@ -105,7 +109,7 @@ Image.getImage = function(left=0, bottom=0, width, height)
 	if height == null then height = self.height - bottom
 	ry = self.height - bottom - height
 	subImg = rl.ImageFromImage(self._img, [left, ry, width, height])
-	return Image.FromRaylibImage(subImg)
+	return Image.FromRaylibImage(autoUnload(subImg))
 end function
 
 // Flip the image in place.
@@ -151,7 +155,7 @@ file.loadImage = function(path)
 		print "file.loadImage: could not load " + path
 		return null
 	end if
-	result = Image.FromRaylibImage(rImg)
+	result = Image.FromRaylibImage(autoUnload(rImg))
 	result.path = path
 	return result
 end function

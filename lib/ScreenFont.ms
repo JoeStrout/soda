@@ -144,7 +144,8 @@ ScreenFont.load = function(texturePath)
 		return false
 	end if
 	rl.SetTextureFilter tex, rl.TEXTURE_FILTER_POINT
-	self.texture = tex
+	// Freed when this ScreenFont is garbage-collected (or sooner, by load).
+	self.texture = autoUnload(tex)
 	self.charWidth = floor(tex.width / 16)
 	self.charHeight = floor(tex.height / 16)
 	return true

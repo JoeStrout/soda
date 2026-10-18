@@ -6,6 +6,11 @@
 //	 w = f.width("Hello world!")
 //   f.print "Hello world!", 480 - w/2, 320
 
+if not globals.hasIndex("hex2") then
+	if not globals.hasIndex("stringUtil") then import "stringUtil"
+	hex2 = @stringUtil.hexStr
+end if		
+
 // CharData class, storing data about just one character in a particular font.
 CharData = {}
 CharData._name = "bmfFonts.CharData";
@@ -116,10 +121,10 @@ Font.load = function(path)
 	data.littleEndian = true
 	vers = data.byte(4)
 	f.version = floor(vers/16) + 0.1 * (vers % 16)
-	f.lineHeight = data.sbyte(5)
-	f.sizeOver = data.sbyte(6)
-	f.sizeUnder = data.sbyte(7)
-	f.addSpace = data.sbyte(8)
+	f.lineHeight = data.sbyte(5) // positive value indicating vertical line spacing
+	f.sizeOver = data.sbyte(6)   // negative value indicating font ascent
+	f.sizeUnder = data.sbyte(7)  // positive value indicating font descent
+	f.addSpace = data.sbyte(8)   // extra horizontal space to add between characters
 	f.sizeInner = data.sbyte(9)
 	f.usedColors = data.byte(10)
 	f.highestUsedColor = data.byte(11)
@@ -215,6 +220,11 @@ Font.save = function(path)
 		self.ensure 1
 		self.buffer.setSbyte self.pos, sbyteVal
 		self.pos = self.pos + 1
+	end function
+	BinaryStream.writeShort = function(shortVal)
+		self.ensure 2
+		self.buffer.setShort self.pos, shortVal
+		self.pos = self.pos + 2
 	end function
 	BinaryStream.writeUshort = function(ushortVal)
 		self.ensure 2
@@ -324,9 +334,9 @@ Font.save = function(path)
 			end for
 			data.writeUshort kernCount
 			print "Writing " + kernCount + " kern entries"
-			for k1 in self.kernMap.keys
+			for k1 in self.kernMap.indexes
 				k1Map = self.kernMap[k1]
-				for k2 in k1Map.keys
+				for k2 in k1Map.indexes
 					data.writeUint k1.code
 					data.writeUint k2.code
 					data.writeShort k1Map[k2]
