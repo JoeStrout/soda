@@ -98,7 +98,7 @@ end function
 Display.install = function(slotNum, asActiveMode=true)
 	if slotNum == self.index and not asActiveMode then return // already in this slot
 	disps = Display._installed[slotNum]
-	curMode = disps[slotNum].mode
+	curMode = disps[0].mode
 	for i in disps.indexes
 		if disps[i].mode == self.mode then
 			disps[i].remove i

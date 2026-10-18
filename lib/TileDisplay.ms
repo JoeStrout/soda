@@ -90,8 +90,8 @@ TileDisplay["extent="] = function(value)
 end function
 
 TileDisplay.clear = function(toIndex=null)
-	for row in range(0, self._rows - 1)
-		for col in range(0, self._cols - 1)
+	for row in range(0, self._rows - 1, 1)
+		for col in range(0, self._cols - 1, 1)
 			self._idx[row][col] = toIndex
 			self._tint[row][col] = null
 			self._xform[row][col] = 0
@@ -156,8 +156,8 @@ end function
 
 TileDisplay.render = function
 	if self.tileSet == null then return
-	for y in range(0, self._rows - 1)
-		for x in range(0, self._cols - 1)
+	for y in range(0, self._rows - 1, 1)
+		for x in range(0, self._cols - 1, 1)
 			idx = self._idx[y][x]
 			if idx == null then continue
 			g = self._tileGeometry(x, y, idx)
@@ -246,6 +246,7 @@ if locals == globals then
 		TextDisplay.print text, ""
 	end function
 
+	// ToDo: rework this test to use some image standard with the Soda distro
 	tileset = file.loadImage("assets/lib/tiles/GrassLand/Terrain/Grassland_Terrain_47Tiles.png")
 	tileSize = 16
 	tilesPerRow = floor(tileset.width / tileSize)          // 12
@@ -266,7 +267,7 @@ if locals == globals then
 	palette.tileSetTileSize = tileSize
 	palette.cellSize = 32
 	palette.extent = [tilesPerRow, tileRows]
-	for i in range(0, tileCount - 1)
+	for i in range(0, tileCount - 1, 1)
 		palette.setCell i % tilesPerRow, floor(i / tilesPerRow), i
 	end for
 	positionPanel palette, 0, 40
@@ -280,7 +281,7 @@ if locals == globals then
 	tintDemo.tileSetTileSize = tileSize
 	tintDemo.cellSize = 32
 	tintDemo.extent = [tintColors.len, 1]
-	for i in range(0, tintColors.len - 1)
+	for i in range(0, tintColors.len - 1, 1)
 		tintDemo.setCell i, 0, demoTile
 		tintDemo.setCellTint i, 0, tintColors[i]
 	end for

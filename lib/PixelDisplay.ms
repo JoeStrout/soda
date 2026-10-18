@@ -22,6 +22,12 @@ PixelDisplay.height = 640
 PixelDisplay._renderTex = null
 PixelDisplay._clip = null  // [left, bottom, width, height] in display coords, or null
 
+PixelDisplay._ensureTex = function
+	if self._renderTex == null then
+		self._renderTex = autoUnload(rl.LoadRenderTexture(self.width, self.height))
+	end if
+end function
+
 // Begin drawing to the render texture in "replace" blend mode,
 // so that drawn colors fully overwrite the destination (matching
 // Mini Micro behavior, where alpha < 255 does not blend).
@@ -33,6 +39,7 @@ PixelDisplay._clip = null  // [left, bottom, width, height] in display coords, o
 // the frame when a bracket is open.  (Mini Micro 2's main.ms does; Soda, which
 // runs the script to completion each frame, never sees the case.)
 PixelDisplay._beginDraw = function(alphaBlend = false)
+	if self._renderTex == null then self._ensureTex
 	rl.BeginTextureMode self._renderTex
 	if self._clip != null then
 		c = self._clip
@@ -61,8 +68,6 @@ PixelDisplay.Make = function(width=960, height=640, color="#00000000")
 	result = new self
 	result.width = width
 	result.height = height
-	// Freed when this display is garbage-collected (or resized, by clear).
-	result._renderTex = autoUnload(rl.LoadRenderTexture(width, height))
 	result.fillRect 0, 0, width, height, color
 	return result
 end function
@@ -93,6 +98,7 @@ end function
 // NOTE: this is rather expensive.  If you are going to do it a lot,
 // instead call getImage on the display, then get pixels of that.
 PixelDisplay.pixel = function(x, y)
+	if self._renderTex == null then self._ensureTex
 	img = rl.LoadImageFromTexture(self._renderTex.texture)
 	c = rl.GetImageColor(img, x, y)
 	rl.UnloadImage img
@@ -408,6 +414,7 @@ end function
 
 // Get a rectangular region of the display as an Image.
 PixelDisplay.getImage = function(left=0, bottom=0, width, height)
+	if self._renderTex == null then self._ensureTex
 	fullImg = rl.LoadImageFromTexture(self._renderTex.texture)
 	// Render texture data is vertically flipped; flip it so y=0 is at the
 	// top, matching the Image class's internal convention.
@@ -475,15 +482,12 @@ end function
 // Drawing functions flip Y coords so content is upside-down in the texture;
 // this flip corrects it, giving us Mini Micro's bottom-up coordinate system.
 PixelDisplay.render = function
+	if self._renderTex == null then return
 	src = [0, 0, self.width, -self.height]
 	w = self.width * self.scale
 	h = self.height * self.scale
 	top = Display.screenHeight - h
 	dest = [-self.scrollX, top + self.scrollY, w, h]
-	if self._renderTex == null then
-		print "NULL _renderTex!"
-		print self
-	end if
 	rl.DrawTexturePro self._renderTex.texture, src, dest, [0, 0], 0, [255, 255, 255, 255]
 end function
 
