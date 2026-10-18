@@ -79,6 +79,7 @@ Sprite.y = 0
 Sprite.rotation = 0
 Sprite.scale = 1
 Sprite.image = null
+Sprite.origin = null
 Sprite.srcRect = null    // optional: [left, top, width, height] in image
 Sprite.tint = raylib.WHITE
 Sprite.localBounds = null
@@ -394,7 +395,11 @@ Sprite.draw = function(offsetX=0, offsetY=0)
 	if s[1] < 0 then srcRect[3] = -srcRect[3]
 	h = Display.screenHeight
 	destRect = [self.x + offsetX, h - self.y - offsetY, destWidth, destHeight]
-	origin = [destWidth * 0.5, destHeight * 0.5]
+	if self.origin then
+		origin = [self.origin[0] * abs(s[0]), self.origin[1] * abs(s[1])]
+	else
+		origin = [destWidth * 0.5, destHeight * 0.5]
+	end if
 	raylib.DrawTexturePro self.image.texture, srcRect, destRect,
 		origin, -self.rotation, self.tint
 end function
