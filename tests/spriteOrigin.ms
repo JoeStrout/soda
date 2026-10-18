@@ -15,8 +15,8 @@ display(4).sprites.push spr1
 display(4).sprites.push spr2
 
 while true
-    spr1.rotation -= key.axis("Horizontal") * 4
-    spr2.rotation -= key.axis("Horizontal") * 4
+    spr1.rotation -= 4
+    spr2.rotation -= 4
 
     yield
 end while
