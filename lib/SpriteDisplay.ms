@@ -448,7 +448,7 @@ end function
 
 SpriteDisplay._renderSprites = function(spriteList)
 	for sp in spriteList
-		if sp isa list then self._renderSprites sp else sp.draw self.scrollX, self.scrollY
+		if sp isa list then self._renderSprites sp else sp.draw -self.scrollX, -self.scrollY
 	end for
 end function
 

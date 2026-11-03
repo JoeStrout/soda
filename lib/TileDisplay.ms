@@ -100,27 +100,60 @@ TileDisplay.clear = function(toIndex=null)
 end function
 
 TileDisplay.cell = function(x, y)
-	return self._idx[y][x]
+	if 0 <= x < self._cols and 0 <= y < self._rows then	return self._idx[y][x]
+	return null
 end function
 
 TileDisplay.setCell = function(x, y, idx)
-	self._idx[y][x] = idx
+	if x isa number and y isa number then
+		self._idx[y][x] = idx
+	else
+		if x isa number then cols = [x] else cols = x
+		if y isa number then rows = [y] else rows = y
+		for y in rows
+			for x in cols
+				self._idx[y][x] = idx
+			end for
+		end for
+	end if
 end function
 
 TileDisplay.cellTint = function(x, y)
-	return self._tint[y][x]
+	if 0 <= x < self._cols and 0 <= y < self._rows then	return self._tint[y][x]
+	return null
 end function
 
 TileDisplay.setCellTint = function(x, y, c)
-	self._tint[y][x] = c
+	if x isa number and y isa number then
+		self._tint[y][x] = c
+	else
+		if x isa number then cols = [x] else cols = x
+		if y isa number then rows = [y] else rows = y
+		for y in rows
+			for x in cols
+				self._tint[y][x] = c
+			end for
+		end for
+	end if
 end function
 
 TileDisplay.cellTransform = function(x, y)
-	return self._xform[y][x]
+	if 0 <= x < self._cols and 0 <= y < self._rows then	return self._xform[y][x]
+	return null
 end function
 
 TileDisplay.setCellTransform = function(x, y, t)
-	self._xform[y][x] = t
+	if x isa number and y isa number then
+		self._xform[y][x] = t
+	else
+		if x isa number then cols = [x] else cols = x
+		if y isa number then rows = [y] else rows = y
+		for y in rows
+			for x in cols
+				self._xform[y][x] = t
+			end for
+		end for
+	end if
 end function
 
 // Internal: source rect into tileSet for a given tile index.
@@ -135,17 +168,29 @@ TileDisplay._srcRectFor = function(idx)
 end function
 
 TileDisplay._tileGeometry = function(x, y, idx)
+	if idx == null then return null
 	srcRect = self._srcRectFor(idx)
 	t = self._xform[y][x]
 	flipH = t >= 4
 	rotation = (t % 4) * 90
 	if flipH then srcRect = [srcRect[0], srcRect[1], -srcRect[2], srcRect[3]]
 
-	spacing = self.cellSize - self.overlap
-	ox = self.oddColOffset * self.cellSize * (y % 2)
-	oy = self.oddRowOffset * self.cellSize * (x % 2)
-	worldX = x * spacing + ox - self.scrollX
-	worldY = y * spacing + oy - self.scrollY
+	if self.cellSize isa list then
+		xsize = self.cellSize[0]; ysize = self.cellSize[1]
+	else
+		xsize = self.cellSize; ysize = xsize
+	end if
+	if self.overlap isa list then
+		xover = self.overlap[0]; yover = self.overlap[1]
+	else
+		xover = self.overlap; yover = xover
+	end if
+	xspacing = xsize - xover
+	yspacing = ysize - yover
+	ox = self.oddRowOffset * xsize * (y % 2)
+	oy = self.oddColOffset * ysize * (x % 2)
+	worldX = x * xspacing + ox - self.scrollX
+	worldY = y * yspacing + oy - self.scrollY
 
 	screenX = worldX + self.cellSize * 0.5
 	screenY = Display.screenHeight - worldY - self.cellSize * 0.5
