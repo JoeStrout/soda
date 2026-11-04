@@ -5,7 +5,6 @@
 import "importUtil"
 ensureImport ["color", "Display", "ScreenFont", "Image"]
 
-colorFromList = @color.fromList
 
 rl = raylib
 
@@ -20,7 +19,10 @@ PixelDisplay.width = 960
 PixelDisplay.height = 640
 PixelDisplay._renderTex = null
 PixelDisplay._clip = null  // [left, bottom, width, height] in display coords, or null
-PixelDisplay._pixCache = null  // CPU copy of _renderTex for pixel(), or null if stale
+// While a pixel cache exists, it, not the texture, is the display's content:
+// setPixel writes only to it, and _flushPix uploads it when it's needed.
+PixelDisplay._pixCache = null  // RawData copy of _renderTex (RGBA, bottom row first), or null
+PixelDisplay._pixDirty = false  // true if _pixCache has writes the texture lacks
 
 PixelDisplay._ensureTex = function
 	if self._renderTex == null then
@@ -61,8 +63,19 @@ end function
 // Anything that draws to _renderTex must call this (_beginDraw does).
 PixelDisplay._dropPixCache = function
 	if self._pixCache == null then return
-	rl.UnloadImage self._pixCache
+	self._flushPix
 	self._pixCache = null
+end function
+
+// Upload the pixel cache's writes.  This is a texture upload, not a draw, so
+// it is safe mid-frame (render calls it) with no texture-mode bracket.
+// A time-sliced script may be suspended inside setPixel, but it marks the
+// cache dirty only after writing to it, so a write is never left unflagged.
+PixelDisplay._flushPix = function
+	if not self._pixDirty then return
+	self._pixDirty = false
+	t = self._renderTex.texture
+	rl.rlUpdateTexture t.id, 0, 0, t.width, t.height, t.format, self._pixCache
 end function
 
 PixelDisplay._endDraw = function
@@ -83,6 +96,9 @@ end function
 
 // Clear the display.  Optionally change the size and/or clear color.
 PixelDisplay.clear = function(color=null, width=960, height=640)
+	// Everything is about to be overwritten (or resized), so don't flush.
+	self._pixCache = null
+	self._pixDirty = false
 	if width != self.width or height != self.height then
 		if self._renderTex != null then rl.UnloadRenderTexture self._renderTex
 		self.width = width
@@ -94,35 +110,55 @@ PixelDisplay.clear = function(color=null, width=960, height=640)
 end function
 
 // Set a single pixel.  Uses self.color if color is not specified.
-// Keeps the pixel cache in step rather than dropping it, so code that
-// alternates pixel and setPixel (a flood fill) reads back from the GPU once.
+// With a pixel cache, writes go only to the cache, so code that alternates
+// pixel and setPixel (a flood fill) costs no GPU work per pixel at all.
 PixelDisplay.setPixel = function(x, y, color=null)
 	if color == null then color = self.color
-	cache = self._pixCache
-	self._pixCache = null	// (so _beginDraw doesn't drop it)
+	d = self._pixCache
+	// The cache handles only the cases where we know exactly which pixel the
+	// GPU would set; anything else drops it and draws.
+	if d != null and self._clip == null and x == floor(x) and y == floor(y) then
+		if x < 0 or y < 0 or x >= self.width or y >= self.height then return
+		d.setInt (y * self.width + x) * 4, rl.ColorToInt(color)
+		self._pixDirty = true
+		return
+	end if
 	self._beginDraw
 	rl.DrawPixel x+0.5, self.height - 1 - y + 0.5, color
 	self._endDraw
-	if cache == null then return
-	// Mirror only the cases where we know exactly which pixel the GPU set.
-	if self._clip == null and x == floor(x) and y == floor(y) then
-		rl.ImageDrawPixel cache, x, y, color
-		self._pixCache = cache
-	else
-		rl.UnloadImage cache
-	end if
+end function
+
+// Color strings by the signed 0xRRGGBBAA int that the cache holds; capped,
+// since an image may hold any number of distinct colors.
+_hexByte = color._hexByte
+_intHex = {}
+_intToHex = function(v)
+	if _intHex.len >= 4096 then outer._intHex = {} // (reset cache)
+	u = v
+	if u < 0 then u += 4294967296
+	s = "#" + _hexByte[floor(u / 16777216)] + _hexByte[floor(u / 65536) % 256] +
+	  _hexByte[floor(u / 256) % 256] + _hexByte[u % 256]
+	_intHex[v] = s
+	return s
 end function
 
 // Get the color of a pixel, as a hex string (e.g. "#FF0000FF").
 // The first call after any drawing other than setPixel reads the whole
 // texture back from the GPU; later calls read from that copy.
 PixelDisplay.pixel = function(x, y)
-	if self._pixCache == null then
-		if self._renderTex == null then self._ensureTex
-		// (Render texture rows are bottom-up, so image row y is display row y.)
-		self._pixCache = autoUnload(rl.LoadImageFromTexture(self._renderTex.texture))
+	d = self._pixCache
+	if d == null then
+		self._ensureTex
+		t = self._renderTex.texture
+		// (Render texture rows are bottom-up, so cache row y is display row y.)
+		d = rl.rlReadTexturePixels(t.id, t.width, t.height, t.format)
+		d.littleEndian = 0		// so each pixel reads as 0xRRGGBBAA
+		self._pixCache = d
 	end if
-	return colorFromList(rl.GetImageColor(self._pixCache, x, y))
+	if x < 0 or y < 0 or x >= self.width or y >= self.height then return "#00000000"
+	v = d.int((floor(y) * self.width + floor(x)) * 4)
+	if _intHex.hasIndex(v) then s = _intHex[v] else s = _intToHex(v)
+	return s
 end function
 
 // Draw a straight line.
@@ -428,6 +464,7 @@ end function
 // Get a rectangular region of the display as an Image.
 PixelDisplay.getImage = function(left=0, bottom=0, width, height)
 	if self._renderTex == null then self._ensureTex
+	self._flushPix
 	fullImg = rl.LoadImageFromTexture(self._renderTex.texture)
 	// Render texture data is vertically flipped; flip it so y=0 is at the
 	// top, matching the Image class's internal convention.
@@ -496,6 +533,7 @@ end function
 // this flip corrects it, giving us Mini Micro's bottom-up coordinate system.
 PixelDisplay.render = function
 	if self._renderTex == null then return
+	if self._pixDirty then self._flushPix
 	src = [0, 0, self.width, -self.height]
 	w = self.width * self.scale
 	h = self.height * self.scale
