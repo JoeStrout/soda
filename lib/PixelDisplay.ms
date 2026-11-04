@@ -99,7 +99,6 @@ end function
 // alternates pixel and setPixel (a flood fill) reads back from the GPU once.
 PixelDisplay.setPixel = function(x, y, color=null)
 	if color == null then color = self.color
-	color = colorToList(color)
 	cache = self._pixCache
 	self._pixCache = null	// (so _beginDraw doesn't drop it)
 	self._beginDraw

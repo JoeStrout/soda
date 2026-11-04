@@ -48,19 +48,27 @@ end function
 
 // Convert a numeric [r, g, b, a] list or map to a color string.
 _hexDigits = "0123456789ABCDEF"
+// Two-digit hex for every byte value, so fromList is a lookup per channel
+// (it is on the hot path of PixelDisplay.pixel).
+_makeHexBytes = function
+	result = []
+	for i in range(0, 255)
+		result.push _hexDigits[floor(i / 16)] + _hexDigits[i % 16]
+	end for
+	return result
+end function
+_hexByte = _makeHexBytes
+freeze _hexByte
 fromList = function(rgbaList)
-	s = "#"
+	hb = _hexByte
 	if rgbaList isa map then
 		c = rgbaList
-		s += _hexDigits[floor(c.r / 16)] + _hexDigits[c.r % 16]
-		s += _hexDigits[floor(c.g / 16)] + _hexDigits[c.g % 16]
-		s += _hexDigits[floor(c.b / 16)] + _hexDigits[c.b % 16]
-		s += _hexDigits[floor(c.a / 16)] + _hexDigits[c.a % 16]
-	else
-		for value in rgbaList
-			s += _hexDigits[floor(value / 16)] + _hexDigits[value % 16]
-		end for
+		return "#" + hb[c.r] + hb[c.g] + hb[c.b] + hb[c.a]
 	end if
+	s = "#"
+	for value in rgbaList
+		s += hb[value]
+	end for
 	return s
 end function
 
