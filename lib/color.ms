@@ -46,42 +46,41 @@ toList = function(s)
 	return [r, g, b, a]
 end function
 
-// Convert a numeric [r, g, b, a] list or map to a color string.
-_hexDigits = "0123456789ABCDEF"
 // Two-digit hex for every byte value, so fromList is a lookup per channel
-// (it is on the hot path of PixelDisplay.pixel).
+// (it is on the hot path of PixelDisplay.pixel, among other places).
 _makeHexBytes = function
+	digits = "0123456789ABCDEF"
 	result = []
 	for i in range(0, 255)
-		result.push _hexDigits[floor(i / 16)] + _hexDigits[i % 16]
+		result.push digits[floor(i / 16)] + digits[i % 16]
 	end for
 	return result
 end function
 _hexByte = _makeHexBytes
 freeze _hexByte
+
+// Convert a numeric [r, g, b, a] list or map to a color string.
 fromList = function(rgbaList)
 	hb = _hexByte
 	if rgbaList isa map then
 		c = rgbaList
 		return "#" + hb[c.r] + hb[c.g] + hb[c.b] + hb[c.a]
 	end if
-	s = "#"
+	s = ["#"]
 	for value in rgbaList
-		s += hb[value]
+		s.append hb[value]
 	end for
-	return s
+	return s.join("")
 end function
 
 rgba = function(r, g, b, a=255)
-	return "#" +
-	  _hexDigits[floor(r /16)] + _hexDigits[r % 16] +
-	  _hexDigits[floor(g /16)] + _hexDigits[g % 16] +
-	  _hexDigits[floor(b /16)] + _hexDigits[b % 16] +
-	  _hexDigits[floor(a /16)] + _hexDigits[a % 16]
+	return "#" + _hexByte[r] + _hexByte[g] + _hexByte[b] + _hexByte[a]
 end function
 
 // rgb: same as rgba, but with alpha defaulting to fully opaque (255).
-rgb = @rgba
+rgb = function(r, g, b)
+	return "#" + _hexByte[r] + _hexByte[g] + _hexByte[b]
+end function
 
 // Interpolate between two colors: t <= 0 gives c1, t >= 1 gives c2, and
 // anything between mixes them.  t defaults to halfway, as in Mini Micro 1.

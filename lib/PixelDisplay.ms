@@ -5,7 +5,6 @@
 import "importUtil"
 ensureImport ["color", "Display", "ScreenFont", "Image"]
 
-colorToList = @color.toList
 colorFromList = @color.fromList
 
 rl = raylib
@@ -129,7 +128,6 @@ end function
 // Draw a straight line.
 PixelDisplay.line = function(x1=0, y1=0, x2=960, y2=640, color, penSize=1)
 	if color == null then color = self.color
-	color = colorToList(color)
 	self._beginDraw
 	h = 0.5  // offset to properly address pixel coordinates
 	rl.DrawLineEx([x1+h, self.height-y1-h], [x2+h, self.height-y2-h], penSize, color)
@@ -141,7 +139,6 @@ end function
 PixelDisplay.drawRect = function(left=0, bottom=0, width=100, height=100, color=null, penSize=1)
 	if width == 0 or height == 0 then return
 	if color == null then color = self.color
-	color = colorToList(color)
 	self._beginDraw
 	if penSize <= 1 then
 		rl.DrawRectangleLines left, self.height - bottom - height, width, height, color
@@ -156,7 +153,6 @@ end function
 // Fill an axis-aligned rectangle on the pixel display.
 PixelDisplay.fillRect = function(left=0, bottom=0, width=100, height=100, color=null)
 	if color == null then color = self.color
-	color = colorToList(color)
 	self._beginDraw
 	rl.DrawRectangle left, self.height - bottom - height, width, height, color
 	self._endDraw
@@ -167,7 +163,6 @@ end function
 PixelDisplay.drawEllipse = function(left=0, bottom=0, width=100, height=100, color=null, penSize=1)
 	if width == 0 or height == 0 then return
 	if color == null then color = self.color
-	color = colorToList(color)
 	self._beginDraw
 	if penSize <= 1 then
 		wOver2 = floor(width/2)
@@ -202,7 +197,6 @@ end function
 // Fill an axis-aligned ellipse on the pixel display.
 PixelDisplay.fillEllipse = function(left=0, bottom=0, width=100, height=100, color=null)
 	if color == null then color = self.color
-	color = colorToList(color)
 	self._beginDraw
 	wOver2 = floor(width/2)
 	rl.DrawEllipse floor(left) + wOver2, self.height - bottom - ceil(height/2),
@@ -354,7 +348,6 @@ end function
 PixelDisplay.drawPoly = function(points, color=null, penSize=1)
 	if points == null or points.len < 2 then return
 	if color == null then color = self.color
-	color = colorToList(color)
 	pts = self._polyPoints(points)
 	self._beginDraw
 	h = 0.5
@@ -370,7 +363,6 @@ end function
 PixelDisplay.fillPoly = function(points, color=null)
 	if points == null or points.len < 3 then return
 	if color == null then color = self.color
-	color = colorToList(color)
 	tris = _triangulate(self._polyPoints(points))
 	self._beginDraw
 	rl.rlDisableBackfaceCulling		// so triangle winding doesn't matter
