@@ -81,6 +81,7 @@ end function
 // Render (draw) the given character to gfx, and return how
 // far to shift the cursor.
 TTFont.printChar = function(c, x=480, y=320, scale=1, tint="#FFFFFF")
+	gfx._dropPixCache
 	rl.BeginTextureMode gfx._renderTex
 	// Use normal color blending for RGB, but MAX mode for alpha,
 	// so that our font rendering doesn't punch holes in the pixel layer.

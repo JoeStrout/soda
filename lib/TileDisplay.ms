@@ -160,11 +160,16 @@ end function
 // Tile-set indexing is top-left to bottom-right -- the one
 // documented exception to Mini Micro's usual bottom-up convention.
 TileDisplay._srcRectFor = function(idx)
-	tilesPerRow = floor(self.tileSet.width / self.tileSetTileSize)
+	s = self.tileSetTileSize
+	if s isa list then
+		tw = s[0]; th = s[1]
+	else
+		tw = s; th = tw
+	end if
+	tilesPerRow = floor(self.tileSet.width / tw)
 	col = idx % tilesPerRow
 	row = floor(idx / tilesPerRow)
-	s = self.tileSetTileSize
-	return [col * s, row * s, s, s]
+	return [col * tw, row * th, tw, th]
 end function
 
 TileDisplay._tileGeometry = function(x, y, idx)

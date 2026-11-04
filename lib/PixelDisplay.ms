@@ -21,6 +21,7 @@ PixelDisplay.width = 960
 PixelDisplay.height = 640
 PixelDisplay._renderTex = null
 PixelDisplay._clip = null  // [left, bottom, width, height] in display coords, or null
+PixelDisplay._pixCache = null  // CPU copy of _renderTex for pixel(), or null if stale
 
 PixelDisplay._ensureTex = function
 	if self._renderTex == null then
@@ -39,6 +40,7 @@ end function
 // the frame when a bracket is open.  (Mini Micro 2's main.ms does; Soda, which
 // runs the script to completion each frame, never sees the case.)
 PixelDisplay._beginDraw = function(alphaBlend = false)
+	if self._pixCache != null then self._dropPixCache
 	if self._renderTex == null then self._ensureTex
 	rl.BeginTextureMode self._renderTex
 	if self._clip != null then
@@ -55,6 +57,13 @@ PixelDisplay._beginDraw = function(alphaBlend = false)
 		rl.rlSetBlendFactors 1, 0, 32774    // GL_ONE, GL_ZERO, GL_FUNC_ADD
 		rl.BeginBlendMode 6                 // BLEND_CUSTOM
 	end if
+end function
+
+// Anything that draws to _renderTex must call this (_beginDraw does).
+PixelDisplay._dropPixCache = function
+	if self._pixCache == null then return
+	rl.UnloadImage self._pixCache
+	self._pixCache = null
 end function
 
 PixelDisplay._endDraw = function
@@ -86,23 +95,36 @@ PixelDisplay.clear = function(color=null, width=960, height=640)
 end function
 
 // Set a single pixel.  Uses self.color if color is not specified.
+// Keeps the pixel cache in step rather than dropping it, so code that
+// alternates pixel and setPixel (a flood fill) reads back from the GPU once.
 PixelDisplay.setPixel = function(x, y, color=null)
 	if color == null then color = self.color
 	color = colorToList(color)
+	cache = self._pixCache
+	self._pixCache = null	// (so _beginDraw doesn't drop it)
 	self._beginDraw
 	rl.DrawPixel x+0.5, self.height - 1 - y + 0.5, color
 	self._endDraw
+	if cache == null then return
+	// Mirror only the cases where we know exactly which pixel the GPU set.
+	if self._clip == null and x == floor(x) and y == floor(y) then
+		rl.ImageDrawPixel cache, x, y, color
+		self._pixCache = cache
+	else
+		rl.UnloadImage cache
+	end if
 end function
 
 // Get the color of a pixel, as a hex string (e.g. "#FF0000FF").
-// NOTE: this is rather expensive.  If you are going to do it a lot,
-// instead call getImage on the display, then get pixels of that.
+// The first call after any drawing other than setPixel reads the whole
+// texture back from the GPU; later calls read from that copy.
 PixelDisplay.pixel = function(x, y)
-	if self._renderTex == null then self._ensureTex
-	img = rl.LoadImageFromTexture(self._renderTex.texture)
-	c = rl.GetImageColor(img, x, y)
-	rl.UnloadImage img
-	return colorFromList(c)
+	if self._pixCache == null then
+		if self._renderTex == null then self._ensureTex
+		// (Render texture rows are bottom-up, so image row y is display row y.)
+		self._pixCache = autoUnload(rl.LoadImageFromTexture(self._renderTex.texture))
+	end if
+	return colorFromList(rl.GetImageColor(self._pixCache, x, y))
 end function
 
 // Draw a straight line.
