@@ -10,9 +10,22 @@
 # modification time (marking the newest) and prints a bbdiff command for
 # comparing it against the canonical copy.
 #
-# Usage: check-lib-sync.sh
+# Usage: check-lib-sync.sh [-i]
 #
-# Exit status is 0 if everything is in sync, 1 if any differences were found.
+#   -i  interactive: after reporting each file whose copies differ, ask which
+#       version (by its content letter) to keep, and copy it over the other
+#       copies of that file.  The default is the newest version; "x" skips.
+#
+# Exit status is 0 if everything is (now) in sync, 1 if any differences remain.
+
+interactive=0
+while getopts "i" opt; do
+	case $opt in
+		i) interactive=1 ;;
+		*) echo "usage: $(basename "$0") [-i]" >&2; exit 2 ;;
+	esac
+done
+shift $((OPTIND - 1))
 
 SVN="${SVN:-$HOME/svnrepo}"
 DIRS=(
@@ -31,9 +44,51 @@ fmtTime() { date -r "$1" "+%Y-%m-%d %H:%M:%S"; }
 
 inSync=0
 outOfSync=0
+resolved=0
 syncList=()
 details=$(mktemp "${TMPDIR:-/tmp}/check-lib-sync.XXXXXX")
 trap 'rm -f "$details"' EXIT
+
+# In interactive mode, the report for each differing file must appear before
+# its prompt, so write it straight to stdout; otherwise collect it in $details
+# to print after the in-sync list.
+if [ $interactive -eq 1 ]; then
+	exec 3>&1
+else
+	exec 3>"$details"
+fi
+
+# Ask which version of $name to keep, and copy it over the other copies.
+# Uses the present, group, newest, and nextGroup variables of the main loop.
+promptAndCopy() {
+	local letters="" choices="" i g src default answer
+	for ((g = 1; g <= nextGroup; g++)); do
+		letters="$letters$(echo $g | tr 123456789 ABCDEFGHI)"
+	done
+	for ((g = 0; g < ${#letters}; g++)); do
+		choices="$choices(${letters:$g:1}), "
+	done
+	default=$(echo "${group[$newest]}" | tr 123456789 ABCDEFGHI)
+	while true; do
+		read -r -p "Keep ${choices}or (x) skip? [$default]: " answer </dev/tty || return
+		[ -z "$answer" ] && answer=$default
+		answer=$(echo "$answer" | tr a-z A-Z)
+		if [ "$answer" = "X" ]; then
+			echo "    skipped"
+			return
+		fi
+		if [ ${#answer} -eq 1 ] && [[ "$letters" == *"$answer"* ]]; then break; fi
+	done
+	g=$(echo "$answer" | tr ABCDEFGHI 123456789)
+	for i in "${present[@]}"; do
+		[ "${group[$i]}" = "$g" ] && { src="${DIRS[$i]}/$name"; break; }
+	done
+	for i in "${present[@]}"; do
+		[ "${group[$i]}" = "$g" ] && continue
+		cp "$src" "${DIRS[$i]}/$name" && echo "    copied $answer -> ${LABELS[$i]}"
+	done
+	resolved=$((resolved + 1))
+}
 
 # Every regular, non-hidden file name in any of the directories.
 names=$(for d in "${DIRS[@]}"; do
@@ -118,12 +173,18 @@ for name in $names; do
 		if [ $other -lt 0 ] || [ "$t" -gt "$otherTime" ]; then otherTime=$t; other=$i; fi
 	done
 	echo "    bbdiff \"${DIRS[$base]}/$name\" \"${DIRS[$other]}/$name\""
+	[ $interactive -eq 1 ] && promptAndCopy
 	echo
-done > "$details"
+done >&3
+exec 3>&-
 
 echo "In sync ($inSync):"
 for line in "${syncList[@]}"; do echo "$line"; done
 echo
-cat "$details"
-echo "$inSync in sync, $outOfSync differ."
-[ $outOfSync -eq 0 ]
+[ $interactive -eq 1 ] || cat "$details"
+if [ $interactive -eq 1 ]; then
+	echo "$inSync in sync, $outOfSync differed, $resolved synced now."
+else
+	echo "$inSync in sync, $outOfSync differ."
+fi
+[ $((outOfSync - resolved)) -eq 0 ]
