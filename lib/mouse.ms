@@ -6,14 +6,42 @@ button = function(which=0)
 	return raylib.IsMouseButtonDown(which)
 end function
 
+// visible and locked are properties, as in Mini Micro: read them, or assign
+// to them.  Raylib can't tell us whether the cursor is locked, so we track
+// both states ourselves.  Locking also hides the cursor (raylib's
+// DisableCursor does that), so the cursor shows only when visible was not
+// set false AND it is not locked.
+_visible = true
+_locked = false
+
 visible = function
-	"Return whether the mouse cursor is visible (currently always true)."
-	return true
+	"Return whether the mouse cursor is shown (false if hidden or locked)."
+	return self._visible and not self._locked
+end function
+
+locals["visible="] = function(value)
+	"Show or hide the mouse cursor."
+	self._visible = (value != 0)
+	if self._locked then return		// stays hidden while locked, either way
+	if self._visible then raylib.ShowCursor else raylib.HideCursor
 end function
 
 locked = function
-	"Return whether the mouse cursor is locked (currently always false)."
-	return false
+	"Return whether the mouse cursor is locked (hidden, and held in the window)."
+	return self._locked
+end function
+
+locals["locked="] = function(value)
+	"Lock or unlock the mouse cursor; while locked, read movement via key.axis."
+	value = (value != 0)
+	if value == self._locked then return
+	self._locked = value
+	if value then
+		raylib.DisableCursor
+	else
+		raylib.EnableCursor		// (which also shows the cursor...)
+		if not self._visible then raylib.HideCursor	// (...so re-hide it if needed)
+	end if
 end function
 
 x = 0

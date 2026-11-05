@@ -179,7 +179,8 @@ file.saveImage = function(path, image, quality=80)
 	// NOTE: we currently ignore the `quality` parameter, because Raylib's
 	// ExportImage API does not use it (it always saves JPEGs at 90% quality).
 	// ToDo: revisit this when Raylib is fixed, or we add our own custom API
-	// in raylib-miniscript that accepts a quality parameter.
+	// in raylib-miniscript that accepts a quality parameter.  See:
+	// https://github.com/raysan5/raylib/issues/6369
 	if image == null or not image isa Image then
 		return "file.saveImage: invalid image"
 	end if
