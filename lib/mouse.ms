@@ -2,14 +2,17 @@ import "importUtil"
 ensureImport ["Display"]
 
 button = function(which=0)
+	"Return whether the given mouse button (0 = left, 1 = right, 2 = middle) is down."
 	return raylib.IsMouseButtonDown(which)
 end function
 
 visible = function
+	"Return whether the mouse cursor is visible (currently always true)."
 	return true
 end function
 
 locked = function
+	"Return whether the mouse cursor is locked (currently always false)."
 	return false
 end function
 
@@ -21,6 +24,7 @@ y = 0
 // Under a host that insets the screen in a bezel, that is not the window
 // origin, and using raw window coordinates would offset every click.
 update = function
+	"Update mouse.x and mouse.y from the pointer position, in screen coordinates."
 	outer.x = raylib.GetMouseX - Display.screenLeft
 	outer.y = Display.screenTop + Display.screenHeight - raylib.GetMouseY
 end function

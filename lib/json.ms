@@ -18,6 +18,7 @@
 //	Example: data = parse(s)
 //			 if data isa error then print data.message
 parse = function(jsonString)
+	"Convert a JSON string (or RawData) into a MiniScript value, or a ParseError."
 	if intrinsics.hasIndex("RawData") and jsonString isa RawData then jsonString = jsonString.utf8
 	p = new Parser
 	return p.parse(jsonString)
@@ -35,6 +36,7 @@ end function
 // Standard JSON has no way to represent these; this matches the behavior of
 // Python and JSON5, but strict JSON parsers will reject such output.
 toJSON = function(value, compact=false, indent=0)
+	"Convert a MiniScript value to a JSON string, optionally in compact form."
 	if @value isa funcRef then return """<function>"""
 	if value == null then return "null"
 	if value isa number then
@@ -53,6 +55,7 @@ end function
 //	Example: hexToInt("002A") 	// returns 42
 //	Returns an error if s is empty or contains a non-hex character.
 hexToInt = function(s)
+	"Convert a hexadecimal string to a number; return an error if invalid."
 	if not s then return err("hexToInt: empty string")
 	result = 0
 	for c in s
@@ -66,6 +69,7 @@ end function
 // and represent them with backslash sequences.
 //	Example: escape(char(9))	// returns "\t"
 escape = function(s)
+	"Return the given string with special characters as backslash sequences."
 	for i in _escapeIndexes
 		s = s.replace(_escapeFrom[i], _escapeTo[i])
 	end for
@@ -77,6 +81,7 @@ end function
 //	Returns an error if s contains a malformed escape (a \u not followed by
 //	4 hex digits, or a backslash at the very end).
 unescape = function(s)
+	"Return the given string with backslash sequences replaced; error if malformed."
 	result = []
 	i = 0
 	maxi = s.len
@@ -130,6 +135,7 @@ Parser._sourceLen = 0
 Parser._p = 0		// index of next character to consume in source
 
 Parser.init = function(source)
+	"Set the source string for this parser to read, skipping any byte order mark."
 	// Ignore a leading byte order mark (common in files saved on Windows)
 	if source[:1] == _bom then source = source[1:]
 	self.source = source
@@ -141,6 +147,7 @@ end function
 // Every _parse method returns either its value or such an error, and
 // callers must pass any error straight back up.
 Parser._fail = function(message, inner=null)
+	"Return a ParseError describing a failure at the current line and column."
 	lines = self.source[:self._p].split(_eol)
 	where = "line " + lines.len + ", column " + (lines[-1].len + 1)
 	return ParseError.err("JSON error at " + where + ": " + message, inner)
@@ -148,6 +155,7 @@ end function
 
 // Parse the source, returning the resulting value, or a ParseError.
 Parser.parse = function(source=null)
+	"Parse the source and return the resulting value, or a ParseError."
 	if source != null then self.init source
 	self._p = 0
 	result = self._parseElement
@@ -159,6 +167,7 @@ end function
 
 whitespace = " " + char(9) + char(10) + char(13)
 Parser._skipWhitespace = function
+	"Advance past any whitespace."
 	while self._p < self._sourceLen
 		if whitespace.indexOf(self.source[self._p]) == null then break
 		self._p = self._p + 1
@@ -166,10 +175,12 @@ Parser._skipWhitespace = function
 end function
 		
 Parser._parseElement = function
+	"Parse and return one JSON element from the current position."
 	return self._parseValue	// for now!
 end function
 
 Parser._parseValue = function
+	"Parse and return one JSON value of any type, or a ParseError."
 	self._skipWhitespace
 	if self._p >= self._sourceLen then return self._fail("unexpected end of input")
 	c = self.source[self._p]
@@ -205,6 +216,7 @@ Parser._parseValue = function
 end function
 
 Parser._parseList = function
+	"Parse and return a JSON array as a list, or a ParseError."
 	self._p = self._p + 1		// skip "["
 	self._skipWhitespace
 	result = []
@@ -232,6 +244,7 @@ Parser._parseList = function
 end function
 
 Parser._parseMap = function
+	"Parse and return a JSON object as a map, or a ParseError."
 	self._p = self._p + 1		// skip "{"
 	self._skipWhitespace
 	result = {}
@@ -275,6 +288,7 @@ end function
 // Get a string literal from the source.  Advance to the next
 // character after the closing quote.
 Parser._parseString = function
+	"Parse and return a JSON string literal, or a ParseError."
 	self._p = self._p + 1
 	startPos = self._p
 	anyEscape = false
@@ -306,6 +320,7 @@ end function
 // Get a numeric literal from the source.  Advance to the next
 // character after the number.
 Parser._parseNumber = function
+	"Parse and return a numeric literal."
 	startPos = self._p
 	while self._p < self._sourceLen
 		c = self.source[self._p]
@@ -323,6 +338,7 @@ end function
 // Generating JSON
 
 _listToJSON = function(lst, compact, indent)
+	"Convert a list to a JSON array string."
 	ws = (_eol + "  "*(indent+1)) * (not compact)
 	parts = ["[", ws]
 	first = true
@@ -340,6 +356,7 @@ _listToJSON = function(lst, compact, indent)
 end function
 
 _mapToJSON = function(lst, compact, indent)
+	"Convert a map to a JSON object string."
 	ws = (_eol + "  "*(indent+1)) * (not compact)
 	parts = ["{", ws]
 	first = true
@@ -386,16 +403,19 @@ freeze _escapeIndexes
 //----------------------------------------------------------------------
 // Unit tests (run when you load & run this script directly).
 runUnitTests = function
+	"Run unit tests on this module, printing any failures."
 	print "Unit testing: json"
 	
 	errorCount = 0
 	assertEqual = function(actual, expected)
+		"Report a test failure if actual does not equal expected."
 		if actual != expected then
 			print "Unit test failure: expected " + expected + ", got " + actual
 			outer.errorCount = errorCount + 1
 		end if
 	end function
 	assertEqualEither = function(actual, expected, expected2)
+		"Report a test failure if actual equals neither expected nor expected2."
 		if actual != expected and actual != expected2 then
 			print "Unit test failure: expected " + expected + ", got " + actual
 			outer.errorCount = errorCount + 1

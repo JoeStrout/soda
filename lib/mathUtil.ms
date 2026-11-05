@@ -12,22 +12,26 @@ e = 2.7182818284
 
 // ln: natural logarithm (i.e., log base e)
 ln = function(x)
+	"Return the natural logarithm (log base e) of x."
 	return log(x, 2.7182818284)
 end function
 
 // radToDeg: convert radians to degrees
 radToDeg = function(radians)
+	"Convert an angle from radians to degrees."
 	return radians * 180 / pi
 end function
 
 // degToRad: convert degrees to radians
 degToRad = function(degrees)
+	"Convert an angle from degrees to radians."
 	return degrees * pi / 180
 end function
 
 // moveTowards: shift a value towards another value, but no more than a 
 // certain amount.  This version works on a number and returns a number.
 moveTowards = function(num, targetNum, maxChange=1)
+	"Return num moved toward targetNum by no more than maxChange."
 	if abs(targetNum - num) <= maxChange then return targetNum
 	if targetNum > num then return num + maxChange
 	return num - maxChange
@@ -40,6 +44,7 @@ end function
 // passed in the first parameter, and returns `true` if any change was
 // made, or `false` if the mover was already at the target.
 moveTowardsXY = function(mover, target, maxDist=1)
+	"Move a map with x and y toward a target, no more than maxDist; return whether it moved."
 	dx = target.x - mover.x
 	dy = target.y - mover.y
 	if dx == 0 and dy == 0 then return false  // already there
@@ -59,6 +64,7 @@ end function
 // either a map containing "x" and "y" (such as mouse or a Sprite), or it
 // can be a 2-element [x,y] list.
 distance = function(p1, p2)
+	"Return the distance between two points (x/y maps or [x,y] lists)."
 	if p1 isa map then
 		x1 = p1.x
 		y1 = p1.y
@@ -79,6 +85,7 @@ end function
 // lerp: Interpolate between two values, that is, return a value that is
 // some portion (t) of the way from a to b.
 lerp = function(a, b, t)
+	"Return the value that is fraction t of the way from a to b."
 	return a + (b-a) * t
 end function
 
@@ -87,6 +94,7 @@ end function
 // containing "x" and "y", or it may be an [x,y] list, but the result will
 // always be in the form of an [x,y] list.
 lerp2d = function(p1, p2, t)
+	"Return the [x,y] point that is fraction t of the way from p1 to p2."
 	if p1 isa map then
 		x1 = p1.x
 		y1 = p1.y
@@ -113,6 +121,7 @@ end function
 // "x" and "y" (such as mouse or a Sprite), or a 2-element [x,y] list -- into
 // a plain [x,y] list.  Used by the pure-MiniScript implementations below.
 _xy = function(p)
+	"Convert a point (x/y map or [x,y] list) to an [x,y] list."
 	if p isa map then return [p.x, p.y]
 	return [p[0], p[1]]
 end function
@@ -129,6 +138,7 @@ end function
 //  p: point of interest (map or list)
 // Returns: a number indicating how far p is from endA to endB.
 proportionAlongLine = function(endA, endB, p)
+	"Return how far (0 at endA, 1 at endB) along a line the nearest point to p lies."
 	a = _xy(endA); b = _xy(endB); q = _xy(p)
 	abx = b[0] - a[0]; aby = b[1] - a[1]
 	return ((q[0]-a[0]) * abx + (q[1]-a[1]) * aby) / (abx*abx + aby*aby)
@@ -147,6 +157,7 @@ end if
 //  p: point of interest (map or list)
 // Returns: an [x,y] list of the nearest point on the line to p.
 nearestPointOnLine = function(endA, endB, p)
+	"Return the [x,y] point on the infinite line through endA and endB nearest to p."
 	a = _xy(endA); b = _xy(endB); q = _xy(p)
 	abx = b[0] - a[0]; aby = b[1] - a[1]
 	segLenSqr = abx*abx + aby*aby
@@ -168,6 +179,7 @@ end if
 //  p: point of interest (map or list)
 // Returns: an [x,y] list of the nearest point on the line segment to p.
 nearestPointOnLineSegment = function(endA, endB, p)
+	"Return the [x,y] point on the segment from endA to endB nearest to p."
 	a = _xy(endA); b = _xy(endB); q = _xy(p)
 	abx = b[0] - a[0]; aby = b[1] - a[1]
 	segLenSqr = abx*abx + aby*aby
@@ -187,6 +199,7 @@ end if
 // lines are parallel, there is no intersection and this
 // function returns null.
 lineIntersectProportion = function(endA1, endB1, endA2, endB2)
+	"Return how far along line 1 it intersects line 2, or null if they are parallel."
 	p1 = _xy(endA1); p2 = _xy(endB1); p3 = _xy(endA2); p4 = _xy(endB2)
 	denom = (p4[1]-p3[1]) * (p2[0]-p1[0]) - (p4[0]-p3[0]) * (p2[1]-p1[1])
 	if denom == 0 then return null   // lines are parallel
@@ -200,6 +213,7 @@ end if
 // lineSegmentsIntersect: return whether the line segment endA1-endB1
 // intersects segment endA2-endB2.
 lineSegmentsIntersect = function(endA1, endB1, endA2, endB2)
+	"Return whether two line segments intersect."
 	ua = lineIntersectProportion(endA1, endB1, endA2, endB2)
 	if ua == null then return false			// segments are parallel
 	if ua < 0 or ua > 1 then return false	// intersection out of bounds
@@ -215,6 +229,7 @@ end if
 // intersects line endA2-endB2.  If there is no intersection, this
 // function returns null.
 lineLineIntersection = function(endA1, endB1, endA2, endB2)
+	"Return the [x,y] point where two infinite lines intersect, or null if parallel."
 	ua = lineIntersectProportion(endA1, endB1, endA2, endB2)
 	if ua == null then return null   // lines are parallel
 	p1 = _xy(endA1); p2 = _xy(endB1)
@@ -231,6 +246,7 @@ end if
 //	polygon: list of [x,y] points defining a polygon
 // Returns: polygon perimeter, or null if given fewer than 2 points.
 polyPerimeter = function(polygon)
+	"Return the total distance around a polygon, or null if it has fewer than 2 points."
 	if polygon.len < 2 then return null
 	result = 0
 	last = _xy(polygon[polygon.len - 1])
@@ -252,6 +268,7 @@ end if
 //	polygon: list of [x,y] points defining a polygon
 // Returns: polygon area.
 polyArea = function(polygon)
+	"Return the area of a (non-self-intersecting) polygon."
 	area = 0
 	if not polygon then return 0
 	last = _xy(polygon[polygon.len - 1])
@@ -270,6 +287,7 @@ end if
 // used by the even-odd point-in-polygon test, so that testing many points
 // against the same polygon doesn't redo this work for each one.
 _precalcPointInPoly = function(polygon)
+	"Precompute per-edge data for testing many points against one polygon."
 	pts = []
 	for p in polygon
 		pts.push _xy(p)
@@ -294,6 +312,7 @@ end function
 // _pointInPolyPre: internal helper.  Even-odd point-in-polygon test, using
 // the data prepared by _precalcPointInPoly.
 _pointInPolyPre = function(precalc, pt)
+	"Return whether a point is within a polygon, using data from _precalcPointInPoly."
 	pts = precalc.pts
 	oddNodes = false
 	current = pts[pts.len - 1][1] > pt[1]
@@ -317,6 +336,7 @@ end function
 // Returns: true if any of the given points is within the polygon;
 //			false otherwise.
 pointInPoly = function(point, polygon)
+	"Return whether a point (or any of a list of points) is within a polygon."
 	if polygon.len < 3 then return false
 	precalc = _precalcPointInPoly(polygon)
 	if point isa list and (point[0] isa list or point[0] isa map) then
@@ -336,6 +356,7 @@ end if
 // return the new position of the middle one when the polygon is inset by
 // the given distance.
 _insetCorner = function(p0, p1, p2, insetDist)
+	"Return the new position of corner p1 when its polygon is inset by insetDist."
 	// find the offset left and right lines
 	leftDist = sqrt((p1[0]-p0[0])^2 + (p1[1]-p0[1])^2)
 	if leftDist < 1E-6 then return p1
@@ -365,6 +386,7 @@ end function
 //	delta: amount to inset/outset the polygon points
 // Returns: new list of points defining offset polygon
 offsetPoly = function(polygon, delta=1)
+	"Return a new polygon inset or outset from the given one by delta."
 	if polygon.len < 2 then return polygon
 	pts = []
 	for p in polygon
@@ -393,6 +415,7 @@ end if
 //	dy: amount to add to the Y coordinate of each point
 // Returns: new list of points defining translated polygon
 shiftPoly = function(polygon, dx=0, dy=0)
+	"Return a new polygon translated by dx, dy."
 	result = []
 	for p in polygon
 		q = _xy(p)
@@ -413,6 +436,7 @@ end if
 //	degrees: amount of rotation to apply, in degrees counter-clockwise
 // Returns: new list of points defining rotated polygon
 rotatePoly = function(polygon, degrees=0)
+	"Return a new polygon rotated counter-clockwise around 0,0 by the given degrees."
 	radians = degrees * pi / 180
 	cosAng = cos(radians); sinAng = sin(radians)
 	result = []
@@ -434,6 +458,7 @@ end if
 //  p: point of interest (map or list)
 // Returns: distance from p to the line
 distanceToLine = function(endA, endB, p)
+	"Return the shortest distance from p to the infinite line through endA and endB."
 	ptOnLine = nearestPointOnLine(endA, endB, p)
 	return distance(p, ptOnLine)
 end function
@@ -446,6 +471,7 @@ end function
 //  p: point of interest (map or list)
 // Returns: distance from p to the line
 distanceToLineSegment = function(endA, endB, p)
+	"Return the shortest distance from p to the segment from endA to endB."
 	ptOnLine = nearestPointOnLineSegment(endA, endB, p)
 	return distance(p, ptOnLine)
 end function
@@ -459,6 +485,7 @@ end function
 //	normal: [x,y] list of normal vector (with length == 1)
 // Returns: new [x,y] list representing reflected vector.
 reflect = function(vector, normal)
+	"Return the [x,y] vector reflected across the given unit normal."
 	dotProd = vector[0]*normal[0] + vector[1]*normal[1]
 	return [vector[0] - 2 * dotProd * normal[0],
 			vector[1] - 2 * dotProd * normal[1] ]
@@ -479,6 +506,7 @@ end function
 // Returns: a new map containing:
 //    vx, vy: new velocity after the bounce
 bounceVelocity = function(ball, lineSeg, friction=0.1)		
+	"Return a map with the new vx, vy of a ball after bouncing off a (possibly moving) segment."
 	// Compute velocity of each line segment endpoint
 	if lineSeg.hasIndex("prevX1") then
 		v1x = lineSeg.x1 - lineSeg.prevX1
@@ -534,6 +562,7 @@ end function
 // fraction of the ball's path comes before the impact.  This function
 // updates the x,y and vx,vy properties of ball, in place.
 bounceOffSegment = function(ball, segment, friction=0.1, fracBefore=null)
+	"Bounce a moving ball off a line segment, updating its x, y, vx, vy in place."
 	prevBallX = ball.x - ball.vx
 	prevBallY = ball.y - ball.vy
 	prevBallPos = [prevBallX, prevBallY]
@@ -565,6 +594,7 @@ end function
 // of a stationary polygon with points defined by polyPts.
 // Returns true if bounced, false if not.
 bounceOffStaticPoly = function(ball, polyPts, friction=0.1)
+	"Bounce a moving ball off a stationary polygon; return whether it bounced."
 	prevBallX = ball.x - ball.vx
 	prevBallY = ball.y - ball.vy
 	prevBallPos = [prevBallX, prevBallY]
@@ -600,6 +630,7 @@ end function
 // position at prevPolyPts.
 // Returns true if bounced, false if not.
 bounceOffMovingPoly = function(ball, polyPts, prevPolyPts=null, friction=0.1)
+	"Bounce a moving ball off a moving polygon; return whether it bounced."
 	// Find the segment which *first* intersects the ball.
 	seg = {}
 	bestFrac = 1
@@ -659,6 +690,7 @@ end function
 // previous position at prevPolyPts.
 // Returns true if bounced, false if not.
 bounceOffPoly = function(ball, polyPts, prevPolyPts=null, friction=0.1)
+	"Bounce a moving ball off a (possibly moving) polygon; return whether it bounced."
 	if prevPolyPts == null then
 		return bounceOffStaticPoly(ball, polyPts, friction)
 	else
@@ -671,18 +703,21 @@ end function
 //  mean: average value of the returned numbers
 //  stddev: standard deviation of the returned numbers
 randNormal = function(mean=0, stddev=1)
+    "Return a random number from a normal distribution with the given mean and stddev."
     return mean + sqrt(-2 * log(rnd,2.7182818284)) * cos(2*pi*rnd) * stddev
 end function
 
 // randRange: return a uniformly distributed random number between the
 // given minimum and maximum values (including min, but not including max).
 randRange = function(min, max)
+	"Return a random number from min (inclusive) to max (exclusive)."
 	return min + (max - min) * rnd
 end function
 
 // dice: return the sum of rolling some number of dice.
 // For example, dice(3,6) simulates rolling three 6-sided dice.
 dice = function(numberOfDice=1, sides=6)
+	"Return the total of rolling the given number of dice with the given number of sides."
 	sum = 0
 	for i in range(1, numberOfDice)
 		sum = sum + ceil(rnd * sides)
@@ -692,6 +727,7 @@ end function
 
 // clamp: limits the given value to a specified range.
 clamp = function(x, minval=0, maxval=1)
+	"Return x limited to the range minval to maxval."
 	if x < minval then return minval
 	if x > maxval then return maxval
 	return x
@@ -701,12 +737,14 @@ end function
 // (Note: if you have more than two, consider importing listUtil
 // and using list.max instead.)
 max = function(a, b)
+	"Return the greater of two values."
 	if b > a then return b else return a
 end function
 
 // min: returns the lesser of two values.
 // (As above, also consider list.min from listUtil.)
 min = function(a, b)
+	"Return the lesser of two values."
 	if b < a then return b else return a
 end function
 
@@ -714,6 +752,7 @@ end function
 // (number of digits past the decimal place).  Trailing zeros will be
 // added as needed to get the decimal point at the right place.
 numToStr = function(n, precision=null)
+	"Convert a number to a string with the given number of digits after the decimal point."
 	if precision == null then return str(n)
 	if not n isa number or not precision isa number then
 		print "numToStr error: arguments must be numbers."
@@ -737,10 +776,12 @@ numToStr = function(n, precision=null)
 end function
 
 runUnitTests = function
+	"Run unit tests on this module, printing any failures."
 	print "Unit testing: mathUtil"
 	
 	errorCount = 0
 	assertEqual = function(actual, expected, note)
+		"Report a test failure if actual does not equal expected."
 		if actual != expected then
 			print "Unit test failure (" + note + "): expected " + expected + ", got " + actual
 			outer.errorCount = errorCount + 1
@@ -749,6 +790,7 @@ runUnitTests = function
 	
 	// Round every coordinate, so that float fuzz doesn't fail a comparison.
 	roundPoly = function(polygon)
+		"Return a copy of a polygon with each coordinate rounded to 6 decimal places."
 		result = []
 		for p in polygon
 			result.push [round(p[0], 6), round(p[1], 6)]

@@ -35,36 +35,44 @@ globals.window = {}
 window._title = "raylib-miniscript"
 
 window.width = function
+	"Return the width of the application window, in pixels."
 	return raylib.GetScreenWidth
 end function
 
 window.height = function
+	"Return the height of the application window, in pixels."
 	return raylib.GetScreenHeight
 end function
 
 window.fullScreen = function
+	"Return whether the application window is in full-screen mode."
 	return raylib.IsWindowFullscreen
 end function
 
 window.title = function
+	"Return the title of the application window."
 	return self._title
 end function
 
 window["width="] = function(value)
+	"Set the width of the application window, in pixels."
 	raylib.SetWindowSize value, raylib.GetScreenHeight
 end function
 
 window["height="] = function(value)
+	"Set the height of the application window, in pixels."
 	raylib.SetWindowSize raylib.GetScreenWidth, value
 end function
 
 // Raylib only offers a toggle, so compare with the current state first.
 window["fullScreen="] = function(value)
+	"Enter or leave full-screen mode."
 	if (value != 0) == (raylib.IsWindowFullscreen != 0) then return
 	raylib.ToggleFullscreen
 end function
 
 window["title="] = function(value)
+	"Set the title of the application window."
 	raylib.SetWindowTitle value
 	self._title = value
 end function
@@ -79,6 +87,7 @@ updateCallbacks = [
 ]
 
 update = function(beginEndRaylibDrawing = true)
+	"Render all displays, then call every function in updateCallbacks; call once per frame."
 	if beginEndRaylibDrawing then raylib.BeginDrawing
 	Display.RenderAll
 	if beginEndRaylibDrawing then raylib.EndDrawing
@@ -90,12 +99,14 @@ end function
 // Override (actually, shadow) the `yield` intrinsic to do our standard
 // update, so that a tight yield loop does not lock up the app.
 globals.yield = function
+	"Update and render everything, then wait for the next frame."
 	outer.update
 	intrinsics.yield
 end function
 
 // And similar for `wait`.
 globals.wait = function(duration=1)
+	"Wait the given number of seconds, updating and rendering all the while."
 	endTime = time + duration
 	while time < endTime
 		intrinsics.yield

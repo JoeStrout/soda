@@ -16,6 +16,7 @@
 // If not, then import that module into the global namespace.  As a 
 // convenience, you may also pass a list of module names to import.
 globals.ensureImport = function(moduleName)
+	"Import the given module (or list of modules) into globals, if not already imported."
 	if moduleName isa string then moduleName = [moduleName]
 	for name in moduleName
 		if globals.hasIndex(name) then continue

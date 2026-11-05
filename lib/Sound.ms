@@ -13,6 +13,7 @@ _playingSounds = []
 // flags it with autoUnload, so it is freed when the Sound is garbage-collected.
 // This passes null (a failed load) through unchanged.
 _owned = function(rResource)
+	"Flag a raylib resource for automatic unloading on GC; pass null through unchanged."
 	if rResource == null then return null
 	return autoUnload(rResource)
 end function
@@ -41,6 +42,7 @@ Sound.sampleRate = 10464
 // does not take ownership: the caller still unloads it, unless it calls
 // autoUnload on it.
 Sound.FromRaylibMusicStream = function(rMusicStream)
+	"Wrap an existing raylib MusicStream as a Sound, without taking ownership of it."
 	if rMusicStream == null then return err("Sound.FromRaylibMusicStream: rMusicStream is null")
 	result = new self
 	result.duration = raylib.GetMusicTimeLength(rMusicStream)
@@ -49,6 +51,7 @@ Sound.FromRaylibMusicStream = function(rMusicStream)
 end function
 
 Sound.FromRaylibSound = function(rSound)
+	"Wrap an existing raylib Sound as a Sound, without taking ownership of it."
 	if rSound == null then return err("Sound.FromRaylibSound: rSound is null")
 	result = new self
 	result.duration = rSound.frameCount / rSound.sampleRate
@@ -57,6 +60,7 @@ Sound.FromRaylibSound = function(rSound)
 end function
 
 Sound.play = function(volume=1, pan=0, speed=1)
+	"Play this sound at the given volume, pan (-1 to 1), and speed."
 	if not self._ensureSound then return
 	if self._music then
 		rl.SetMusicVolume self._music, volume
@@ -77,6 +81,7 @@ Sound.play = function(volume=1, pan=0, speed=1)
 end function
 
 Sound.adjust = function(volume=1, pan=0, speed=1)
+	"Change the volume, pan, and speed of this sound while it plays."
 	if self._sound == null and self._music == null then return
 	if self._music then
 		rl.SetMusicVolume self._music, volume
@@ -92,6 +97,7 @@ end function
 
 
 Sound.stop = function
+	"Stop playing this sound."
 	if self._music == null and self._sound == null then return
 	if self._music then
 		rl.StopMusicStream self._music
@@ -105,6 +111,7 @@ Sound.stop = function
 end function
 
 Sound.update = function
+	"Feed this sound's music stream, restart it if looping, or note that it finished."
 	if not self.isPlaying then return
 	if self._music then
 		rl.UpdateMusicStream self._music
@@ -115,6 +122,7 @@ Sound.update = function
 end function
 
 Sound.UpdateAll = function
+	"Update all currently playing sounds; call once per frame."
 	// (backwards, since a sound that has finished removes itself from the list)
 	for i in range(_playingSounds.len - 1, 0, -1)
 		_playingSounds[i].update
@@ -122,6 +130,7 @@ Sound.UpdateAll = function
 end function
 
 Sound.unload = function
+	"Free this sound's raylib Sound or MusicStream."
 	if self._music then rl.UnloadMusicStream(self._music)
 	self._music = null
 	if self._sound then rl.UnloadSound(self._sound)
@@ -129,6 +138,7 @@ Sound.unload = function
 end function
 
 Sound.StopAll = function
+	"Stop all sounds that are currently playing."
 	for snd in _playingSounds
 		snd.stop
 	end for
@@ -169,6 +179,7 @@ freeze Sound.sawtoothWave
 // noise.  Uses its own generator, so it does not disturb the sequence of
 // numbers produced by `rnd`.
 Sound.noiseWave = function(seed=42, samples=509)
+	"Return a waveform list of pseudo-random values, approximating white noise."
 	result = []
 	state = floor(abs(seed)) % 4294967296
 	for i in range(0, samples-1, 1)
@@ -183,6 +194,7 @@ end function
 // assumed to be uniformly spaced between t=0 and t=1.  A plain number
 // (rather than a list) is treated as a constant.
 _lookupLUT = function(samples, t)
+	"Return the value at t (0-1) in an evenly spaced look-up table, interpolating linearly."
 	if samples isa number then return samples
 	if samples.len == 1 or t <= 0 then return samples[0]
 	if t >= 1 then return samples[-1]
@@ -197,6 +209,7 @@ end function
 // Middle C is note 60; A above middle C (note 69) is 440 Hz.
 // See https://newt.phys.unsw.edu.au/jw/notes.html
 globals.noteFreq = function(note=60)
+	"Return the frequency (in Hz) of the given MIDI note number (60 = middle C)."
 	return 2 ^ ((note - 69) / 12) * 440
 end function
 
@@ -220,6 +233,7 @@ end function
 // sampleRate, or mixes afterwards discards them, so the next `play`
 // synthesizes the sound anew (as in Mini Micro).
 Sound.init = function(duration=1, freq=440, envelope=null, waveform=null)
+	"Set up this sound for synthesis from the given duration, frequency, envelope, and waveform."
 	if self.isPlaying then self.stop
 	self.unload
 	self.duration = duration
@@ -246,6 +260,7 @@ end function
 //	daDing.mix dd2
 //	daDing.play
 Sound.mix = function(sound, level=1)
+	"Mix another synthesized sound into this one, at the given relative level."
 	if self.isPlaying then self.stop
 	self.unload
 	if self.mixes == null then self.mixes = []
@@ -262,6 +277,7 @@ end function
 // Collect this sound and everything mixed into it (recursively) as a list of
 // {sound, level} maps.  Levels multiply down the chain, as in Mini Micro.
 Sound._gatherDefs = function(defs, level=1)
+	"Add this sound and all sounds mixed into it to defs, as {sound, level} maps."
 	if defs.len > 16 then return	// enough is enough already
 	defs.push {"sound": self, "level": level}
 	if self.mixes == null then return
@@ -273,6 +289,7 @@ end function
 // Compute the raw samples (-1 to 1) of this sound, including anything
 // mixed into it.  Levels are normalized so the total stays within range.
 Sound._buildSamples = function
+	"Compute and return the samples (-1 to 1) of this sound, including all mixes."
 	defs = []
 	self._gatherDefs defs
 	rate = self.sampleRate
@@ -296,6 +313,7 @@ end function
 // Add this sound's own samples (ignoring its mixes) into the given buffer,
 // scaled by the given level.
 Sound._addSamples = function(result, rate, level)
+	"Add this sound's own samples (not its mixes), scaled by level, into result."
 	dur = self.duration
 	if dur == null or dur <= 0 then return
 	sampleCount = round(rate * dur)
@@ -329,6 +347,7 @@ end function
 
 // Duration (in seconds) of one cycle of the wave, at the given point in time.
 _waveLength = function(freq, fracDone, duration)
+	"Return the length (in seconds) of one wave cycle at the given point in the sound."
 	f = _lookupLUT(freq, fracDone)
 	if f <= 0 then return duration
 	return 1 / f
@@ -340,53 +359,63 @@ end function
 // parameter gets a property setter.)  We lose the ability to adjust or stop
 // what is currently playing along with the generated sound, so stop it first.
 Sound._invalidate = function
+	"Stop and discard any generated sound, so it is synthesized anew on next play."
 	if self._sound == null and self._music == null then return
 	if self.isPlaying then self.stop
 	self.unload
 end function
 
 Sound["duration="] = function(value)
+	"Set the duration, discarding any previously synthesized sound."
 	self._invalidate
 	super.duration = value
 end function
 
 Sound["freq="] = function(value)
+	"Set the frequency, discarding any previously synthesized sound."
 	self._invalidate
 	super.freq = value
 end function
 
 Sound["envelope="] = function(value)
+	"Set the envelope, discarding any previously synthesized sound."
 	self._invalidate
 	super.envelope = value
 end function
 
 Sound["waveform="] = function(value)
+	"Set the waveform, discarding any previously synthesized sound."
 	self._invalidate
 	super.waveform = value
 end function
 
 Sound["fadeIn="] = function(value)
+	"Set the fade-in time, discarding any previously synthesized sound."
 	self._invalidate
 	super.fadeIn = value
 end function
 
 Sound["fadeOut="] = function(value)
+	"Set the fade-out time, discarding any previously synthesized sound."
 	self._invalidate
 	super.fadeOut = value
 end function
 
 Sound["sampleRate="] = function(value)
+	"Set the sample rate, discarding any previously synthesized sound."
 	self._invalidate
 	super.sampleRate = value
 end function
 
 Sound["mixes="] = function(value)
+	"Set the list of mixed-in sounds, discarding any previously synthesized sound."
 	self._invalidate
 	super.mixes = value
 end function
 
 // Generate the raylib sound for a synthesized Sound.
 Sound._synthesize = function
+	"Generate and return a raylib Sound from this sound's synthesis parameters."
 	samples = self._buildSamples
 	if not samples then return null
 	wave = rl.CreateWave(samples.len, self.sampleRate, 32, 1, samples)
@@ -400,6 +429,7 @@ end function
 // Make sure we have something to play, synthesizing it if needed.
 // Returns whether we now have a sound (or music stream) in hand.
 Sound._ensureSound = function
+	"Synthesize this sound if needed; return whether it now has something to play."
 	if self._sound == null and self._music == null then
 		self._sound = self._synthesize
 	end if
@@ -407,6 +437,7 @@ Sound._ensureSound = function
 end function
 
 file.loadSound = function(path, asMusicStream=null)
+	"Load a sound file as a Sound, streaming it if asMusicStream (default: for .ogg/.mp3)."
 	if asMusicStream == null then
 		asMusicStream = (path[-4:] == ".ogg" or path[-4:] == ".mp3")
 	end if

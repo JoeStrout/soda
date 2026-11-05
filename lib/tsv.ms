@@ -48,6 +48,7 @@
 //	column (which must be unique, or else you will lose some rows due
 //	to reuse of that first column value as a key).
 parseLines = function(lines, asRowList=true)
+	"Parse a list of TSV lines into a list of row maps (or a map of maps keyed by column 1)."
 	TAB = char(9)
 	CR = char(13)
 	// First line should be column names.
@@ -89,6 +90,7 @@ end function
 //	column (which must be unique, or else you will lose some rows due
 //	to reuse of that first column value as a key).
 parseFile = function(path, asRowList=true)
+	"Read and parse the TSV file at the given path (see parseLines)."
 	lines = file.readLines(path)
 	if lines == null then
 		print "tsv.parseFile: unable to read " + path
@@ -99,6 +101,7 @@ end function
 
 // tsv.parse: parse TSV data where lines are separated by CR, LF, or CRLF.
 parse = function(text, asRowList=true)
+	"Parse TSV text with lines separated by CR, LF, or CRLF (see parseLines)."
 	CR = char(13)
 	LF = char(10)
 	lines = []
@@ -116,10 +119,12 @@ end function
 //----------------------------------------------------------------------
 // Unit tests (run when you load & run this script directly).
 runUnitTests = function
+	"Run unit tests on this module, printing any failures."
 	print "Unit testing: tsv"
 	
 	errorCount = 0
 	assertEqual = function(actual, expected)
+		"Report a test failure if actual does not equal expected."
 		if actual != expected then
 			print "Unit test failure: expected " + expected + ", got " + actual
 			outer.errorCount = errorCount + 1

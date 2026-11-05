@@ -5,6 +5,7 @@
 // index is not found, return a default value instead.  Works with
 // inherited values, too.
 map.get = function(key, defaultValue=null)
+	"Return the value for the given key (possibly inherited), or defaultValue if not found."
 	m = self
 	while m
 		if m.hasIndex(@key) then return m[@key]
@@ -21,6 +22,7 @@ end function
 // When m.hasOrInherits(k) is false, map.get(k, default) returns
 // the default value.
 map.hasOrInherits = function(index)
+	"Return whether this map has or inherits the given key."
 	m = self
 	while m
 		if m.hasIndex(@index) then return true
@@ -36,6 +38,7 @@ end function
 // does not walk the inheritance chain (just like .hasIndex), but
 // if you pass `true` as the second parameter, then it does.
 map.hasValue = function(v, includeInherited=false)
+	"Return whether this map (optionally including inherited maps) has the given value."
 	if self.indexOf(@v) != null then return true
 	if includeInherited then
 		m = self
@@ -51,6 +54,7 @@ end function
 // sortedIndexes: get the indexes of this map, but in sorted order
 // (rather than undefined order as .indexes gives you).
 map.sortedIndexes = function
+	"Return the keys of this map, in sorted order."
 	result = self.indexes
 	result.sort
 	return result
@@ -59,6 +63,7 @@ end function
 // inverse: return a map that has the keys and values swapped (keys
 // of this map become values of the result map, and vice versa).
 map.inverse = function
+	"Return a new map with the keys and values of this one swapped."
 	result = {}
 	for kv in self
 		result[@kv.value] = @kv.key
@@ -69,6 +74,7 @@ end function
 // filterIndexes: remove any indexes for which the given function
 // does not return true.
 map.filterIndexes = function(func)
+	"Remove all entries whose key does not satisfy func (in place)."
 	for k in self.indexes
 		if not func(@k) then self.remove @k
 	end for
@@ -77,6 +83,7 @@ end function
 // filterValues: remove any key/value pairs for which the 
 // function, applied to the value, does not return true.
 map.filterValues = function(func)
+	"Remove all entries whose value does not satisfy func (in place)."
 	for k in self.indexes
 		if not func(self[@k]) then self.remove @k
 	end for
@@ -85,6 +92,7 @@ end function
 // applyToValues: apply the given function to all values,
 // in place.
 map.applyToValues = function(func)
+	"Replace each value with the result of calling func on it (in place)."
 	for kv in self
 		self[@kv.key] = func(@kv.value)
 	end for
@@ -94,6 +102,7 @@ end function
 // of little maps with "key" and "value", just like what you get
 // when you iterate over a map with a `for` loop.
 map.pairs = function
+	"Return a list of all key/value pairs, as maps with key and value."
 	result = []
 	for kv in self
 		result.push kv
@@ -105,6 +114,7 @@ end function
 // applied to locals (or globals), enabling you to swap the values
 // of two variables.
 map.swap = function(key1, key2)
+	"Exchange the values of two keys (in place)."
 	temp = @self[@key1]
 	self[key1] = @self[@key2]
 	self[key2] = @temp
@@ -113,6 +123,7 @@ end function
 // mapUtils.fromTo: generate a map from one sequence (list or string)
 // to another.  The two sequences must be the same length.
 fromTo = function(fromSeq, toSeq)
+	"Return a map from each element of one sequence to the corresponding element of another."
 	if fromSeq.len != toSeq.len then
 		print "mapUtils.fromTo: sequence lengths do not match (" + fromSeq.len + " and " + toSeq.len + ")"
 		return null
@@ -125,10 +136,12 @@ fromTo = function(fromSeq, toSeq)
 end function
 
 runUnitTests = function
+	"Run unit tests on this module, printing any failures."
 	print "Unit testing: mapUtil"
 	
 	errorCount = 0
 	assertEqual = function(actual, expected, note)
+		"Report a test failure if actual does not equal expected."
 		if actual != expected then
 			print "Unit test failure (" + testing + "): expected " + expected + ", got " + actual
 			outer.errorCount = errorCount + 1

@@ -20,6 +20,7 @@ whitespace = " " + TAB + CR + LF
 //		"hello".capitalized			// returns "Hello"
 //		"miniScript".capitalized	// returns "MiniScript"
 string.capitalized = function
+	"Return this string with its first letter in uppercase."
 	if self.len < 2 then return self.upper
 	return self[0].upper + self[1:]
 end function
@@ -31,6 +32,7 @@ end function
 // Example:
 //		"a tale of two cities".titleCase	// returns "A Tale of Two Cities"
 string.titleCase = function(delimiter=" ")
+	"Return this string with each word capitalized, except small words in the middle."
 	words = self.split(delimiter)
 	for i in words.indexes
 		if i == 0 or i == words.len-1 or smallWords.indexOf(words[i]) == null then
@@ -42,22 +44,26 @@ end function
 
 // startsWith: return true if this string starts with the given substring.
 string.startsWith = function(s)
+	"Return whether this string starts with the given substring."
 	return self.len >= s.len and self[:s.len] == s
 end function
 
 // endsWith: return true if this string ends with the given substring.
 string.endsWith = function(s)
+	"Return whether this string ends with the given substring."
 	return self.len >= s.len and self[-s.len:] == s
 end function
 
 // contains: return true if this string contains the given substring anywhere.
 string.contains = function(s)
+	"Return whether this string contains the given substring."
 	return self.indexOf(s) != null
 end function
 
 // isNumeric: returns true if this string is a valid number like "-3.1415".
 // You should be able to get a valid value out of val() whenever this is true.
 string.isNumeric = function
+	"Return whether this string is a valid number, like -3.1415."
 	state = "PRENUM"
 	for c in self
 		if state == "PRENUM" then
@@ -101,6 +107,7 @@ end function
 //		"Hello".lastIndexOf("l")		// returns 3
 //		"Hello".lastIndexOf("l", 3)		// returns 2
 string.lastIndexOf = function(substr, beforeIdx=null)
+	"Return the last index of the given substring (optionally before beforeIdx), or null."
 	sslen = substr.len
 	if beforeIdx == null then i = self.len - sslen else i = beforeIdx - 1
 	while i >= 0
@@ -112,6 +119,7 @@ end function
 
 // pad: return this string, padded (and optionally cut) to a desired length.
 string.pad = function(length, padChar=" ", cutIfTooLong=true)
+	"Return this string padded (and optionally cut) to the given length."
 	if self.len > length then
 		if cutIfTooLong then return self[:length]
 	else if self.len < length then
@@ -124,6 +132,7 @@ end function
 // Example:
 //		"  hello ".trim		// returns "hello"
 string.trim = function(charsToRemove=null)
+	"Return this string without leading and trailing whitespace (or the given characters)."
 	if not self then return self
 	if charsToRemove == null then charsToRemove = whitespace
 	len = self.len
@@ -142,6 +151,7 @@ end function
 // Example:
 //		"  hello ".trimRight		// returns "  hello"
 string.trimRight = function(charsToRemove=null)
+	"Return this string without trailing whitespace (or the given characters)."
 	if not self then return self
 	if charsToRemove == null then charsToRemove = whitespace
 	p1 = self.len - 1
@@ -155,6 +165,7 @@ end function
 // Example:
 //		"  hello ".trimLeft		// returns "hello "
 string.trimLeft = function(charsToRemove=null)
+	"Return this string without leading whitespace (or the given characters)."
 	if not self then return self
 	if charsToRemove == null then charsToRemove = whitespace
 	len = self.len
@@ -170,6 +181,7 @@ end function
 // Example:
 //		"Hi!!! Bob!!".compress("!")  // returns "Hi! Bob!"
 string.compress = function(charToCompress=" ")
+	"Return this string with each run of the given character replaced by just one."
 	s = self
 	prevLen = -1
 	charTimes2 = charToCompress + charToCompress
@@ -186,6 +198,7 @@ end function
 // Example:
 //		"Hello World".ellideEnd(6)	// returns "Hello…"
 string.ellideEnd = function(maxLength=10)
+	"Return this string shortened to maxLength if needed, with an ellipsis at the end."
 	if self.len <= maxLength then return self
 	return self[:maxLength-1] + "…"
 end function
@@ -195,11 +208,13 @@ end function
 // Example:
 //		"Hello World".ellideMiddle(6)	// returns "He…rld"
 string.ellideMiddle = function(maxLength=10)
+	"Return this string shortened to maxLength if needed, with an ellipsis in the middle."
 	if self.len <= maxLength then return self
 	return self[:ceil(maxLength/2)-1] + "…" + self[-maxLength/2:]
 end function
 
 string.reverse = function
+	"Return this string with its characters in reverse order."
 	chars = self.split("")
 	for i in range(0, chars.len/2-1)
 	    negi = -1 - i
@@ -214,6 +229,7 @@ end function
 // common line break patterns (CR, LF, and CRLF).  Note that it
 // assumes only ONE of these patterns is used, not some crazy mix.
 string.splitLines = function
+	"Return a list of the lines in this string, split on CR, LF, or CRLF."
 	lines = []
 	if self.indexOf(CR+LF) != null then
 		lines = self.split(CR+LF)
@@ -231,6 +247,7 @@ end function
 //		self: string to wrap
 //		width: character limit per line; defaults to 67
 string.wrap = function(width=67)
+	"Return a list of lines, word-wrapping this string to the given width."
 	if self == "" then return [""]
 	result = []
 	for s in self.split(char(13))
@@ -264,6 +281,7 @@ end function
 // could also be used to replace special characters with HTML
 // entity codes, etc.).
 string.cipher = function(charMap)
+	"Return this string with each character replaced according to the given map."
 	chars = self.split("")
 	for i in chars.indexes
 		c = chars[i]
@@ -277,6 +295,7 @@ end function
 // it in the alphabet.  Note that if you apply rot13 twice, you 
 // get back the original string.
 string.rot13 = function
+	"Return this string with each letter replaced by the letter 13 places away."
 	if not outer.hasIndex("rot13map") then
 		outer.rot13map = {}
 		c0 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -294,6 +313,7 @@ end function
 // padToLength.  Example:
 //   hexStr(123, 4) --> "007B"
 hexStr = function(val, padToLength=2, lowercase=false)
+	"Convert an integer to a hexadecimal string, padded to the given number of digits."
 	digits = "0123456789ABCDEF"
 	val = floor(val)
 	if val < 0 then return "0" * padToLength
@@ -312,11 +332,12 @@ end function
 // Example:
 //	hexVal("007B") --> 123
 hexVal = function(hexstr)
+	"Convert a hexadecimal string to a number."
 	result = 0
 	digits = "0123456789ABCDEF"
 	for c in hexstr
 		cval = digits.indexOf(c.upper)
-		if cval < 0 then break
+		if cval == null then break
 		result = result * 16 + cval
 	end for
 	return result
@@ -328,6 +349,7 @@ if intrinsics.hasIndex("RawData") then
 	// urlEncode: Encode a string so it can be used as a URL query
 	// parameter.
 	string.urlEncode = function
+		"Return this string encoded for use as a URL query parameter."
 		urlSafeChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
 		  "abcdefghijklmnopqrstuvwxyz0123456789-_.~"
 		bytes = new RawData
@@ -348,6 +370,7 @@ if intrinsics.hasIndex("RawData") then
 	
 	// urlDecode: convert a URL-encoded string back into plain text.
 	string.urlDecode = function
+		"Return this URL-encoded string decoded back into plain text."
 		bytes = new RawData
 		bytes.resize self.len + 2 * (self.split("%").len - 1)
 		i = 0		// where we are in self (input)
@@ -372,6 +395,7 @@ end if
 // between: find a string between two substrings.  This can be 
 // used, for example, to find text between two HTML tags.
 string.between = function(startTag, endTag, after=null)
+	"Return the text between the given start and end substrings (or null)."
 	if startTag == "" then
 		pos0 = 0
 	else
@@ -395,6 +419,7 @@ end function
 // match the other.  A result of 0 means the strings are
 // identical; higher values mean more different.
 string.editDistance = function(s2)
+	"Return the Levenshtein (edit) distance between this string and s2."
 	n = self.len
 	m = s2.len
 	if n == 0 then return m
@@ -437,6 +462,7 @@ end function
 // this string at places identified by {key}.
 // (See string.match for the inverse operation.)
 string.fill = function(args)
+	"Return this string with each {key} replaced by the corresponding value in args."
 	s = self
 	for idx in args.indexes
 		key = "{" + idx + "}"
@@ -456,6 +482,7 @@ end function
 // can't match, then returns null.
 // (See string.fill for the inverse operation.)
 string.match = function(pattern)
+	"Match this string to a pattern containing {key} fields; return a map of values, or null."
 	// Start by splitting this pattern into literal and field parts.
 	parts = []
 	p = 0
@@ -501,10 +528,12 @@ string.match = function(pattern)
 end function
 
 runUnitTests = function
+	"Run unit tests on this module, printing any failures."
 	print "Unit testing: stringUtil"
 	
 	errorCount = 0
 	assertEqual = function(actual, expected, note)
+		"Report a test failure if actual does not equal expected."
 		if actual != expected then
 			print "Unit test failure (" + testing + "): expected " + expected + ", got " + actual
 			outer.errorCount = errorCount + 1

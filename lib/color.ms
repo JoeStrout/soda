@@ -23,6 +23,7 @@ pink = "#FF8080"
 
 // Convert a hex digit character to its numeric value (0-15).
 hexDigitVal = function(c)
+	"Return the numeric value (0-15) of a single hex digit character."
 	code = c.code
 	if code >= 48 and code <= 57 then return code - 48
 	if code >= 65 and code <= 70 then return code - 55
@@ -33,6 +34,7 @@ end function
 // Convert a Mini Micro color string ("#RRGGBB" or "#RRGGBBAA")
 // to a numeric [r, g, b, a] list.
 toList = function(s)
+	"Convert a color string (#RRGGBB or #RRGGBBAA) to an [r, g, b, a] list."
 	if s isa list then return s
 	if not s isa string or s.len < 7 or s[0] != "#" then return [255, 255, 255, 255]
 	r = hexDigitVal(s[1]) * 16 + hexDigitVal(s[2])
@@ -49,6 +51,7 @@ end function
 // Two-digit hex for every byte value, so fromList is a lookup per channel
 // (it is on the hot path of PixelDisplay.pixel, among other places).
 _makeHexBytes = function
+	"Return a list of two-digit hex strings for every byte value 0-255."
 	digits = "0123456789ABCDEF"
 	result = []
 	for i in range(0, 255)
@@ -61,6 +64,7 @@ freeze _hexByte
 
 // Convert a numeric [r, g, b, a] list or map to a color string.
 fromList = function(rgbaList)
+	"Convert an [r, g, b, a] list (or r/g/b/a map) to a color string."
 	hb = _hexByte
 	if rgbaList isa map then
 		c = rgbaList
@@ -74,16 +78,19 @@ fromList = function(rgbaList)
 end function
 
 rgba = function(r, g, b, a=255)
+	"Return a #RRGGBBAA color string from the given red, green, blue, and alpha (0-255)."
 	return "#" + _hexByte[r] + _hexByte[g] + _hexByte[b] + _hexByte[a]
 end function
 
 // rgb: same as rgba, but with alpha defaulting to fully opaque (255).
 rgb = function(r, g, b)
+	"Return a #RRGGBB color string from the given red, green, and blue (0-255)."
 	return "#" + _hexByte[r] + _hexByte[g] + _hexByte[b]
 end function
 
 // Interpolate between two colors: t <= 0 gives c1, t >= 1 gives c2, and
 // anything between mixes them.  t defaults to halfway, as in Mini Micro 1.
 lerp = function(c1, c2, t=0.5)
+	"Return a color interpolated between c1 and c2 by t (0-1)."
 	return fromList(raylib.ColorLerp(c1, c2, t))
 end function

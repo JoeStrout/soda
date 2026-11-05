@@ -15,6 +15,7 @@ rl = raylib
 // would silently alter the `list` map, which the user may or
 // may not want.
 _list_init = function(size, initialValue)
+	"Return a new list of the given size, filled with initialValue."
 	if @initialValue isa funcRef then
 		result = []
 		for i in range(1, size)
@@ -48,6 +49,7 @@ TextDisplayCell.backColor = "#000000"
 TextDisplayCell.inverse = false		// used for the hardware cursor
 
 TextDisplayCell.Make = function(fore, back)
+	"Create a new blank cell with the given foreground and background colors."
 	noob = new self
 	noob.character = " "
 	noob.color = fore
@@ -96,6 +98,7 @@ TextDisplay._cells = null		// _cells[row][col] -> TextDisplayCell
 TextDisplay.scrollCount = 0
 
 TextDisplay.Make = function
+	"Create and return a new TextDisplay with the default grid size."
 	noob = new self
 	noob.setSize noob.columns, noob.rows
 	return noob
@@ -104,6 +107,7 @@ end function
 // Resize the character grid.  Discards the current contents and homes
 // the cursor.
 TextDisplay.setSize = function(newCols, newRows)
+	"Resize the grid to the given columns and rows, clearing it and homing the cursor."
 	self.columns = newCols
 	self.rows = newRows
 	self._cells = _list_init(newRows, null)
@@ -123,11 +127,13 @@ end function
 // that this centers on Display's screen rect, not on the window: under a host
 // with a bezel those differ, and the bezel's insets need not be symmetrical.
 TextDisplay.updateOffsets = function
+	"Recompute offsetX and offsetY to center the grid on the screen."
 	self.offsetX = floor((Display.screenWidth - self.columns * self.colSpacing) / 2)
 	self.offsetY = floor((Display.screenHeight - self.rows * self.rowSpacing) / 2)
 end function
 
 TextDisplay.setCellSpacing = function(colSp, rowSp)
+	"Set the pixel spacing between columns and rows, and re-center the grid."
 	self.colSpacing = colSp
 	self.rowSpacing = rowSp
 	self.updateOffsets
@@ -136,6 +142,7 @@ end function
 // Load a font texture (a 16x16 grid of glyphs) for this display to use.
 // Returns true on success.
 TextDisplay.loadFont = function(fontTexturePath)
+	"Load a font texture for this display to use; return true on success."
 	f = new ScreenFont
 	if not f.load(fontTexturePath) then return false
 	self.font = f
@@ -151,17 +158,20 @@ end function
 
 // Get the cell map at the given row and column, or null if out of range.
 TextDisplay._cellAt = function(row, col)
+	"Return the cell at the given row and column, or null if out of range."
 	if row < 0 or row >= self.rows or col < 0 or col >= self.columns then return null
 	return self._cells[row][col]
 end function
 
 TextDisplay.cell = function(x, y)
+	"Return the character at column x, row y."
 	c = self._cellAt(y, x)
 	if c == null then return null
 	return c.character
 end function
 
 TextDisplay.setCell = function(x, y, character)
+	"Set the character at column x, row y (either may be a list)."
 	if x isa number and y isa number then
 		// fast path
 		c = self._cellAt(y, x)
@@ -180,12 +190,14 @@ TextDisplay.setCell = function(x, y, character)
 end function
 
 TextDisplay.cellColor = function(x, y)
+	"Return the foreground color of the text at column x, row y."
 	c = self._cellAt(y, x)
 	if c == null then return null
 	return c.color
 end function
 
 TextDisplay.setCellColor = function(x, y, foreColor)
+	"Set the foreground color of the text at column x, row y (either may be a list)."
 	if x isa list then cols = x else cols = [x]
 	if y isa list then rows = y else rows = [y]
 	for _y in rows
@@ -197,12 +209,14 @@ TextDisplay.setCellColor = function(x, y, foreColor)
 end function
 
 TextDisplay.cellBackColor = function(x, y)
+	"Return the background color at column x, row y."
 	c = self._cellAt(y, x)
 	if c == null then return null
 	return c.backColor
 end function
 
 TextDisplay.setCellBackColor = function(x, y, backColor)
+	"Set the background color at column x, row y (either may be a list)."
 	if x isa list then cols = x else cols = [x]
 	if y isa list then rows = y else rows = [y]
 	for _y in rows
@@ -217,6 +231,7 @@ end function
 // default to the display's current color/backColor; if inverse is on, the
 // two are swapped as they go into the cell.
 TextDisplay._set = function(row, col, character, foreColor=null, backColor=null)
+	"Store a character and colors in the given cell, swapping colors if inverse is on."
 	if foreColor == null then foreColor = self.color
 	if backColor == null then backColor = self.backColor
 	c = self._cellAt(row, col)
@@ -237,6 +252,7 @@ end function
 
 // Fill one row with the given character, in the current colors.
 TextDisplay.fillRow = function(row, character=" ")
+	"Fill one row with the given character, in the current colors."
 	if row == null then row = self.row
 	if row < 0 or row >= self.rows then return
 	cellRow = self._cells[row]
@@ -251,11 +267,13 @@ TextDisplay.fillRow = function(row, character=" ")
 end function
 
 TextDisplay.clearRow = function(row)
+	"Fill one row with spaces, in the current colors."
 	self.fillRow row, " "
 end function
 
 // Fill the whole grid with the given character, in the current colors.
 TextDisplay.fill = function(character=" ")
+	"Fill the whole grid with the given character, in the current colors."
 	for row in range(0, self.rows - 1, 1)
 		self.fillRow row, character
 	end for
@@ -264,6 +282,7 @@ end function
 // Fill the grid with spaces and hide the cursor.  Note that this does not
 // move the cursor; see the note at the top of this file.
 TextDisplay.clear = function
+	"Fill the grid with spaces and hide the cursor (without moving it)."
 	self.fill " "
 	self.cursorShown = false
 end function
@@ -275,6 +294,7 @@ end function
 // Print a string, followed by the delimiter (which defaults to
 // self.delimiter, i.e. a carriage return).  Pass "" for no delimiter.
 TextDisplay.print = function(s="", delimiter=null)
+	"Print a string at the cursor, followed by the delimiter (default: self.delimiter)."
 	if delimiter == null then delimiter = self.delimiter
 	if s == null then s = ""
 	if not s isa string then s = str(s)
@@ -290,6 +310,7 @@ end function
 // Write a single character at the cursor, interpreting the handful of
 // control codes Mini Micro understands.
 TextDisplay.put = function(character)
+	"Write one character at the cursor, handling control codes such as tab and backspace."
 	code = character.code
 	if code == CR or code == LF then
 		self.nextLine
@@ -316,6 +337,7 @@ end function
 
 // Move the cursor one column right, wrapping to the next line at the edge.
 TextDisplay.advance = function
+	"Move the cursor one column right, wrapping to the next line at the edge."
 	super.column = self.column + 1
 	if self.column >= self.columns then self.nextLine
 end function
@@ -323,6 +345,7 @@ end function
 // Move the cursor one column left, wrapping back to the end of the line
 // above (i.e. the next higher row index).  Stops at the top-left corner.
 TextDisplay.backup = function
+	"Move the cursor one column left, wrapping to the end of the line above."
 	self._hideCursorVisual
 	super.column = self.column - 1
 	if self.column < 0 then
@@ -338,6 +361,7 @@ end function
 // Move the cursor to the start of the next line down, scrolling if we've
 // run off the bottom.
 TextDisplay.nextLine = function
+	"Move the cursor to the start of the next line down, scrolling if needed."
 	super.row = self.row - 1
 	while self.row < 0
 		self.scroll
@@ -347,6 +371,7 @@ end function
 
 // Scroll the contents up one row, clearing the bottom row.
 TextDisplay.scroll = function
+	"Scroll the contents up one row, clearing the bottom row."
 	// Rotate the row lists rather than copying cell by cell; row 0 is about
 	// to be overwritten wholesale by clearRow anyway, so its cells can be
 	// recycled as the new top row.
@@ -366,6 +391,7 @@ end function
 // Internal code that wants the raw, unclamped store writes through `super`
 // instead.
 TextDisplay["column="] = function(value)
+	"Move the cursor to the given column, clamped to the grid."
 	if value < 0 then
 		value = 0
 	else if value >= self.columns then
@@ -379,6 +405,7 @@ TextDisplay["column="] = function(value)
 end function
 
 TextDisplay["row="] = function(value)
+	"Move the cursor to the given row, clamped to the grid."
 	if value < 0 then
 		value = 0
 	else if value >= self.rows then
@@ -410,6 +437,7 @@ TextDisplay._cursorSavedColor = null
 // Internal: invert the cell the cursor is on, without changing the "cursor is
 // on" state.  Used by the blink, which is driven by the console.
 TextDisplay._showCursorVisual = function
+	"Draw the cursor by inverting its cell, without changing cursorShown."
 	c = self._cellAt(self.row, self.column)
 	if c == null then return
 	// Keyed on the save rather than on c.inverse: the console inverts cells for
@@ -422,6 +450,7 @@ end function
 // Internal: un-invert it again.  Used before anything that moves the cursor or
 // writes to the screen.
 TextDisplay._hideCursorVisual = function
+	"Un-invert the cursor's cell, restoring its color, without changing cursorShown."
 	if not self.cursorShown then return
 	c = self._cellAt(self.row, self.column)
 	if c == null then return
@@ -431,12 +460,14 @@ TextDisplay._hideCursorVisual = function
 end function
 
 TextDisplay.hideCursor = function
+	"Hide the text cursor."
 	self._hideCursorVisual
 	self._cursorTime = 0
 	self.cursorShown = false
 end function
 
 TextDisplay.showCursor = function
+	"Show the text cursor."
 	self._showCursorVisual
 	self._cursorTime = 0
 	self.cursorShown = true
@@ -448,6 +479,7 @@ end function
 //----------------------------------------------------------------------
 
 TextDisplay.render = function
+	"Draw the character grid to the screen."
 	if not self.visible then return
 	if self.font == null or not self.font.isLoaded then return
 

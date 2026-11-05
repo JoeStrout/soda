@@ -11,11 +11,27 @@ interpretTrueAndFalse = false
 // Similar flag for string "null".
 interpretNull = true
 
+// hexToInt: convert a string containing a hexadecimal number.
+//	Supports both uppercase and lowercase for digits A-F.
+//	Example: hexToInt("002A") 	// returns 42
+//	Returns an error if s is empty or contains a non-hex character.
+hexToInt = function(s)
+	"Convert a hexadecimal string to a number; return an error if invalid."
+	if not s then return err("hexToInt: empty string")
+	result = 0
+	for c in s
+		if not _hexDigitMap.hasIndex(c) then return err("hexToInt: invalid hex digit '" + c + "'")
+		result = result * 16 + _hexDigitMap[c]
+	end for
+	return result
+end function
+
 // parse: convert a GRFON string into a MiniScript value (which could
 //	include a list or map of other values).  This is the main entry point
 //	for reading GRFON data and converting it to native form.
 //	Example: parse("42")		// returns 42
 parse = function(grfonString)
+	"Convert a GRFON string (or RawData) into a MiniScript value."
 	if intrinsics.hasIndex("RawData") and grfonString isa RawData then grfonString = grfonString.utf8
 	p = new Parser
 	return p.parse(grfonString)
@@ -28,6 +44,7 @@ end function
 // Note that by the special `://` rule, these characters are not escaped,
 // even though in any other combination, `:` and `//` are special.
 escape = function(s)
+	"Return the given string with GRFON special characters backslash-escaped."
 	for i in _escapeIndexes
 		s = s.replace(_escapeFrom[i], _escapeTo[i])
 	end for
@@ -39,6 +56,7 @@ end function
 // unescape: replace backslash sequences in the given string.
 //	Example: unescape("\t")		// returns char(9)
 unescape = function(s)
+	"Return the given string with backslash escape sequences replaced."
 	result = []
 	i = 0
 	maxi = s.len
@@ -74,6 +92,7 @@ unescape = function(s)
 end function
 
 toGRFON = function(value, compact=false, indent=0, topLevel=true)
+	"Convert a MiniScript value to a GRFON string, optionally in compact form."
 	if @value isa funcRef then return "<function>"
 	if value == null then return "null"
 	if value isa number then return str(value)
@@ -97,6 +116,7 @@ Parser._sourceLen = 0
 Parser._p = 0		// index of next character to consume in source
 
 Parser.init = function(source)
+	"Set the source string for this parser to read."
 	self.source = source
 	self._sourceLen = source.len
 end function
@@ -108,6 +128,7 @@ end function
 //	some unkeyed values, will return the unkeyed values as
 //	a list keyed by "_".
 Parser.parse = function(source=null)
+	"Parse the source (a string or list of lines) and return the resulting value."
 	if source isa list then source = source.join(char(10))
 	if source != null then self.init source
 	self._p = 0
@@ -116,6 +137,7 @@ end function
 
 whitespace = " " + char(9) + cr + lf
 Parser._skipWhitespace = function
+	"Advance past any whitespace and // comments."
 	while self._p < self._sourceLen
 		if self.source[self._p : self._p + 2] == "//" then
 			self._skipToEOL
@@ -128,6 +150,7 @@ Parser._skipWhitespace = function
 end function
 
 Parser._skipToEOL = function
+	"Advance past the end of the current line."
 	while self._p < self._sourceLen
 		c = self.source[self._p]
 		self._p += 1
@@ -136,6 +159,7 @@ Parser._skipToEOL = function
 end function
 
 Parser._parseElement = function(asValue=false)
+	"Parse and return one element (value or collection) from the current position."
 	result = null
 	resultIsKeyedMap = false  // true only when result was built by the ":" branch
 	while true
@@ -208,6 +232,7 @@ Parser._parseElement = function(asValue=false)
 end function
 
 Parser._parseValue = function
+	"Parse and return a single scalar value (number, string, or null)."
 	self._skipWhitespace
 	if self._p >= self._sourceLen then return null
 	c = self.source[self._p]
@@ -233,6 +258,7 @@ end function
 // Return [raw string, anyEscape].
 _delims = ":;}" + cr + lf
 Parser._getStringAndEsc = function
+	"Read raw text up to the next delimiter; return [text, whether it had escapes]."
 	startPos = self._p
 	anyEscape = false
 	while self._p < self._sourceLen
@@ -257,6 +283,7 @@ end function
 // so the caller can see if it is a ":" or "}" or whatever.
 // Automatically unescape the string, and return it.
 Parser._parseString = function
+	"Read text up to the next delimiter and return it, unescaped."
 	strAndEsc = self._getStringAndEsc
 	if strAndEsc[1] then return unescape(strAndEsc[0])
 	return strAndEsc[0]
@@ -265,6 +292,7 @@ end function
 // Generating GRFON
 
 _listToGRFON = function(lst, compact, indent, topLevel=false)
+	"Convert a list to GRFON."
 	if compact then
 		ws = "; "
 	else
@@ -289,6 +317,7 @@ _listToGRFON = function(lst, compact, indent, topLevel=false)
 end function
 
 _mapToGRFON = function(m, compact, indent, topLevel=false)
+	"Convert a map to GRFON."
 	if compact then
 		ws = "; "
 	else
@@ -324,16 +353,19 @@ _eol = char(10)
 //----------------------------------------------------------------------
 // Unit tests (run when you load & run this script directly).
 runUnitTests = function
+	"Run unit tests on this module, printing any failures."
 	print "Unit testing: grfon"
 	
 	errorCount = 0
 	assertEqual = function(actual, expected)
+		"Report a test failure if actual does not equal expected."
 		if actual != expected then
 			print "Unit test failure: expected " + expected + ", got " + actual
 			outer.errorCount = errorCount + 1
 		end if
 	end function
 	assertEqualEither = function(actual, expected, expected2)
+		"Report a test failure if actual equals neither expected nor expected2."
 		if actual != expected and actual != expected2 then
 			print "Unit test failure: expected " + expected + ", got " + actual
 			outer.errorCount = errorCount + 1

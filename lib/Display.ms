@@ -10,6 +10,7 @@ globals.displayMode = {
   "sprite": 5 }
 
 displayMode.str = function(modeNum)
+	"Return the name of the given display mode number (e.g. ""pixel"" for 3)."
 	return displayMode.indexOf(modeNum)
 end function
 freeze displayMode
@@ -34,10 +35,12 @@ Display.screenLeft = 0
 Display.screenTop = 0
 
 Display.screenWidth = function
+	"Return the width of the screen area that displays draw into, in pixels."
 	return raylib.GetScreenWidth
 end function
 
 Display.screenHeight = function
+	"Return the height of the screen area that displays draw into, in pixels."
 	return raylib.GetScreenHeight
 end function
 
@@ -48,6 +51,7 @@ end function
 Display._installed = [null] * 8
 
 Display.NewDisplayOfMode = function(mode)
+	"Create and return a new display of the given displayMode."
 	if mode == displayMode.off then return new Display
 	if mode == displayMode.solidColor then return SolidColorDisplay.Make
 	if mode == displayMode.pixel then return PixelDisplay.Make
@@ -58,6 +62,7 @@ Display.NewDisplayOfMode = function(mode)
 end function
 
 Display.FindOrMakeDisplay = function(slotNum, mode)
+	"Return the display of the given mode in the given slot, creating it if needed."
 	disps = Display._installed[slotNum]
 	for d in disps
 		if d.mode == mode then return d
@@ -75,6 +80,7 @@ end function
 // Display subclass, say, declaring the mode it implements) just stores the
 // value, as it always did.
 Display["mode="] = function(newMode)
+	"Make the display of the given mode active in this display's slot."
 	if not (self.index isa number) or self.index < 0 or self.index > 7 then
 		super.mode = newMode
 		return
@@ -96,13 +102,14 @@ end function
 // installed display will be immediately visible ONLY if it happens
 // to match the previous mode.
 Display.install = function(slotNum, asActiveMode=true)
+	"Install this display into the given slot (0-7), optionally making it active."
 	if slotNum == self.index and not asActiveMode then return // already in this slot
 	disps = Display._installed[slotNum]
 	curMode = disps[0].mode
 	for i in disps.indexes
 		if disps[i].mode == self.mode then
-			disps[i].remove i
 			disps[i].index = null
+			disps.remove i
 			break
 		end if
 	end for
@@ -116,6 +123,7 @@ end function
 
 // Get the display currently installed in the given slot.
 globals.display = function(index)
+	"Return the display currently active in the given slot (0-7)."
 	if not (index isa number) or index < 0 or index >= Display._installed.len then
 		return err("display(index): index must be a number from 0 to " + (Display._installed.len-1))
 	end if
@@ -124,6 +132,7 @@ end function
 
 // Initialize all our displays (and eight display slots).
 Display.Initialize = function
+	"Set up all eight display slots and restore the default display configuration."
 	for slot in range(0,7)
 		Display._installed[slot] = []
 		for mode in [0, 3]
@@ -134,6 +143,7 @@ Display.Initialize = function
 end function
 
 clear = function
+	"Reset all displays to their default modes, clear them, and reset gfx and text."
 	modes = [0, 0, 0, 2, 5, 3, 0, 1]
 	for i in range(0, 7)
 		display(i).mode = modes[i]
@@ -149,6 +159,7 @@ end function
 globals.clear = @clear
 
 Display.RenderAll = function
+	"Render the active display in each slot, from back (7) to front (0)."
 	for slot in range(7, 0)
 		Display._installed[slot][0].render
 	end for

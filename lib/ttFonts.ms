@@ -14,11 +14,13 @@ Emoji.ascent = null   // pixels between baseline and top of image; defaults to i
 Emoji.applyColor = false  // if true, tint with text color; if false, don't
 
 Emoji.release = function
+	"Free this emoji's image."
 	if self.image then self.image.release
 	self.image = null
 end function
 
 Emoji.Make = function(imageOrPath, ascent=null)
+	"Create a new Emoji from an Image or image file path, with an optional ascent."
 	noob = new self
 	if imageOrPath isa string then imageOrPath = file.loadImage(imageOrPath)
 	if not imageOrPath isa Image then
@@ -44,6 +46,7 @@ TTFont.emoji = {}
 freeze TTFont.emoji
 
 TTFont.Load = function(path, size=24)
+	"Load a TrueType font file at the given point size and return a new TTFont."
 	// ToDo: provide a way to load more (non-ASCII) characters, perhaps
 	// the standard Mini Micro character set?
 	font = new TTFont
@@ -69,6 +72,7 @@ TTFont.Load = function(path, size=24)
 end function
 
 TTFont.unload = function
+	"Free this font and the images of its emoji."
 	if self._font then
 		rl.UnloadFont(self._font)
 		self._font = null
@@ -81,6 +85,7 @@ end function
 // Render (draw) the given character to gfx, and return how
 // far to shift the cursor.
 TTFont.printChar = function(c, x=480, y=320, scale=1, tint="#FFFFFF")
+	"Draw one character (or emoji) to gfx; return how far to advance the cursor."
 	gfx._dropPixCache
 	rl.BeginTextureMode gfx._renderTex
 	// Use normal color blending for RGB, but MAX mode for alpha,
@@ -109,6 +114,7 @@ end function
 
 // Given a string, split into a list of plain strings and Emoji.
 TTFont._splitIntoParts = function(s)
+	"Split a string into a list of plain strings and Emoji objects."
 	if not s or not self.emoji then return [s]
 	result = []
 	startIdx = 0
@@ -138,6 +144,7 @@ end function
 
 // Print the given string to gfx at the given location.
 TTFont.print = function(s, x=20, y=320, scale=1, tint="#FFFFFF")
+	"Draw a string (which may include emoji) to gfx with its left end at x, y."
 	if not s then return
 	gfx._beginDraw
 	// Use normal color blending for RGB, but MAX mode for alpha,
@@ -168,16 +175,19 @@ end function
 
 // Print the given string to gfx, centered horizontally on the given x.
 TTFont.printCentered = function(s, x=480, y=320, scale=1, tint="#FFFFFF")
+	"Draw a string to gfx, centered horizontally on x."
 	self.print s, x - self.width(s, scale)/2, y, scale, tint
 end function
 
 // Print the given string to gfx, right-aligned on x.
 TTFont.printRight = function(s, x=940, y=320, scale=1, tint="#FFFFFF")
+	"Draw a string to gfx, right-aligned on x."
 	self.print s, x - self.width(s, scale), y, scale, tint
 end function
 
 // Return the width of the given string in this font.
 TTFont.width = function(s, scale=1)
+	"Return the width of the given string in this font, in pixels."
 	width = 0
 	for part in self._splitIntoParts(s)
 		if part isa Emoji then
@@ -192,6 +202,7 @@ end function
 // Return the number of characters of the given string that
 // fit a given width.
 TTFont.lenToFit = function(s, width=100)
+	"Return how many leading characters of a string fit within the given width."
 	if not s or not (s isa string) then return 0
 	if self.width(s) <= width then return s.len
 	lo = 1
@@ -210,6 +221,7 @@ end function
 // Wrap a long text into multiple lines, breaking on words,
 // as needed to fit within the given width.  Return a list of strings.
 TTFont.wrapLines = function(s="", width=550)
+	"Return a list of lines, word-wrapping a string to fit the given pixel width."
 	if not s then return [""]
 	result = []
 
@@ -242,6 +254,7 @@ TTFont.wrapLines = function(s="", width=550)
 end function
 
 TTFont.printWrapped = function(s="", x, y, wrapWidth, tint="#FFFFFF")
+	"Draw a string to gfx word-wrapped to wrapWidth; return the y below the last line."
 	lines = self.wrapLines(s, wrapWidth)
 	for line in lines
 		self.print line, x, y, 1, tint

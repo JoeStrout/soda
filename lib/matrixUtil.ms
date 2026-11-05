@@ -21,6 +21,7 @@
 // A file-scope helper, and so private to this module: the wrapper methods
 // below reach it through `outer`, but importers never see it on the class.
 _asMatrix = function(x)
+	"Return x as a Matrix, converting from a list of lists if needed."
 	if x isa Matrix then return x
 	if x isa list then return Matrix.fromList(x)
 	return err("Matrix: expected a Matrix or a list, got " + x)
@@ -38,6 +39,7 @@ end function
 
 // A.times(B): matrix product (or scaling, if B is a number) -> new Matrix.
 Matrix.times = function(B)
+	"Return a new matrix: this matrix times B (a matrix, list, or number)."
 	if B isa number then return self.gemm(null, null, null, false, false, B)
 	B = _asMatrix(B)
 	if B isa error then return B
@@ -46,6 +48,7 @@ end function
 
 // A.multiplyBy(B): matrix product (or scaling) in place -> self.
 Matrix.multiplyBy = function(B)
+	"Multiply this matrix by B (a matrix, list, or number) in place; return self."
 	if B isa number then return self.gemm(null, null, self, false, false, B)
 	B = _asMatrix(B)
 	if B isa error then return B
@@ -54,41 +57,49 @@ end function
 
 // A.timesInto(B, out): matrix product written into an existing matrix -> out.
 Matrix.timesInto = function(B, out)
+	"Store this matrix times B into the existing matrix out; return out."
 	return self.gemm(B, null, out)
 end function
 
 // A.transposedTimes(B): Aᵀ·B, without ever forming Aᵀ -> new Matrix.
 Matrix.transposedTimes = function(B)
+	"Return a new matrix: the transpose of this matrix, times B."
 	return self.gemm(B, null, null, true)
 end function
 
 // A.timesTransposed(B): A·Bᵀ, without ever forming Bᵀ -> new Matrix.
 Matrix.timesTransposed = function(B)
+	"Return a new matrix: this matrix times the transpose of B."
 	return self.gemm(B, null, null, false, true)
 end function
 
 // A.timesPlus(B, c): A·B + c, one pass; c broadcasts like any addend -> new.
 Matrix.timesPlus = function(B, c)
+	"Return a new matrix: this matrix times B, plus c."
 	return self.gemm(B, c)
 end function
 
 // A.timesPlusInto(B, c, out): A·B + c, written into an existing matrix -> out.
 Matrix.timesPlusInto = function(B, c, out)
+	"Store this matrix times B, plus c, into the existing matrix out; return out."
 	return self.gemm(B, c, out)
 end function
 
 // A.plusScaled(C, beta): A + beta*C -> new Matrix.
 Matrix.plusScaled = function(C, beta)
+	"Return a new matrix: this matrix plus beta times C."
 	return self.gemm(null, C, null, false, false, 1, beta)
 end function
 
 // A.addScaled(C, beta): A += beta*C, in place -> self.
 Matrix.addScaled = function(C, beta)
+	"Add beta times C to this matrix in place; return self."
 	return self.gemm(null, C, self, false, false, 1, beta)
 end function
 
 // C.addProduct(A, B): C += A·B, in place -> self.
 Matrix.addProduct = function(A, B)
+	"Add A times B to this matrix in place; return self."
 	A = _asMatrix(A)
 	if A isa error then return A
 	B = _asMatrix(B)
@@ -98,21 +109,25 @@ end function
 
 // A.transposed -> a new matrix, the transpose of A.
 Matrix.transposed = function
+	"Return a new matrix that is the transpose of this one."
 	return self.gemm(null, null, null, true)
 end function
 
 // A.transpose: transpose in place (reshaping self) -> self.
 Matrix.transpose = function
+	"Transpose this matrix in place; return self."
 	return self.gemm(null, null, self, true)
 end function
 
 // A.clone -> an independent copy of A.
 Matrix.clone = function
+	"Return an independent copy of this matrix."
 	return self.gemm(null)
 end function
 
 // A.copyFrom(B): overwrite A's contents with B's, resizing as needed -> self.
 Matrix.copyFrom = function(B)
+	"Overwrite this matrix with the contents of B, resizing as needed; return self."
 	B = _asMatrix(B)
 	if B isa error then return B
 	return B.gemm(null, null, self)
@@ -121,31 +136,37 @@ end function
 // A.plus(x) -> new matrix, A + x.  x may be a number, a Matrix, or a list;
 // a 1 x n or n x 1 operand broadcasts, as it does everywhere else.
 Matrix.plus = function(x)
+	"Return a new matrix: this matrix plus x (a number, matrix, or list)."
 	return self.gemm(null, x)
 end function
 
 // A.add(x): A += x, in place -> self.
 Matrix.add = function(x)
+	"Add x (a number, matrix, or list) to this matrix in place; return self."
 	return self.gemm(null, x, self)
 end function
 
 // A.minus(x) -> new matrix, A - x.
 Matrix.minus = function(x)
+	"Return a new matrix: this matrix minus x (a number, matrix, or list)."
 	return self.gemm(null, x, null, false, false, 1, -1)
 end function
 
 // A.subtract(x): A -= x, in place -> self.
 Matrix.subtract = function(x)
+	"Subtract x (a number, matrix, or list) from this matrix in place; return self."
 	return self.gemm(null, x, self, false, false, 1, -1)
 end function
 
 // A.negated -> new matrix, -A.
 Matrix.negated = function
+	"Return a new matrix with every element negated."
 	return self.gemm(null, null, null, false, false, -1)
 end function
 
 // A.negate: negate in place -> self.
 Matrix.negate = function
+	"Negate every element of this matrix in place; return self."
 	return self.gemm(null, null, self, false, false, -1)
 end function
 
@@ -160,6 +181,7 @@ end function
 
 // Hadamard (elementwise) product -> new matrix.
 Matrix.elemTimes = function(x)
+	"Return a new matrix: the elementwise product of this matrix and x."
 	c = self.clone
 	if c isa error then return c
 	return c.elemMultiplyBy(x)
@@ -167,6 +189,7 @@ end function
 
 // Elementwise quotient -> new matrix.
 Matrix.elemOver = function(x)
+	"Return a new matrix: the elementwise quotient of this matrix and x."
 	c = self.clone
 	if c isa error then return c
 	return c.elemDivideBy(x)
@@ -174,24 +197,28 @@ end function
 
 // Each element raised to the k'th power -> new matrix.
 Matrix.powed = function(k)
+	"Return a new matrix with every element raised to the power k."
 	c = self.clone
 	if c isa error then return c
 	return c.pow(k)
 end function
 
 Matrix.absed = function
+	"Return a new matrix with the absolute value of every element."
 	c = self.clone
 	if c isa error then return c
 	return c.abs
 end function
 
 Matrix.sqrted = function
+	"Return a new matrix with the square root of every element."
 	c = self.clone
 	if c isa error then return c
 	return c.sqrt
 end function
 
 Matrix.rounded = function(places = 0)
+	"Return a new matrix with every element rounded to the given decimal places."
 	c = self.clone
 	if c isa error then return c
 	return c.round(places)
@@ -199,6 +226,7 @@ end function
 
 // Each element clamped to [lo, hi]; a null bound means unbounded -> new matrix.
 Matrix.clamped = function(lo, hi)
+	"Return a new matrix with every element clamped to lo-hi (null means no limit)."
 	c = self.clone
 	if c isa error then return c
 	return c.clamp(lo, hi)
@@ -206,6 +234,7 @@ end function
 
 // f applied to each element, in row-major order -> new matrix.
 Matrix.applied = function(f)
+	"Return a new matrix with f applied to every element."
 	c = self.clone
 	if c isa error then return c
 	return c.apply(@f)
@@ -213,30 +242,35 @@ end function
 
 // f(element, arg1) applied to each element -> new matrix.
 Matrix.applied1 = function(f, arg1)
+	"Return a new matrix with f(element, arg1) applied to every element."
 	c = self.clone
 	if c isa error then return c
 	return c.apply1(@f, arg1)
 end function
 
 Matrix.sigmoided = function
+	"Return a new matrix with the sigmoid function applied to every element."
 	c = self.clone
 	if c isa error then return c
 	return c.sigmoid
 end function
 
 Matrix.tanhed = function
+	"Return a new matrix with tanh applied to every element."
 	c = self.clone
 	if c isa error then return c
 	return c.tanh
 end function
 
 Matrix.softmaxed = function(axis = 1)
+	"Return a new matrix with softmax applied along the given axis."
 	c = self.clone
 	if c isa error then return c
 	return c.softmax(axis)
 end function
 
 Matrix.reshaped = function(rows, columns)
+	"Return a new matrix with the same elements, reshaped to rows x columns."
 	c = self.clone
 	if c isa error then return c
 	return c.reshape(rows, columns)
@@ -249,32 +283,38 @@ end function
 
 // True if m2 has exactly our shape.  (m.size, a list of extents, is intrinsic.)
 Matrix.sameSize = function(m2)
+	"Return whether m2 has exactly the same shape as this matrix."
 	return self.rows == m2.rows and self.columns == m2.columns
 end function
 
 // [0, 1, ... rows-1], for iterating.  Not cached: matrices can be resized.
 Matrix.rowRange = function
+	"Return a list of the row indexes, 0 to rows-1."
 	if self.rows == 0 then return []
 	return range(0, self.rows - 1)
 end function
 
 Matrix.colRange = function
+	"Return a list of the column indexes, 0 to columns-1."
 	if self.columns == 0 then return []
 	return range(0, self.columns - 1)
 end function
 
 // One row, as a 1 x columns Matrix.  (For a plain list, use getRow.)
 Matrix.row = function(r)
+	"Return row r as a new 1 x columns matrix."
 	return self.getSub(r, 0, 1)
 end function
 
 // One column, as a rows x 1 Matrix.  (For a plain list, use getColumn.)
 Matrix.column = function(c)
+	"Return column c as a new rows x 1 matrix."
 	return self.getSub(0, c, null, 1)
 end function
 
 // One column, as a 1 x rows Matrix.
 Matrix.columnAsRow = function(c)
+	"Return column c as a new 1 x rows matrix."
 	sub = self.getSub(0, c, null, 1)
 	if sub isa error then return sub
 	return sub.transpose		// in place: `sub` is ours, freshly made
@@ -282,6 +322,7 @@ end function
 
 // The whole matrix as a list of row lists.
 Matrix.toList = function
+	"Return this matrix as a list of row lists."
 	result = []
 	for r in self.rowRange
 		result.push self.getRow(r)
@@ -291,11 +332,13 @@ end function
 
 // Reshape to a single row, in place -> self.
 Matrix.flatten = function
+	"Reshape this matrix to a single row, in place; return self."
 	return self.reshape(1, null)
 end function
 
 // A new 1 x n matrix holding our elements in row-major order.
 Matrix.flattened = function
+	"Return a new 1 x n matrix of this matrix's elements, in row-major order."
 	c = self.clone
 	if c isa error then return c
 	return c.flatten
@@ -304,6 +347,7 @@ end function
 // The sum of the main diagonal.  Defined for non-square matrices too, over
 // min(rows, columns) elements, as numpy's trace is.
 Matrix.trace = function
+	"Return the sum of the elements on the main diagonal."
 	n = self.rows
 	if self.columns < n then n = self.columns
 	total = 0
@@ -326,6 +370,7 @@ end function
 // across the row).  Returns the new row's index -- so a spawn reads
 // `i = pos.addRow([x, y])`.
 Matrix.addRow = function(values)
+	"Append one row (a list, or a number for every column); return its index."
 	// A matrix with no shape at all adopts the width of its first row.
 	if self.rows == 0 and self.columns == 0 and values isa list then
 		e = self.resize(0, values.len)
@@ -342,6 +387,7 @@ end function
 // Append rows: `n` blank (zero) rows if given a number, or the rows of a
 // Matrix or list of lists.  Returns the first new row's index.
 Matrix.addRows = function(rowsOrCount)
+	"Append n zero rows, or the rows of a matrix or list; return the first new index."
 	i = self.rows
 	if rowsOrCount isa number then
 		e = self.resize(i + rowsOrCount, null)
@@ -355,6 +401,7 @@ end function
 
 // Append all the rows of m2 (a Matrix or list of lists) -> self.
 Matrix.appendRows = function(m2)
+	"Append all rows of m2 (a matrix or list of lists); return self."
 	m2 = _asMatrix(m2)
 	if m2 isa error then return m2
 	if self.rows == 0 then
@@ -378,6 +425,7 @@ end function
 // A list rather than a pair because pairwise chaining (a.vcat(b).vcat(c))
 // recopies the accumulated prefix at every step; this sizes the result once.
 Matrix.vcat = function(matrices)
+	"Return a new matrix stacking the given list of matrices vertically."
 	blocks = []
 	rows = 0
 	cols = 0
@@ -406,6 +454,7 @@ end function
 // Matrix.hcat(matrices): the same, side by side.  Note that this is inherently
 // a full copy: row-major storage means no column is contiguous.
 Matrix.hcat = function(matrices)
+	"Return a new matrix joining the given list of matrices side by side."
 	blocks = []
 	rows = 0
 	cols = 0
@@ -435,6 +484,7 @@ end function
 // out in row-major order.  Exactly one of rows/columns may be null and is
 // then inferred; both null gives a 1 x n row vector.
 Matrix.fromFlatList = function(flatList, rows, columns)
+	"Return a new matrix from a flat list in row-major order, inferring a null dimension."
 	m = Matrix.fromList(flatList)
 	if m isa error then return m
 	if rows == null and columns == null then return m
@@ -451,6 +501,7 @@ end function
 
 // The mean, over the whole matrix or along one axis.
 Matrix.mean = function(axis)
+	"Return the mean of all elements, or along axis 0 (columns) or 1 (rows)."
 	s = self.sum(axis)
 	if s isa error then return s
 	if axis == null then
@@ -465,16 +516,19 @@ end function
 
 // Add all the rows together -> 1 x columns.
 Matrix.sumRows = function
+	"Return a new 1 x columns matrix: the sum of all rows."
 	return self.sum(0)
 end function
 
 // Add all the columns together -> rows x 1.
 Matrix.sumColumns = function
+	"Return a new rows x 1 matrix: the sum of all columns."
 	return self.sum(1)
 end function
 
 // The Euclidean length of each row -> rows x 1.
 Matrix.rowLengths = function
+	"Return a new rows x 1 matrix of the Euclidean length of each row."
 	s = self.sumOfSquares(1)
 	if s isa error then return s
 	return s.sqrt
@@ -482,12 +536,14 @@ end function
 
 // Scale each row to unit length, in place -> self.
 Matrix.normalizeRows = function
+	"Scale each row to unit length, in place; return self."
 	lengths = self.rowLengths
 	if lengths isa error then return lengths
 	return self.elemDivideBy(lengths)
 end function
 
 Matrix.normalizedRows = function
+	"Return a new matrix with each row scaled to unit length."
 	c = self.clone
 	if c isa error then return c
 	return c.normalizeRows
@@ -496,6 +552,7 @@ end function
 // The dot product of each row with the corresponding row of m2 -> rows x 1.
 // m2 may have one row, which is then dotted with every row of self.
 Matrix.rowDot = function(m2)
+	"Return a new rows x 1 matrix of the dot product of each row with the row of m2."
 	p = self.elemTimes(m2)
 	if p isa error then return p
 	return p.sum(1)
@@ -511,10 +568,12 @@ end function
 
 // ReLU, in place -> self.
 Matrix.relu = function
+	"Apply ReLU (replace negatives with 0) in place; return self."
 	return self.clamp(0, null)
 end function
 
 Matrix.relued = function
+	"Return a new matrix with ReLU (negatives replaced with 0) applied."
 	c = self.clone
 	if c isa error then return c
 	return c.relu
@@ -522,6 +581,7 @@ end function
 
 // relu'(y) = (y > 0) -> new matrix of 0s and 1s.
 Matrix.reluDeriv = function
+	"Return a new matrix of the ReLU derivative (1 where positive, else 0)."
 	c = self.clone
 	if c isa error then return c
 	return c.greaterThan(0)
@@ -529,6 +589,7 @@ end function
 
 // sigmoid'(y) = y * (1 - y), where y is the sigmoid's output.
 Matrix.sigmoidDeriv = function
+	"Return a new matrix of the sigmoid derivative, given sigmoid outputs."
 	d = self.negated			// -y
 	if d isa error then return d
 	d.add 1						// 1 - y
@@ -537,6 +598,7 @@ end function
 
 // tanh'(y) = 1 - y², where y is the tanh's output.
 Matrix.tanhDeriv = function
+	"Return a new matrix of the tanh derivative, given tanh outputs."
 	d = self.powed(2)			// y²
 	if d isa error then return d
 	d.negate					// -y²
@@ -547,6 +609,7 @@ end function
 // exactly yHat - targets.  `self` is the *probabilities* (softmax output),
 // i.e. what softmaxCrossEntropy wrote into its outProbs argument.
 Matrix.softmaxCrossEntropyGrad = function(targets)
+	"Return the gradient of softmax cross-entropy loss (these probabilities minus targets)."
 	return self.minus(targets)
 end function
 
@@ -567,6 +630,7 @@ _band = Matrix.ofSize(0, 0)
 
 // Fold an index that has run off either end of 0..n-1 back into range.
 _borderIndex = function(t, n, mode)
+	"Fold an out-of-range index t back into 0 to n-1, according to the border mode."
 	if mode == "wrap" then
 		t = t % n
 		if t < 0 then t += n
@@ -603,6 +667,7 @@ end function
 // The names are scipy.ndimage's.  Corners come out right for every mode:
 // rows are filled first, then whole columns including the new rows.
 Matrix.refreshBorder = function(kernel, mode=0)
+	"Fill the border that convolve(kernel) leaves unwritten, using the given mode; return self."
 	if kernel isa Matrix then
 		kh = kernel.rows; kw = kernel.columns
 	else if kernel isa list and kernel.len > 0 and kernel[0] isa list then
@@ -658,6 +723,7 @@ end function
 // rotation), in place -> self.  convolve correlates; flipping the kernel first
 // gives true convolution, as scipy.signal.convolve2d or MATLAB conv2 compute.
 Matrix.flip = function
+	"Reverse the elements in both dimensions (rotate 180 degrees) in place; return self."
 	i = 0; j = self.rows - 1
 	while i < j; self.swapRows i, j; i += 1; j -= 1; end while
 	i = 0; j = self.columns - 1
@@ -667,6 +733,7 @@ end function
 
 // m.flipped -> new matrix, m reversed in both dimensions.
 Matrix.flipped = function
+	"Return a new matrix with the elements reversed in both dimensions."
 	return self.clone.flip
 end function
 
@@ -681,6 +748,7 @@ Matrix.maxStrColumns = 8
 
 // Print the whole matrix, one row per line.
 Matrix.print = function(fieldWidth = 10, precision = null)
+	"Print the whole matrix, one row per line."
 	print self.format(fieldWidth, precision)
 end function
 
@@ -688,6 +756,7 @@ end function
 // a method rather than an override of the global str(m) because MiniScript
 // has no hook for a map to define its own string form.
 Matrix.str = function
+	"Return a short string showing the dimensions and the top-left elements."
 	desc = self.rows + "x" + self.columns + " Matrix"
 	if self.rows == 0 or self.columns == 0 then return desc
 	r = self.rows
@@ -713,10 +782,12 @@ end function
 //----------------------------------------------------------------------
 
 runUnitTests = function
+	"Run unit tests on this module, printing any failures."
 	print "Unit testing: matrixUtil"
 
 	errorCount = 0
 	assertEqual = function(actual, expected, note)
+		"Report a test failure if actual does not equal expected."
 		if actual isa Matrix then actual = actual.toList
 		if actual != expected then
 			print "Unit test failure (" + note + "): expected " + expected +
@@ -726,6 +797,7 @@ runUnitTests = function
 	end function
 
 	assert = function(shouldBeTrue, note)
+		"Report a test failure if shouldBeTrue is not true."
 		if shouldBeTrue then return
 		print "Unit test failure (" + note + ") at " + stackTrace[1]
 		outer.errorCount = errorCount + 1
@@ -779,9 +851,9 @@ runUnitTests = function
 	assertEqual m.times(0.5).rounded, [[1,1,2], [2,3,3]], "rounded"
 	assertEqual m.clamped(2, 5), [[2,2,3], [4,5,5]], "clamped"
 	assertEqual m.clamped(0, null), [[1,2,3], [4,5,6]], "clamped null hi"
-	double = function(x); return x*2; end function
+	double = function(x); "Return x times 2."; return x*2; end function
 	assertEqual m.applied(@double), [[2,4,6], [8,10,12]], "applied"
-	addUp = function(x, k); return x + k; end function
+	addUp = function(x, k); "Return x plus k."; return x + k; end function
 	assertEqual m.applied1(@addUp, 100), [[101,102,103], [104,105,106]], "applied1"
 	assertEqual m, [[1,2,3], [4,5,6]], "elementwise copies leave self alone"
 

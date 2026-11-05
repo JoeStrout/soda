@@ -9,11 +9,13 @@ max = @mathUtil.max; min = @mathUtil.min
 
 // Print without a carriage return (i.e. moving to the next line).
 printNoCR = function(s)
+	"Print the given string without moving to the next line."
 	print s, ""
 end function
 
 // Draw a button with the given caption at the cursor position.
 drawButton = function(caption)
+	"Print a button with the given caption at the cursor position."
 	text.inverse = not text.inverse
 	print char(57856) + caption + char(57857), ""
 	text.inverse = not text.inverse
@@ -28,6 +30,7 @@ end function
 //		maxLines: maximum lines to print; or if null, no limit
 // Returns: remaining (unprinted) portion of string, or null
 printWrap = function(s, width=null, maxLines=null)
+	"Print a string word-wrapped to the given width; return any unprinted remainder."
 	left = text.column
 	if width == null then width = 67 - left
 	lineCount = 0
@@ -59,17 +62,20 @@ end function
 
 // Get the text column for a given screen pixel X coordinate.
 textCol = function(pixelX)
+	"Return the text column at the given screen X coordinate."
 	return floor((pixelX-5)/14)
 end function
 
 // Get the text row for a given screen pixel Y coordinate.
 textRow = function(pixelY)
+	"Return the text row at the given screen Y coordinate."
 	return floor((pixelY-6)/24)
 end function
 
 // Print a string starting at the given column and row.
 // Also, if you use this to print to row 0, it avoids the usual scrolling.
 printAt = function(column, row, s)
+	"Print a string at the given column and row (without scrolling on row 0)."
 	text.row = row
 	text.column = column
 	if row == 0 then
@@ -82,6 +88,7 @@ end function
 
 // Print a string centered on the given column and row.
 printCenteredAt = function(column, row, s)
+	"Print a string centered on the given column and row."
 	printAt column - s.len/2, row, s
 end function
 
@@ -89,6 +96,7 @@ end function
 // (by filling the rest of the line with spaces, or whatever character you specify).
 // Also applies default foreground and background colors.
 clearToEOL = function(character=" ")
+	"Clear from the cursor to the end of the line, in the current colors."
 	cols = range(text.column, 67)
 	text.setCell cols, text.row, character
 	text.setCellColor cols, text.row, text.color
@@ -99,6 +107,7 @@ end function
 // (or whatever character you specify).
 // Also applies default foreground and background colors.
 clearRow = function(row=null, character=" ")
+	"Clear the given row (or rows), in the current colors."
 	if row == null then row = text.row
 	if not row isa list then row = [row]
 	allCols = range(0, 67)
@@ -113,6 +122,7 @@ end function
 // (or whatever character you specify).
 // Also applies default foreground and background colors.
 clearRect = function(left=0, bottom=0, width=68, height=25, character=" ")
+	"Clear a rectangular area of the text display, in the current colors."
 	for r in range(bottom, bottom+height-1)
 		for c in range(left, left+width-1)
 			text.setCell c, r, character
@@ -130,6 +140,7 @@ buttonRight = char(57857) + char(135)
 // button function: returns a complete printable button with the given
 // caption, optionally padded to some caption length.
 button = function(caption, minCaptionLength=0)
+	"Return a printable button string with the given caption, optionally padded."
 	if caption.len < minCaptionLength then
 		pad = minCaptionLength - caption.len
 		caption = " " * floor(pad/2) + caption + " " * ceil(pad/2)
@@ -144,6 +155,7 @@ Cell.character = ""
 Cell.color = ""
 Cell.backColor = ""
 Cell.get = function(column, row)
+	"Return a new Cell holding the character and colors at the given column and row."
 	result = new Cell
 	result.character = text.cell(column, row)
 	result.color = text.cellColor(column, row)
@@ -151,6 +163,7 @@ Cell.get = function(column, row)
 	return result
 end function
 Cell.apply = function(column, row)
+	"Store this cell's character and colors at the given column and row."
 	text.setCell column, row, self.character
 	text.setCellColor column, row, self.color
 	text.setCellBackColor column, row, self.backColor
@@ -160,6 +173,7 @@ end function
 // of Cell objects in [row][col] order.
 // (You can then restore this later with setContent.)
 getContent = function
+	"Return the whole text display as a 2D array of Cells, in [row][col] order."
 	rows = []
 	for row in range(0, 25)
 		cols = []
@@ -174,6 +188,7 @@ end function
 // setContent: restore the content of the text display with the given
 // 2D array of Cell objects in [row][col] order.
 setContent = function(data)
+	"Restore the text display from a 2D array of Cells (as from getContent)."
 	row = 0
 	for dataRow in data
 		col = 0
@@ -190,6 +205,7 @@ end function
 // getState: get the content of the screen as well as the text
 // colors and cursor position.  Use with setState (below).
 getState = function
+	"Return the text display content, colors, delimiter, and cursor position."
 	result = {}
 	result.text = getContent
 	result.color = text.color
@@ -202,6 +218,7 @@ end function
 // setState: set the screen content, text colors, and cursor position
 // (as obtained from getState).
 setState = function(state)
+	"Restore the text display content, colors, delimiter, and cursor (as from getState)."
 	setContent state.text
 	text.color = state.color
 	text.backColor = state.backColor
@@ -226,10 +243,11 @@ DialogButton = {}
 DialogButton.caption = "Button"
 DialogButton.visible = false
 DialogButton.key = ""  // shortcut key
-DialogButton.width = function; return self.caption.len + 2; end function
+DialogButton.width = function; "Return the width of this button, in text columns."; return self.caption.len + 2; end function
 DialogButton.x = 20
 DialogButton.y = 10
 DialogButton.draw = function
+	"Draw this button at its position on the text display."
 	c = text.backColor
 	text.row = self.y; text.column = self.x; print buttonLeft, ""
 	text.backColor = color.black
@@ -238,10 +256,12 @@ DialogButton.draw = function
 	print buttonRight, ""
 end function
 DialogButton.contains = function(pt)
+	"Return whether the given screen point is within this button."
 	return textRow(pt.y) == self.y and 
 	   textCol(pt.x) >= self.x and textCol(pt.x) < self.x + self.width
 end function
 DialogButton.trackHit = function
+	"Track the mouse while the button is held; return whether it was released inside."
 	c = text.cellBackColor(self.x, self.y)
 	while mouse.button
 		text.color = c
@@ -256,6 +276,7 @@ DialogButton.trackHit = function
 end function
 
 Dialog.make = function(title="", message="Your message here.")
+	"Create a new Dialog with the given title and message, and an OK button."
 	dlog = new Dialog
 	dlog.title = title
 	dlog.message = message
@@ -273,14 +294,15 @@ Dialog.make = function(title="", message="Your message here.")
 	return dlog
 end function
 
-Dialog.top = function; return 11 + ceil(self.height/2); end function
-Dialog.bottom = function; return 12 - floor(self.height/2); end function
-Dialog.left = function; return 34 - floor(self.width/2); end function
-Dialog.right = function; return 33 + ceil(self.width/2); end function
+Dialog.top = function; "Return the top text row of this dialog."; return 11 + ceil(self.height/2); end function
+Dialog.bottom = function; "Return the bottom text row of this dialog."; return 12 - floor(self.height/2); end function
+Dialog.left = function; "Return the left text column of this dialog."; return 34 - floor(self.width/2); end function
+Dialog.right = function; "Return the right text column of this dialog."; return 33 + ceil(self.width/2); end function
 
 // Helper function to draw the dialog and return the button instances.
 // Most user code will not call this directly; call Dialog.show instead.
 Dialog.draw = function	
+	"Draw this dialog and its buttons; return the list of buttons."
 	rows = range(self.bottom, self.top)
 	cols = range(self.left, self.right)
 	
@@ -321,6 +343,7 @@ end function
 // Another internal helper function used to draw the content of the dialog,
 // given the range of rows and columns.
 Dialog.drawContent = function(cols, rows)
+	"Draw the dialog message within the given columns and rows."
 	text.color = self.textColor
 	text.backColor = self.backColor
 	text.row = rows[-2]
@@ -333,13 +356,14 @@ end function
 // Return true if event handled, false or null otherwise.  To close
 // the dialog, set self.done = true.
 Dialog.handleMouse = null
-Dialog.handleKey = function(k); end function
-Dialog.handleMouseWheel = function(axisValue); end function
+Dialog.handleKey = function(k); "Override to handle a keypress; return true if handled."; end function
+Dialog.handleMouseWheel = function(axisValue); "Override to handle mouse wheel movement."; end function
 Dialog.cleanup = null
 
 // Main entry point: call this to show your dialog, and get back a reference
 // to the button that was pressed.
 Dialog.show = function(timeout=null)
+	"Show this dialog and wait for the user; return the button pressed (or null on timeout)."
 	priorState = getState
 	
 	// draw the dialog, and get back the list of visible buttons
@@ -408,6 +432,7 @@ FileDialog.playingSound = null
 FileDialog.origDisp0 = null
 FileDialog.selection = ""
 FileDialog.make = function(title="Select file", width=null)
+	"Create a new FileDialog for picking a file, starting in the current directory."
 	dlog = Dialog.make(title)
 	dlog.__isa = FileDialog
 	dlog.okBtn.caption = "Select"
@@ -434,6 +459,7 @@ FileDialog.make = function(title="Select file", width=null)
 end function
 
 FileDialog.select = function(path)
+	"Select the given file path, changing directory if needed."
 	self.stopPreview
 	self.selection = path
 	dir = file.parent(path)
@@ -455,6 +481,7 @@ FileDialog.select = function(path)
 end function
 
 FileDialog.getFileInfoForDir = function(dir)
+	"Return a list of file info maps for the given directory, sorted by name."
 	files = file.children(dir)
 	if not files then return []
 	for i in range(files.len - 1)
@@ -470,6 +497,7 @@ FileDialog.getFileInfoForDir = function(dir)
 end function	
 
 FileDialog.highlightedInCol0 = function
+	"Return the index of the directory in column 0 that contains the selection."
 	f = self.files
 	for i in f.indexes
 		if f[i].isDirectory and self.selection.startsWith(f[i].path+"/") then
@@ -479,12 +507,14 @@ FileDialog.highlightedInCol0 = function
 end function
 
 FileDialog.highlightedInColumn = function(colNum)
+	"Return the index of the highlighted entry in the given column."
 	if colNum == 0 then return self.highlightedInCol0
 	if colNum == 1 then return self.selIdx
 	return 0
 end function
 
 FileDialog.scrollIntoView = function(colNum, files, selectedIndex, padding=2)
+	"Scroll the given column so the selected index is visible."
 	posInView = selectedIndex - self.scroll[colNum]
 	if posInView < padding then
 		self.scroll[colNum] = max(0, selectedIndex - padding)
@@ -498,6 +528,7 @@ FileDialog.scrollIntoView = function(colNum, files, selectedIndex, padding=2)
 end function
 
 FileDialog.drawFiles = function(colNum=1, files=null)
+	"Draw the list of files in the given column."
 	if files == null then files = self.files
 	width = self.colWidth[colNum]
 	text.row = self.top - 2
@@ -535,6 +566,7 @@ FileDialog.drawFiles = function(colNum=1, files=null)
 end function
 
 FileDialog.drawParentDir = function
+	"Draw the contents of the parent directory in column 0."
 	if self.directory == "/" then
 		text.row = self.top - 2
 		text.column = self.colLeft[0]
@@ -552,6 +584,7 @@ FileDialog.drawParentDir = function
 end function
 
 FileDialog.drawPreviewText = function(lines)
+	"Draw the given lines of text in the preview column."
 	text.color = self.listTextColor
 	text.backColor = self.listBackColor
 	text.row = self.top - 2
@@ -564,6 +597,7 @@ FileDialog.drawPreviewText = function(lines)
 end function
 
 FileDialog.drawPreview = function
+	"Draw a preview of the selected file or directory in column 2."
 	if not (0 <= self.selIdx < self.files.len) then
 		self.drawPreviewText []
 		return
@@ -618,6 +652,7 @@ FileDialog.drawPreview = function
 end function
 
 FileDialog.stopPreview = function
+	"Stop any sound preview and remove any image preview."
 	if self.playingSound then
 		self.playingSound.stop
 		self.playingSound = null
@@ -632,6 +667,7 @@ end function
 FileDialog.cleanup = @FileDialog.stopPreview
 
 FileDialog.drawContent = function(cols, rows)
+	"Draw the current directory and all three columns."
 	self.drawCurDir
 	self.drawParentDir		// leftmost column
 	self.drawFiles			// center column
@@ -639,12 +675,14 @@ FileDialog.drawContent = function(cols, rows)
 end function
 
 FileDialog.drawCurDir = function
+	"Draw the path of the current directory at the top of the dialog."
 	text.color = self.textColor; text.backColor = self.backColor
 	text.row = self.top - 1; text.column = self.left + 2
 	print self.directory.pad(self.width-4)
 end function
 
 FileDialog.selectIdx = function(newSelIdx, padding=6)
+	"Select the file at the given index in the current directory, and redraw."
 	if not self.files then
 		self.selIdx = -1
 		return
@@ -659,6 +697,7 @@ FileDialog.selectIdx = function(newSelIdx, padding=6)
 end function
 
 FileDialog.handleKey = function(k)
+	"Handle navigation keys (arrows, Home, End, page keys, letters); return true if handled."
 	self.stopPreview
 	kcode = k.code
 	count = self.files.len
@@ -694,6 +733,7 @@ FileDialog.handleKey = function(k)
 end function
 
 FileDialog.handleMouse = function
+	"Handle a click on a file entry; return true if handled."
 	row = textRow(mouse.y)
 	if row > self.top-2 or row < self.top-2 - (self.height-6) then return false
 	col = textCol(mouse.x)
@@ -721,6 +761,7 @@ FileDialog.handleMouse = function
 end function
 
 FileDialog.handleMouseWheel = function(axisValue)
+	"Move the selection up or down in response to the mouse wheel."
 	if axisValue > 0 then
 		self.selectIdx(self.selIdx-1)
 	else

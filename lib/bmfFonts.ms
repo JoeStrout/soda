@@ -19,6 +19,7 @@ CharData._name = "bmfFonts.CharData";
 // charData map.  Return the next data position after
 // the character has been read (i.e., position of next char).
 CharData.load = function(data, pos)
+	"Read this character's data from RawData at pos; return the position just past it."
 	self.width = data.byte(pos)
 	self.height = data.byte(pos+1)
 	self.relX = data.sbyte(pos+2)
@@ -49,6 +50,7 @@ for i in range(0,255); hexStrToInt[hex2(i)] = i; end for
 // Note that an index of 0 always means "don't draw" (transparent).
 // Also, this function has no effect if self.image is null.
 CharData.findColorsFromImage = function(paletteMap, alphaBits)
+	"Rebuild this character's color-index list from its image and the given palette map."
 	if not self.image then return
 	self.colors = []
 	for bitmapY in range(self.height - 1)
@@ -76,6 +78,7 @@ end function
 // Write the data for this character out to a binary stream (defined
 // in Font.save, below).  This is a helper method for Font.save.
 CharData.save = function(stream, paletteMap, alphaBits)
+	"Write this character's data to the given BinaryStream (used by Font.save)."
 	stream.writeByte self.width
 	stream.writeByte self.height
 	stream.writeByte self.relX
@@ -96,11 +99,13 @@ Font.data = null	// raw data from file
 Font.chars = null   // key: character; value: charData map
 Font.kernMap = null  // key: char1; value: map from char2->kern
 Font.setKern = function(c1, c2, kern)
+	"Set the kerning adjustment between characters c1 and c2."
 	if self.kernMap == null then self.kernMap = {}
 	if not self.kernMap.hasIndex(c1) then self.kernMap[c1] = {}
 	self.kernMap[c1][c2] = kern
 end function
 Font.kern = function(c1, c2)
+	"Return the kerning adjustment between characters c1 and c2 (0 if none)."
 	if self.kernMap == null then return 0
 	if not self.kernMap.hasIndex(c1) then return 0
 	km = self.kernMap[c1]
@@ -112,6 +117,7 @@ end function
 // Call this on the Font class itself (i.e. not an instance).
 // Pass in the path to the font file; get back a new Font object.
 Font.load = function(path)
+	"Load a BMF font file from the given path and return a new Font (or null)."
 	data = file.loadRaw(path)
 	if data == null then return null
 	
@@ -195,6 +201,7 @@ end function
 // that this method ignores self.data, and creates new data
 // from the current font attributes and character data.
 Font.save = function(path)
+	"Save this font to a BMF file at the given path; return null or an error."
 	// We'll need a little BinaryStream class wrapping a RawData,
 	// to make it easier.  This just expands the RawData buffer as we go.
 	BinaryStream = {}
@@ -202,6 +209,7 @@ Font.save = function(path)
 	BinaryStream.buffer = null
 	BinaryStream.pos = 0
 	BinaryStream.ensure = function(bytesNeeded=4)
+		"Grow the buffer as needed so that bytesNeeded more bytes will fit."
 		if self.buffer == null then
 			self.buffer = new RawData
 			self.buffer.resize 256
@@ -212,31 +220,37 @@ Font.save = function(path)
 		end while
 	end function
 	BinaryStream.writeByte = function(byteVal)
+		"Write an unsigned byte and advance."
 		self.ensure 1
 		self.buffer.setByte self.pos, byteVal
 		self.pos = self.pos + 1
 	end function
 	BinaryStream.writeSbyte = function(sbyteVal)
+		"Write a signed byte and advance."
 		self.ensure 1
 		self.buffer.setSbyte self.pos, sbyteVal
 		self.pos = self.pos + 1
 	end function
 	BinaryStream.writeShort = function(shortVal)
+		"Write a signed 16-bit integer and advance."
 		self.ensure 2
 		self.buffer.setShort self.pos, shortVal
 		self.pos = self.pos + 2
 	end function
 	BinaryStream.writeUshort = function(ushortVal)
+		"Write an unsigned 16-bit integer and advance."
 		self.ensure 2
 		self.buffer.setUshort self.pos, ushortVal
 		self.pos = self.pos + 2
 	end function
 	BinaryStream.writeUint = function(uintVal)
+		"Write an unsigned 32-bit integer and advance."
 		self.ensure 4
 		self.buffer.setUint self.pos, uintVal
 		self.pos = self.pos + 4
 	end function
 	BinaryStream.writeUtf8 = function(utf8Str)
+		"Write a string as UTF-8 and advance; return the number of bytes written."
 		// It's hard to know how many bytes to ensure.  But most UTF-8
 		// characters require 3 bytes or less, so this is probably safe:
 		self.ensure utf8Str.len*3
@@ -245,6 +259,7 @@ Font.save = function(path)
 		return bytesUsed
 	end function
 	BinaryStream.writeLenPrefixedString = function(s)
+		"Write a string as UTF-8, preceded by a length byte, and advance."
 		if s.len > 255 then s = s[:255]
 		self.ensure s.len*3 + 1
 		bytesUsed = self.buffer.setUtf8(self.pos + 1, s)
@@ -358,6 +373,7 @@ end function
 // Return null if not found.  (But if we fail to find
 // a lowercase letter, automatically look for upper case.)
 Font.charData = function(c)	
+	"Return the CharData for the given character (or its uppercase), or null."
 	if self.chars.hasIndex(c) then return self.chars[c]
 	c = c.upper
 	if self.chars.hasIndex(c) then return self.chars[c]
@@ -371,6 +387,7 @@ end function
 //  shift: how much to move the baseline cursor after drawing;
 //		if null, this defaults to image.width
 Font.addChar = function(c, image, relX=0, relY=0, shift=null)
+	"Add a character to this font, with the given glyph image and metrics."
 	if shift == null then shift = image.width
 	cd = new CharData
 	cd.charCode = c.code
@@ -387,6 +404,7 @@ end function
 // either pass in a string (the character), or a CharData object.
 // (Most users will use print or printChar, below.)
 Font.renderChar = function(c, g, destX=0, destY=0)
+	"Draw a character pixel by pixel into anything with a setPixel method."
 	if c isa string then d = self.charData(c) else d = c
 	if d == null then return null
 	clrRange = 2^(8 - self.alphaBits)
@@ -418,6 +436,7 @@ end function
 
 // Make and return an Image of the given character.
 Font.makeCharImage = function(c)
+	"Create and return a new Image of the given character."
 	d = self.charData(c)
 	if d == null then return null
 	img = Image.create(d.width, d.height, color.clear)
@@ -428,6 +447,7 @@ end function
 // Get an Image that represents the given character.
 // This method uses a cache, so is faster after the first call.
 Font.getCharImage = function(c)
+	"Return an Image of the given character, cached after the first call."
 	d = self.charData(c)
 	if d == null then return null
 	if d.image == null then d.image = self.makeCharImage(c)
@@ -438,6 +458,7 @@ end function
 // far to shift the cursor.  This uses the image cache, so
 // it gets faster after the first drawing of each character.
 Font.printChar = function(c, x=480, y=320, scale=1, tint="#FFFFFF")
+	"Draw one character to gfx; return how far to advance the cursor."
 	d = self.charData(str(c))
 	if d == null then return 0
 	if d.image == null and d.width > 0 then d.image = self.makeCharImage(c)
@@ -458,6 +479,7 @@ end function
 
 // Print the given string to gfx at the given location.
 Font.print = function(s, x=20, y=320, scale=1, tint="#FFFFFF")
+	"Draw a string to gfx with its left end at x, y."
 	s = str(s)
 	lastc = ""
 	for c in s
@@ -469,17 +491,20 @@ end function
 
 // Print the given string to gfx, centered horizontally on the given x.
 Font.printCentered = function(s, x=480, y=320, scale=1, tint="#FFFFFF")
+	"Draw a string to gfx, centered horizontally on x."
 	s = str(s)
 	self.print s, x - self.width(s, scale)/2, y, scale, tint
 end function
 
 // Print the given string to gfx, right-aligned on x.
 Font.printRight = function(s, x=940, y=320, scale=1, tint="#FFFFFF")
+	"Draw a string to gfx, right-aligned on x."
 	s = str(s)
 	self.print s, x - self.width(s, scale), y, scale, tint
 end function
 
 Font.printJustified = function(s, x, y, width=500, scale=1, tint="#FFFFFF")
+    "Draw a string to gfx, spacing its words to fill exactly the given width."
     words = s.split
     w = 0
     for word in words; w += self.width(word, scale); end for
@@ -495,6 +520,7 @@ end function
 
 // Return the width of the given string in this font.
 Font.width = function(s, scale=1)
+	"Return the width of the given string in this font, in pixels."
 	s = str(s)
 	sum = 0
 	lastc = ""
@@ -510,6 +536,7 @@ end function
 // Return the number of characters of the given string that
 // fit a given width.
 Font.lenToFit = function(s, width=100)
+	"Return how many leading characters of a string fit within the given width."
 	if not s or not (s isa string) then return 0
 	if self.width(s) <= width then return s.len
 	lo = 1
@@ -543,6 +570,7 @@ boxesSample = [
 // Demo program: find the fonts directory, then load and display
 // every font found therein.
 demo = function()
+	"Demo: load and display every BMF font found in the fonts folder."
 	clear; text.row = 10
 	
 	fontsFolder = "fonts"

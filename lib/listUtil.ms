@@ -6,6 +6,7 @@
 
 // contains: return true if this list contains the given element.
 list.contains = function(item)
+	"Return whether this list contains the given element."
 	return self.indexOf(@item) != null
 end function
 
@@ -15,6 +16,7 @@ end function
 //		[7,4,7,9].lastIndexOf(7)		// returns 2
 //		[7,4,7,9].lastIndexOf(7, 2)		// returns 0
 list.lastIndexOf = function(element, beforeIdx=null)
+	"Return the last index of the given element (optionally before beforeIdx), or null."
 	if beforeIdx == null then i = self.len - 1 else i = beforeIdx - 1
 	while i >= 0
 		if @self[i] == @element then return i
@@ -27,6 +29,7 @@ end function
 // split: similar to string.split, this splits a list into sub-lists
 // by where the given delimiter element is found.
 list.split = function(delimiter, maxCount=null)
+	"Split this list into sub-lists wherever the given delimiter element appears."
 	if maxCount == 1 then return [self]
 	result = []
 	p0 = 0
@@ -48,6 +51,7 @@ end function
 // deepcopy: clones this list, and if it contains sub-lists,
 // clones those as well.
 list.deepCopy = function
+	"Return a copy of this list, recursively copying any sub-lists."
 	result = self[:]
 	for i in result.indexes
 		if @result[i] isa list then result[i] = result[i].deepCopy
@@ -65,6 +69,7 @@ end function
 //		x = [1, 2, 3]
 //		x.add [10,100,10]	// x is now [11, 102, 13]
 list.add = function(addend)
+	"Add a number to every element (in place), or add another list element-wise."
 	if addend isa list then
 		maxi = self.len - 1
 		if addend.len - 1 < maxi then maxi = addend.len - 1
@@ -86,6 +91,7 @@ end function
 // with another list of the same size, returning a new list (leaving this
 // one untouched).
 list.plus = function(addend)
+	"Return a new list with a number added to every element, or another list added element-wise."
 	result = self[:]
 	result.add addend
 	return result
@@ -101,6 +107,7 @@ end function
 //		x = [1, 2, 3]
 //		x.multiplyBy [10,100,10]	// x is now [10, 200, 30]
 list.multiplyBy = function(factor)
+	"Multiply every element by a number (in place), or by another list element-wise."
 	if factor isa list then
 		maxi = self.len - 1
 		if factor.len - 1 < maxi then maxi = factor.len - 1
@@ -125,6 +132,7 @@ end function
 //		x = [1, 2, 3]
 //		x.times [10,100,10]	// returns [10, 200, 30]
 list.times = function(factor)
+	"Return a new list with every element multiplied by a number, or by another list element-wise."
 	result = self[:]
 	result.multiplyBy factor
 	return result
@@ -133,6 +141,7 @@ end function
 // dot: return a scalar that is the sum of all the pairwise products
 // between this list and another list of the same size.
 list.dot = function(other)
+	"Return the dot product of this list and another of the same length."
 	if other.len != self.len then return null
 	sum = 0
 	for i in self.indexes
@@ -146,6 +155,7 @@ end function
 //		x = [1, 2, 3]
 //		x.reverse		// x is now [3, 2, 1]
 list.reverse = function
+	"Reverse the order of elements in this list (in place)."
 	if not self then return self
 	for i in range(0, self.len/2-1)
 	    negi = -1 - i
@@ -160,6 +170,7 @@ end function
 //		x = [1, 2, 3]
 //		x.reversed		// returns [3, 2, 1]
 list.reversed = function
+	"Return a new list with the elements of this one in reverse order."
 	result = self[:]
 	result.reverse
 	return result
@@ -171,6 +182,7 @@ end function
 //		x = [1.1, 1.9, 3.45]
 //		x.apply @round  // x is now [1, 2, 3]
 list.apply = function(func)
+	"Replace each element with the result of calling func on it (in place)."
 	for i in self.indexes
 		self[i] = func(self[i])
 	end for
@@ -182,6 +194,7 @@ end function
 //		x = [1.1, 1.9, 3.45]
 //		y = x.applied(@round)  // y is now [1, 2, 3]; x is unchanged
 list.applied = function(func)
+  "Return a new list containing the result of calling func on each element."
   result = self[:]
   result.apply @func
   return result
@@ -189,6 +202,7 @@ end function
 
 // apply1: same as apply, but takes 1 extra argument.
 list.apply1 = function(func, arg1)
+	"Replace each element with func(element, arg1) (in place)."
 	for i in self.indexes
 		self[i] = func(self[i], arg1)
 	end for
@@ -197,6 +211,7 @@ end function
 // applied1: like list.apply1, but returns the result as a new list,
 // without changing the list it is called on.
 list.applied1 = function(func, arg1)
+  "Return a new list containing func(element, arg1) for each element."
   result = self[:]
   result.apply1 @func, arg1
   return result
@@ -204,12 +219,14 @@ end function
 
 // mean: return the average (sum divided by number of values)
 list.mean = function
+	"Return the average of the elements in this list."
 	return self.sum / self.len
 end function
 
 // counts: return a map that maps each unique element of this list,
 // to the number of times that value occurs.
 list.counts = function
+	"Return a map from each distinct element to the number of times it occurs."
 	result = {}
 	for item in self
 		if result.hasIndex(@item) then
@@ -224,11 +241,13 @@ end function
 // distinct: return this list, with any duplicate entries removed.
 // (Note that order of the result is not guaranteed.)
 list.distinct = function
+	"Return a list of the distinct elements in this list (in no particular order)."
 	return self.counts.indexes
 end function
 
 // product: return the result of multiplying up all values in the list.
 list.product = function
+	"Return the product of all elements in this list."
 	first = true
 	for item in self
 		if first then
@@ -243,6 +262,7 @@ end function
 
 // min: return the minimum value of all elements in the list.
 list.min = function
+	"Return the smallest element in this list."
 	first = true
 	for item in self
 		if first then
@@ -257,6 +277,7 @@ end function
 
 // max: return the maximum value of all elements in the list.
 list.max = function
+	"Return the largest element in this list."
 	first = true
 	for item in self
 		if first then
@@ -277,6 +298,7 @@ end function
 //	on the function you provide, this could calculate a sum, or
 //	a min or max, or lots of other possibilities.
 list.reduce = function(func)
+	"Combine all elements into one value by applying a two-argument func cumulatively."
 	if self.len == 0 then return func(null, null)
 	if self.len == 1 then return func(self[0], null)
 	result = func(self[0], self[1])
@@ -292,6 +314,7 @@ end function
 //	Or instead of a function, you may give the name of a map key, which must
 //	evaluate to true for every element we keep (to filter by an object property).
 list.filter = function(func)
+	"Remove elements for which func (or the named map key) is not true (in place)."
 	i = self.len - 1
 	if @func isa string then
 		while i >= 0
@@ -311,6 +334,7 @@ end function
 // filter function.  Note that func must be an actual function,
 // and not just the name of a map key in this case.
 list.filter1 = function(func, arg1)
+	"Remove elements for which func(element, arg1) is not true (in place)."
 	i = self.len - 1
 	while i >= 0
 		if not func(self[i], arg1) then self.remove i
@@ -322,6 +346,7 @@ end function
 //	the given function is true.  As with filter, you may also specify the
 //	name of a map key to look up in each element of the self.
 list.filtered = function(func)
+	"Return a new list of the elements for which func (or the named map key) is true."
 	result = []
 	if @func isa string then
 		for elem in self
@@ -339,6 +364,7 @@ end function
 // filtered1: like list.filter, but takes an additional argument
 // for the filter function.
 list.filtered1 = function(func, arg1)
+	"Return a new list of the elements for which func(element, arg1) is true."
 	result = []
 	for elem in self
 		if func(elem, arg1) then result.push elem
@@ -351,6 +377,7 @@ end function
 // Example:
 //		x = [5,7,7,9,7,7,7]; x.compress(7)  // x is now [5,7,9,7]
 list.compress = function(valueToCompress)
+	"Replace each run of the given value with a single instance of it (in place)."
 	i = self.len - 1
 	compressing = false
 	while i >= 0
@@ -368,6 +395,7 @@ end function
 // Example:
 //		x = [5,7,7,9,7,7,7]; x.compress(7)  // x is now [5,7,9,7]
 list.compressed = function(valueToCompress)
+	"Return a new list with each run of the given value replaced by a single instance."
 	result = []
 	compressing = false
 	for value in self
@@ -388,6 +416,7 @@ end function
 // out the value of the given index for every element in the list, returning
 // theses as a new list in the same order.
 list.valuesOf = function(indexToExtract)
+	"Return a list of the value at the given index or key of each element."
 	result = []
 	for elem in self
 		result.push elem[@indexToExtract]
@@ -397,6 +426,7 @@ end function
 
 // removeVal: remove the first (or all) occurrences of a given value.
 list.removeVal = function(val, removeAll=false)
+	"Remove the first (or every) occurrence of the given value."
 	i = 0
 	while true
 		i = self.indexOf(@val, i-1)
@@ -408,12 +438,14 @@ end function
 
 // any: return a random element of the list
 list.any = function
+	"Return a random element of this list (or null if empty)."
 	if self.len < 1 then return null
 	return self[self.len * rnd]
 end function
 
 // swap: exchange two values in place, by their indexes
 list.swap = function(index1, index2)
+	"Exchange the elements at the two given indexes (in place)."
 	temp = @self[index1]
 	self[index1] = @self[index2]
 	self[index2] = @temp
@@ -424,6 +456,7 @@ end function
 // (for example, @rnd), in which case it will be invoked for
 // each element as they are created.
 list.init = function(size, initialValue)
+	"Return a new list of the given size, filled with initialValue (or results of calling it)."
 	if @initialValue isa funcRef then
 		result = []
 		for i in range(1, size)
@@ -440,6 +473,7 @@ end function
 // you would want for a 2D array of numbers; if you want to do matrix math,
 // use matrixUtil instead.)
 list.init2d = function(rows, columns, initialValue)
+	"Return a new 2D array (list of row lists), filled with initialValue."
 	result = []
 	for a in range(1, rows)
 		result.push list.init(columns, @initialValue)
@@ -449,6 +483,7 @@ end function
 
 // init3D: build a 3D array, composed as a list of 2D arrays.
 list.init3d = function(sizeA, sizeB, sizeC, initialValue)
+	"Return a new 3D array (list of 2D arrays), filled with initialValue."
 	result = []
 	for a in range(1, sizeA)
 		result.push list.init2d(sizeB, sizeC, @initialValue)
@@ -457,10 +492,12 @@ list.init3d = function(sizeA, sizeB, sizeC, initialValue)
 end function
 
 runUnitTests = function
+	"Run unit tests on this module, printing any failures."
 	print "Unit testing: listUtil"
 	
 	errorCount = 0
 	assertEqual = function(actual, expected, note)
+		"Report a test failure if actual does not equal expected."
 		if actual != expected then
 			print "Unit test failure (" + note + "): expected " + expected + ", got " + actual
 			outer.errorCount = errorCount + 1
@@ -521,6 +558,7 @@ runUnitTests = function
 
 	a = range(1, 10)
 	isEven = function(x)
+		"Return whether x is even."
 		return x % 2 == 0
 	end function
 	a.filter @isEven
@@ -530,7 +568,7 @@ runUnitTests = function
 	assertEqual a, range(1, 10), "filtered"
 	assertEqual b, [2, 4, 6, 8, 10], "filtered"
 
-	moreThan = function(a, b); return a > b; end function
+	moreThan = function(a, b); "Return whether a is greater than b."; return a > b; end function
 	a = range(1,10)
 	a.filter1 @moreThan, 7
 	assertEqual a, [8, 9, 10], "filter1"
@@ -561,6 +599,7 @@ runUnitTests = function
 	assertEqual a, [1,6,5,7,9], "removeVal (all)"
 		
 	sum = function(a,b)
+		"Return the sum of a and b."
 		return a + b
 	end function
 

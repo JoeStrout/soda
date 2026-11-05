@@ -11,10 +11,11 @@ freeze charToIdx
 
 // Encode a RawData as Base64
 toBase64 = function(raw)
+	"Encode a RawData (or string, as UTF-8) as a Base64 string."
 	if raw isa string then
 		rd = new RawData
-		rd.resize string.len*3
-		rd.resize rd.setUtf8(0, raw)
+		rd.resize raw.len*3  // allocate (probably extra) space
+		rd.resize rd.setUtf8(0, raw)  // then shrink to size
 		raw = rd
 	end if
 	rlen = raw.len
@@ -45,6 +46,7 @@ toBase64 = function(raw)
 end function
 
 toRaw = function(b64)
+	"Decode a Base64 string into a RawData."
 	blen = b64.len
 	raw = new RawData
 	raw.resize ceil(blen * 3/4)
@@ -82,15 +84,18 @@ toRaw = function(b64)
 end function
 
 toString = function(b64)
+	"Decode a Base64 string into a (UTF-8) string."
 	globals.raw = toRaw(b64)
 	return raw.utf8
 end function
 
 runUnitTests = function
+	"Run unit tests on this module, printing any failures."
 	print "Unit testing: base64"
 	
 	errorCount = 0
 	assertEqual = function(actual, expected, note)
+		"Report a test failure if actual does not equal expected."
 		if actual != expected then
 			print "Unit test failure (" + testing + "): expected " + expected + ", got " + actual
 			outer.errorCount = errorCount + 1

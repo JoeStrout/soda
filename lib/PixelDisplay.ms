@@ -25,6 +25,7 @@ PixelDisplay._pixCache = null  // RawData copy of _renderTex (RGBA, bottom row f
 PixelDisplay._pixDirty = false  // true if _pixCache has writes the texture lacks
 
 PixelDisplay._ensureTex = function
+	"Create this display's render texture, if it does not already exist."
 	if self._renderTex == null then
 		self._renderTex = autoUnload(rl.LoadRenderTexture(self.width, self.height))
 	end if
@@ -41,6 +42,7 @@ end function
 // the frame when a bracket is open.  (Mini Micro 2's main.ms does; Soda, which
 // runs the script to completion each frame, never sees the case.)
 PixelDisplay._beginDraw = function(alphaBlend = false)
+	"Begin drawing to the render texture, in replace mode or (optionally) alpha blend mode."
 	if self._pixCache != null then self._dropPixCache
 	if self._renderTex == null then self._ensureTex
 	rl.BeginTextureMode self._renderTex
@@ -62,6 +64,7 @@ end function
 
 // Anything that draws to _renderTex must call this (_beginDraw does).
 PixelDisplay._dropPixCache = function
+	"Upload any pending pixel cache writes, then discard the cache."
 	if self._pixCache == null then return
 	self._flushPix
 	self._pixCache = null
@@ -72,6 +75,7 @@ end function
 // A time-sliced script may be suspended inside setPixel, but it marks the
 // cache dirty only after writing to it, so a write is never left unflagged.
 PixelDisplay._flushPix = function
+	"Upload pending writes in the pixel cache to the render texture."
 	if not self._pixDirty then return
 	self._pixDirty = false
 	t = self._renderTex.texture
@@ -79,6 +83,7 @@ PixelDisplay._flushPix = function
 end function
 
 PixelDisplay._endDraw = function
+	"End drawing to the render texture, restoring blend, scissor, and texture mode."
 	rl.EndBlendMode
 	if self._clip != null then rl.EndScissorMode
 	rl.EndTextureMode
@@ -86,6 +91,7 @@ end function
 
 // Create a new PixelDisplay with the given size.
 PixelDisplay.Make = function(width=960, height=640, color="#00000000")
+	"Create a new PixelDisplay of the given size, filled with the given color."
 	result = new self
 	result.width = width
 	result.height = height
@@ -96,6 +102,7 @@ end function
 
 // Clear the display.  Optionally change the size and/or clear color.
 PixelDisplay.clear = function(color=null, width=960, height=640)
+	"Clear the display to the given color, optionally resizing it."
 	// Everything is about to be overwritten (or resized), so don't flush.
 	self._pixCache = null
 	self._pixDirty = false
@@ -113,6 +120,7 @@ end function
 // With a pixel cache, writes go only to the cache, so code that alternates
 // pixel and setPixel (a flood fill) costs no GPU work per pixel at all.
 PixelDisplay.setPixel = function(x, y, color=null)
+	"Set the pixel at x, y to the given color (or self.color)."
 	if color == null then color = self.color
 	d = self._pixCache
 	// The cache handles only the cases where we know exactly which pixel the
@@ -133,6 +141,7 @@ end function
 _hexByte = color._hexByte
 _intHex = {}
 _intToHex = function(v)
+	"Convert a signed 0xRRGGBBAA int to a #RRGGBBAA string, caching the result."
 	if _intHex.len >= 4096 then outer._intHex = {} // (reset cache)
 	u = v
 	if u < 0 then u += 4294967296
@@ -146,6 +155,7 @@ end function
 // The first call after any drawing other than setPixel reads the whole
 // texture back from the GPU; later calls read from that copy.
 PixelDisplay.pixel = function(x, y)
+	"Return the color of the pixel at x, y as a #RRGGBBAA string."
 	d = self._pixCache
 	if d == null then
 		self._ensureTex
@@ -163,6 +173,7 @@ end function
 
 // Draw a straight line.
 PixelDisplay.line = function(x1=0, y1=0, x2=960, y2=640, color, penSize=1)
+	"Draw a straight line from x1, y1 to x2, y2."
 	if color == null then color = self.color
 	self._beginDraw
 	h = 0.5  // offset to properly address pixel coordinates
@@ -173,6 +184,7 @@ end function
 // Draw a axis-aligned rectangle outline on the pixel display.
 // A thick pen is centered on the rect's bounds, as in Mini Micro 1.
 PixelDisplay.drawRect = function(left=0, bottom=0, width=100, height=100, color=null, penSize=1)
+	"Draw the outline of an axis-aligned rectangle."
 	if width == 0 or height == 0 then return
 	if color == null then color = self.color
 	self._beginDraw
@@ -188,6 +200,7 @@ end function
 
 // Fill an axis-aligned rectangle on the pixel display.
 PixelDisplay.fillRect = function(left=0, bottom=0, width=100, height=100, color=null)
+	"Fill an axis-aligned rectangle."
 	if color == null then color = self.color
 	self._beginDraw
 	rl.DrawRectangle left, self.height - bottom - height, width, height, color
@@ -197,6 +210,7 @@ end function
 // Draw a axis-aligned ellipse outline on the pixel display.
 // A thick pen is centered on the ellipse's bounds, as in Mini Micro 1.
 PixelDisplay.drawEllipse = function(left=0, bottom=0, width=100, height=100, color=null, penSize=1)
+	"Draw the outline of an ellipse within the given rectangle."
 	if width == 0 or height == 0 then return
 	if color == null then color = self.color
 	self._beginDraw
@@ -232,6 +246,7 @@ end function
 
 // Fill an axis-aligned ellipse on the pixel display.
 PixelDisplay.fillEllipse = function(left=0, bottom=0, width=100, height=100, color=null)
+	"Fill an ellipse within the given rectangle."
 	if color == null then color = self.color
 	self._beginDraw
 	wOver2 = floor(width/2)
@@ -244,6 +259,7 @@ end function
 // Convert a list of polygon points -- each either an [x,y] list or a map
 // with "x" and "y" keys -- into display coordinates (y flipped).
 PixelDisplay._polyPoints = function(points)
+	"Convert polygon points ([x,y] lists or x/y maps) to [x,y] lists with y flipped."
 	result = []
 	for pt in points
 		if pt isa map then
@@ -257,6 +273,7 @@ end function
 
 // Twice the signed area of a polygon (positive if counter-clockwise).
 _signedArea2 = function(pts)
+	"Return twice the signed area of a polygon (positive if counter-clockwise)."
 	sum = 0
 	prev = pts[-1]
 	for p in pts
@@ -267,6 +284,7 @@ _signedArea2 = function(pts)
 end function
 
 _pointInTri = function(p, a, b, c)
+	"Return whether point p lies within (or on the edge of) triangle a, b, c."
 	d1 = (p[0]-b[0]) * (a[1]-b[1]) - (a[0]-b[0]) * (p[1]-b[1])
 	d2 = (p[0]-c[0]) * (b[1]-c[1]) - (b[0]-c[0]) * (p[1]-c[1])
 	d3 = (p[0]-a[0]) * (c[1]-a[1]) - (c[0]-a[0]) * (p[1]-a[1])
@@ -275,6 +293,7 @@ end function
 
 // Cross product at corner i, times sgn: positive means a convex corner.
 _cornerCross = function(v, i, sgn)
+	"Return the cross product at corner i of polygon v, times sgn (positive if convex)."
 	a = v[i - 1]
 	b = v[i]
 	c = v[(i + 1) % v.len]
@@ -284,6 +303,7 @@ end function
 // Ear-clipping triangulation of a simple (but possibly concave) polygon.
 // Returns a list of [a,b,c] point triples.
 _triangulate = function(pts)
+	"Split a simple (possibly concave) polygon into a list of [a,b,c] triangles."
 	// Drop repeated points: a zero-area corner is never an ear, and would
 	// otherwise stall the clipping (callers duplicate endpoints readily).
 	v = []
@@ -382,6 +402,7 @@ end function
 
 // Draw a polygon outline.  Points may be [x,y] lists or maps with x and y.
 PixelDisplay.drawPoly = function(points, color=null, penSize=1)
+	"Draw the outline of a polygon given as [x,y] lists or maps with x and y."
 	if points == null or points.len < 2 then return
 	if color == null then color = self.color
 	pts = self._polyPoints(points)
@@ -397,6 +418,7 @@ end function
 
 // Fill a polygon.  Points may be [x,y] lists or maps with x and y.
 PixelDisplay.fillPoly = function(points, color=null)
+	"Fill a polygon given as [x,y] lists or maps with x and y."
 	if points == null or points.len < 3 then return
 	if color == null then color = self.color
 	tris = _triangulate(self._polyPoints(points))
@@ -426,6 +448,7 @@ freeze PixelDisplay._fontFiles
 freeze PixelDisplay._fontKerning
 
 PixelDisplay._loadFont = function(fontName="normal")
+	"Return the ScreenFont of the given size name, loading it if needed."
 	if not PixelDisplay._fontFiles.hasIndex(fontName) then fontName = "normal"
 	if PixelDisplay._fonts.hasIndex(fontName) then return PixelDisplay._fonts[fontName]
 	if version.hostName == "Mini Micro" then
@@ -445,6 +468,7 @@ PixelDisplay._loadFont = function(fontName="normal")
 end function
 
 PixelDisplay.print = function(str="", x=0, y=0, color=null, fontName="normal")
+	"Draw a string with its bottom-left corner at x, y, using a built-in font."
 	if color == null then color = self.color
 	font = PixelDisplay._loadFont(fontName)
 	if not font.isLoaded then return
@@ -463,6 +487,7 @@ end function
 
 // Get a rectangular region of the display as an Image.
 PixelDisplay.getImage = function(left=0, bottom=0, width, height)
+	"Return a rectangular region of the display as a new Image."
 	if self._renderTex == null then self._ensureTex
 	self._flushPix
 	fullImg = rl.LoadImageFromTexture(self._renderTex.texture)
@@ -482,6 +507,7 @@ PixelDisplay.getImage = function(left=0, bottom=0, width, height)
 end function
 
 PixelDisplay._drawTexture = function(tex, left, bottom, width=null, height=null, srcLeft=0, srcBottom=0, srcWidth=null, srcHeight=null, tint="#FFFFFF")
+	"Draw part of a raylib texture into the given rectangle, with alpha blending."
 	if width == null then width = tex.width
 	if height == null then height = tex.height
 	if srcWidth == null then srcWidth = tex.width
@@ -499,6 +525,7 @@ end function
 
 // Draw an Image onto this PixelDisplay.
 PixelDisplay.drawImage = function(img, left, bottom, width=null, height=null, srcLeft=0, srcBottom=0, srcWidth=null, srcHeight=null, tint="#FFFFFF")
+	"Draw an Image (or part of one) into the given rectangle, optionally tinted."
 	tex = rl.LoadTextureFromImage(img._img)
 	rl.SetTextureFilter tex, rl.TEXTURE_FILTER_POINT
 	self._drawTexture tex, left, bottom, width, height, srcLeft, srcBottom, srcWidth, srcHeight, tint
@@ -508,6 +535,7 @@ end function
 // Use the image to tile the given destination rect, repeating as many
 // times as needed.  Useful for repeated patterns.
 PixelDisplay.patternFill = function(img, left, bottom, width=null, height=null, srcLeft=0, srcBottom=0)
+	"Fill the given rectangle by tiling the given Image repeatedly."
 	tex = rl.LoadTextureFromImage(img._img)
 	rl.SetTextureWrap tex, rl.TEXTURE_WRAP_REPEAT
 	rl.SetTextureFilter tex, rl.TEXTURE_FILTER_POINT
@@ -518,11 +546,13 @@ end function
 // Limit drawing to a rectangular region.  Coordinates use the same
 // bottom-up system as other PixelDisplay methods.  Call clearClip to restore.
 PixelDisplay.setClip = function(left, bottom, width, height)
+	"Limit all subsequent drawing to the given rectangle."
 	self._clip = [left, bottom, width, height]
 end function
 
 // Remove any clip region set by setClip.
 PixelDisplay.clearClip = function
+	"Remove any clip rectangle set by setClip."
 	self._clip = null
 end function
 
@@ -532,6 +562,7 @@ end function
 // Drawing functions flip Y coords so content is upside-down in the texture;
 // this flip corrects it, giving us Mini Micro's bottom-up coordinate system.
 PixelDisplay.render = function
+	"Draw this display to the screen, applying scale and scroll."
 	if self._renderTex == null then return
 	if self._pixDirty then self._flushPix
 	src = [0, 0, self.width, -self.height]
@@ -545,6 +576,7 @@ end function
 // Unit tests.  These cover the pure geometry helpers only -- nothing here
 // touches raylib -- so they can be run headlessly:  tests/triangulate.ms
 PixelDisplay.runUnitTests = function
+	"Run unit tests on the polygon geometry helpers; return the number of failures."
 	print "Unit testing: PixelDisplay"
 	errorCount = 0
 

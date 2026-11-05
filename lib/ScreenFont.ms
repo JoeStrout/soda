@@ -76,6 +76,7 @@ _fragShader100 = [
 // the default shader when compilation fails, so checking the uniform
 // location is the reliable test.)
 _tryShaderSource = function(fragSrc)
+	"Try to load the given fragment shader; return true if it has our color uniforms."
 	shader = rl.LoadShaderFromMemory("", fragSrc)
 	if shader == null then return false
 	foreLoc = rl.GetShaderLocation(shader, "foreColor")
@@ -95,6 +96,7 @@ end function
 // success.  (Corresponds to ScreenFont::LoadShader in the C++ version,
 // except that the source is built in rather than read from files.)
 ScreenFont.loadShader = function
+	"Load the shared glyph-coloring shader; return true on success."
 	if _shader != null then rl.UnloadShader _shader
 	outer._shader = null
 	outer._foreColorLoc = -1
@@ -108,6 +110,7 @@ ScreenFont.loadShader = function
 end function
 
 ScreenFont.unloadShader = function
+	"Unload the shared glyph-coloring shader, if loaded."
 	if _shader == null then return
 	rl.UnloadShader _shader
 	outer._shader = null
@@ -119,11 +122,13 @@ ScreenFont.unloadShader = function
 end function
 
 ScreenFont.shaderLoaded = function
+	"Return whether the shared glyph-coloring shader is loaded."
 	return _shader != null
 end function
 
 // Create a new ScreenFont, optionally loading a font texture right away.
 ScreenFont.Make = function(texturePath=null)
+	"Create a new ScreenFont, optionally loading a font texture from the given path."
 	noob = new self
 	if texturePath != null then noob.load texturePath
 	return noob
@@ -133,6 +138,7 @@ end function
 // color) on transparent; only the alpha channel is used.  Returns true on
 // success.
 ScreenFont.load = function(texturePath)
+	"Load a font texture (a 16x16 grid of glyphs); return true on success."
 	if self.texture != null then
 		rl.UnloadTexture self.texture
 		self.texture = null
@@ -152,6 +158,7 @@ ScreenFont.load = function(texturePath)
 end function
 
 ScreenFont.isLoaded = function
+	"Return whether this font has a texture loaded."
 	return self.texture != null
 end function
 
@@ -201,6 +208,7 @@ freeze ScreenFont._specialPositions
 ScreenFont.UNKNOWN_CHAR_POS = 21
 
 ScreenFont.fontPosition = function(unicode)
+	"Return the glyph grid position (0-255) for the given Unicode code point."
 	// ASCII and the Roman accented characters map straight through.
 	if unicode <= 127 or (unicode >= 191 and unicode <= 255) then return unicode
 	if self._specialPositions.hasIndex(unicode) then return self._specialPositions[unicode]
@@ -209,6 +217,7 @@ end function
 
 // Source rectangle in the font texture for the given code point.
 ScreenFont.srcRect = function(unicode)
+	"Return the [x, y, width, height] source rect in the font texture for a code point."
 	fontPos = self.fontPosition(unicode)
 	charRow = floor(fontPos / 16)
 	charCol = fontPos % 16
@@ -218,6 +227,7 @@ end function
 
 // Internal: push an [r,g,b,a] color into a vec4 uniform, normalized to 0-1.
 _setColorUniform = function(loc, rgba)
+	"Set a vec4 shader uniform from an [r,g,b,a] color with 0-255 components."
 	rl.SetShaderValue _shader, loc,
 	   [rgba[0]/255, rgba[1]/255, rgba[2]/255, rgba[3]/255], rl.SHADER_UNIFORM_VEC4
 end function
@@ -225,6 +235,7 @@ end function
 // Draw one character.  x,y give the top-left corner of the character cell,
 // in raylib screen coordinates (y increasing downward).
 ScreenFont.drawChar = function(unicode, x, y, foreColor, backColor)
+	"Draw one character with its top-left at x, y (raylib coordinates), in the given colors."
 	if self.texture == null then return
 	if not _shaderTried then self.loadShader
 
@@ -256,6 +267,7 @@ end function
 
 // Free the font texture.
 ScreenFont.unload = function
+	"Free this font's texture."
 	if self.texture == null then return
 	rl.UnloadTexture self.texture
 	self.texture = null

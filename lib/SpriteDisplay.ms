@@ -9,6 +9,7 @@ Bounds.height = 0
 Bounds.rotation = 0
 
 Bounds.corners = function
+	"Return the four corners of this (possibly rotated) rectangle, as [x,y] lists."
 	hw = self.width / 2
 	hh = self.height / 2
 	cosR = cos(self.rotation * pi / 180)
@@ -23,6 +24,7 @@ Bounds.corners = function
 end function
 
 Bounds.contains = function(x, y)
+	"Return whether the given point (x,y, [x,y], or x/y map) is within these bounds."
 	if x isa map then
 		y = x.y
 		x = x.x
@@ -42,6 +44,7 @@ Bounds.contains = function(x, y)
 end function
 
 Bounds.overlaps = function(b)
+	"Return whether these bounds overlap the given Bounds."
 	cornersA = self.corners
 	cornersB = b.corners
 	axes = []
@@ -89,6 +92,7 @@ Sprite.localBounds = null
 // values, or as a single number to apply to both, or as an
 // [x,y] list, or an {"x":x, "y":y} map.
 Sprite.addBounds = function(insetX=0, insetY=null)
+	"Set localBounds to fit this sprite's image or srcRect, optionally inset."
 	if not self.image.texture and not self.srcRect then
 		print "Sprite.addBounds: neither image.texture nor srcRect defined"
 		exit
@@ -123,11 +127,13 @@ Sprite._uvs = null			// if set, 4 [u,v] points
 Sprite._hexDigits = "0123456789ABCDEF"
 
 Sprite._scaleXY = function
+	"Return this sprite's scale as an [x, y] list."
 	if self.scale isa list then return [self.scale[0], self.scale[1]]
 	return [self.scale, self.scale]
 end function
 
 Sprite._localCorners = function
+	"Return this sprite's four corners in local (unscaled, unrotated) coordinates."
 	if self.localCorners then return self.localCorners
 	if self.srcRect then
 		hw = self.srcRect[2] / 2
@@ -143,6 +149,7 @@ end function
 // Corners in world (display) coordinates, i.e. with scale, rotation,
 // and position applied.  Returns null if we have nothing to draw yet.
 Sprite.corners = function
+	"Return this sprite's four corners in display coordinates, or null if no image."
 	lc = self._localCorners
 	if lc == null then return null
 	s = self._scaleXY
@@ -161,6 +168,7 @@ end function
 // Set the corners, in world coordinates; they are stored relative to
 // our position/rotation/scale, so moving the sprite moves them too.
 Sprite.setCorners = function(points)
+	"Warp this sprite by setting its four corners, in display coordinates."
 	if not (points isa list) or points.len != 4 then
 		print "Sprite.setCorners requires a list of exactly 4 [x,y] points"
 		return
@@ -180,6 +188,7 @@ Sprite.setCorners = function(points)
 end function
 
 Sprite.uvs = function
+	"Return the texture coordinates at the four corners, as [u,v] lists."
 	if self._uvs == null then return [[0,0], [1,0], [1,1], [0,1]]
 	result = []
 	for uv in self._uvs
@@ -189,6 +198,7 @@ Sprite.uvs = function
 end function
 
 Sprite.setUVs = function(uvs)
+	"Set the texture coordinates at the four corners, as [u,v] lists."
 	if not (uvs isa list) or uvs.len != 4 then
 		print "Sprite.setUVs requires a list of exactly 4 [u,v] points"
 		return
@@ -201,6 +211,7 @@ Sprite.setUVs = function(uvs)
 end function
 
 Sprite._tintRGBA = function
+	"Return this sprite's tint as an [r, g, b, a] list."
 	t = self.tint
 	if t == null then return [255, 255, 255, 255]
 	if t isa list then
@@ -227,6 +238,7 @@ end function
 // by Gaussian elimination with partial pivoting.  Returns the eight
 // coefficients, or null if the quad is degenerate.
 Sprite._solveHomography = function(pts, uvs)
+	"Solve for the projective transform taking four local points to four UVs."
 	a = []
 	b = []
 	for i in [0, 1, 2, 3]
@@ -274,6 +286,7 @@ Sprite._shaderLoc = -1
 Sprite._shaderFailed = false
 
 Sprite._ensureShader = function
+	"Return the shared warped-quad shader, building it if needed (null on failure)."
 	if Sprite._shader != null then return Sprite._shader
 	if Sprite._shaderFailed then return null
 	ver = raylib.rlGetVersion
@@ -324,6 +337,7 @@ Sprite._hUVs = null
 // applies the local-to-UV homography and divides.  That is exact per
 // pixel, with four vertices and no subdivision.
 Sprite._drawQuad = function(offsetX, offsetY)
+	"Draw this sprite as an arbitrary (warped) textured quad."
 	lc = self._localCorners
 	if lc == null then return
 	pts = self.corners
@@ -377,6 +391,7 @@ end function
 Sprite.update = null	// define your own update method if needed
 
 Sprite.draw = function(offsetX=0, offsetY=0)
+	"Draw this sprite to the screen, shifted by the given offset."
 	if self.image == null then return
 	if self.localCorners or self._uvs then
 		self._drawQuad offsetX, offsetY
@@ -400,6 +415,7 @@ Sprite.draw = function(offsetX=0, offsetY=0)
 end function
 
 Sprite.worldBounds = function
+	"Return this sprite's localBounds transformed to display coordinates."
 	lb = self.localBounds
 	if lb == null then return null
 	b = new Bounds
@@ -419,11 +435,13 @@ Sprite.worldBounds = function
 end function
 
 Sprite.contains = function(x, y)
+	"Return whether the given point is within this sprite's bounds."
 	if self.localBounds == null then return false
 	return self.worldBounds.contains(x, y)
 end function
 
 Sprite.overlaps = function(other)
+	"Return whether this sprite's bounds overlap another Sprite or Bounds."
 	if other isa Sprite then other = other.worldBounds
 	return self.worldBounds.overlaps(other)
 end function
@@ -435,28 +453,33 @@ SpriteDisplay.scrollY = 0
 SpriteDisplay.sprites = null
 
 SpriteDisplay.Make = function
+	"Create and return a new, empty SpriteDisplay."
 	sp = new self
 	sp.clear
 	return sp
 end function
 
 SpriteDisplay.clear = function
+	"Remove all sprites and reset the scroll position."
 	self.sprites = []
 	self.scrollX = 0
 	self.scrollY = 0
 end function
 
 SpriteDisplay._renderSprites = function(spriteList)
+	"Draw each sprite in the given list, recursing into any nested lists."
 	for sp in spriteList
 		if sp isa list then self._renderSprites sp else sp.draw -self.scrollX, -self.scrollY
 	end for
 end function
 
 SpriteDisplay.render = function
+	"Draw all sprites in this display to the screen."
 	self._renderSprites self.sprites
 end function
 
 testBounds = function
+	"Interactive test: highlight a rotated Bounds when the mouse is inside it."
 	import "soda"
 	
 	b = new Bounds

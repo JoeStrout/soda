@@ -11,6 +11,7 @@ if intrinsics.hasIndex("Display") and intrinsics.hasIndex("displayMode") then
 	// prepareErrDisplay is used internally to prepare the default error display.
 	// You probably won't ever need to call this.
 	prepareErrDisplay = function
+		"Set up a text display in slot 0 for showing error messages."
 		outer._prevMode = display(0).mode
 		display(0).mode = displayMode.text
 		outer._prevDisp = display(0)
@@ -23,6 +24,7 @@ if intrinsics.hasIndex("Display") and intrinsics.hasIndex("displayMode") then
 	
 	// clear: clears (just) the error display.
 	clear = function
+		"Remove the error display, restoring the display that was in slot 0."
 		if errDisplay == null then prepareErrDisplay
 		_prevDisp.install 0
 		display(0).mode = _prevMode
@@ -37,6 +39,7 @@ end if
 // abort: print a stack trace (optionally, after an error message),
 // then exit the program.
 abort = function(errMsg)
+	"Print an error message and stack trace, then exit the program."
 	if errDisplay == null then prepareErrDisplay
 	if errMsg == null then errMsg = "qa.abort has been called."
 	errDisplay.print errMsg
@@ -55,6 +58,7 @@ end function
 // assert: abort if the given condition is not true.
 // Error message can include the given (optional) description.
 assert = function(condition, desc)
+	"Abort with the given description if condition is not true."
 	if condition then return
 	msg = "Assert failed"
 	if desc != null then msg = msg + ": " + desc
@@ -64,6 +68,7 @@ end function
 // assertEqual: abort if the first two parameters are not equal.
 // Additional descriptive note is optional.
 assertEqual = function(actual, expected, note)
+	"Abort with a message if actual does not equal expected."
 	if @actual == @expected then return
 	msg = "Assert failed"
 	if note != null then msg = msg + " (" + note + ")"
@@ -76,6 +81,7 @@ end function
 //	If you're on Mini Micro, also see the global `mapName` function added
 //	in /sys/lib/startup.ms.
 namedMaps = function
+	"Return a map from each known class map to its name (deprecated; use typeOf)."
 	result = {}
 	for i in _namedMapNames.indexes
 		result[_namedMapMaps[i]] = _namedMapNames[i]
@@ -86,6 +92,7 @@ end function
 _namedMapMaps = []
 _namedMapNames = []
 addNamedMap = function(name, map=null)
+	"Register a class map (by default, the intrinsic of that name) under a name for typeOf."
 	if map == null and intrinsics.hasIndex(name) then map = intrinsics[name]
 	if map == null then return
 	idx = _namedMapNames.indexOf(name)
@@ -105,6 +112,7 @@ end for
 
 
 typeOf = function(value)
+	"Return the name of the type or class of the given value."
 	if @value isa funcRef then return "funcRef"
 	if value isa number then return "number"
 	if value isa string then return "string"
@@ -125,6 +133,7 @@ end function
 // assertType: abort if the first parameter is not of the specified type.
 // Additional descriptive note is optional.
 assertType = function(value, type, note)
+	"Abort with a message if value is not of the given type."
 	if @value isa type then return
 	msg = "Assert failed"
 	if note != null then msg = msg + " (" + note + ")"
@@ -135,12 +144,14 @@ end function
 
 
 runUnitTests = function
+	"Run unit tests on this module, printing any failures."
 	print "Unit testing: qa"
 
 	// We can't easily test the various assert methods, but we
 	// can at least test typeOf (and through that, namedMaps).
 	errorCount = 0
 	assertEqual = function(actual, expected)
+		"Report a test failure if actual does not equal expected."
 		// for the sake of unit testing, let's round all numbers to 1 decimal place.
 		if actual != expected then
 			print "Unit test failure (line " + stackTrace[1].split[-1] + 

@@ -122,6 +122,7 @@ freeze _layoutSensitiveKeys
 // Called once as this module loads, which requires the window to already
 // exist; call it again if the layout can change while the app runs.
 applyKeyboardLayout = function
+	"Update key names to match the current keyboard layout; return true if it worked."
 	if not raylib.IsWindowReady then return false
 	gotAny = false
 	for keyCode in _layoutSensitiveKeys
@@ -139,6 +140,7 @@ applyKeyboardLayout
 // there is no such key.  Callers that must poll raylib directly (the console,
 // for its control chords) need this to avoid re-deriving the layout.
 codeForName = function(keyName)
+	"Return the raylib key code for the named key, or null if there is none."
 	if not _nameToRaylib.hasIndex(keyName) then return null
 	return _nameToRaylib[keyName]
 end function
@@ -175,6 +177,7 @@ axisDeadZone = 0.1
 // Read one axis of one gamepad, in Soda's convention: +1 is right or up.
 // The D-pad stands in for the left stick, so it works as a digital stick.
 _gamepadAxis = function(gamepadNum, axisNum)
+	"Return the value (-1 to 1) of one axis of one gamepad, with +1 right or up."
 	if axisNum == raylib.GAMEPAD_AXIS_LEFT_X then
 		right = raylib.IsGamepadButtonDown(gamepadNum, raylib.GAMEPAD_BUTTON_LEFT_FACE_RIGHT)
 		left = raylib.IsGamepadButtonDown(gamepadNum, raylib.GAMEPAD_BUTTON_LEFT_FACE_LEFT)
@@ -196,6 +199,7 @@ end function
 
 // Read the given axis on whichever connected gamepad is pushed hardest.
 _anyGamepadAxis = function(axisNum)
+	"Return the value of the given axis on whichever gamepad is pushed hardest."
 	result = 0
 	for i in range(0, _maxGamepads - 1, 1)
 		if not raylib.IsGamepadAvailable(i) then continue
@@ -206,9 +210,10 @@ _anyGamepadAxis = function(axisNum)
 end function
 
 pressed = function(keyName)
+	"Return whether the named key, mouse button, or joystick button is down."
 	if keyName[:6] == "mouse " and keyName.len >= 7 then
 		// Special case: mouse buttons
-		btnNum = val(keyName[7])
+		btnNum = val(keyName[6])
 		return raylib.IsMouseButtonDown(btnNum)
 	end if
 	if keyName[:9] == "joystick " then
@@ -240,6 +245,7 @@ end function
 keyQueue = []
 
 available = function
+	"Return whether a keypress is waiting to be read with key.get."
 	if keyQueue then return true
 	nextCharCode = raylib.GetCharPressed
 	if nextCharCode == 0 then return false
@@ -248,6 +254,7 @@ available = function
 end function
 
 get = function
+	"Return the next key typed, waiting for one if necessary."
 	while true
 		if keyQueue then return keyQueue.pull
 		result = raylib.GetCharPressed
@@ -259,6 +266,7 @@ end function
 // Empty the queue in place: other code (Mini Micro's Console) holds a
 // reference to this very list, and rebinding would leave it holding the old one.
 clear = function
+	"Discard any keypresses waiting in the queue."
 	while keyQueue.len
 		keyQueue.pop
 	end while
@@ -273,6 +281,7 @@ end function
 // The `smoothed` parameter is accepted for Mini Micro compatibility, but
 // inputs are currently reported raw.
 axis = function(axisName="Horizontal", smoothed=1)
+	"Return the value (-1 to 1) of the named input axis, from keys or gamepads."
 	if axisName == "Mouse ScrollWheel" then return raylib.GetMouseWheelMove
 	if axisName == "Horizontal" then
 		// Check arrow keys, then WASD, then all gamepads.
@@ -322,6 +331,7 @@ freeze _extraKeys
 // In order to make all keys work properly, including ones that Raylib
 // doesn't return from GetCharPressed, call this on every frame:
 update = function
+	"Queue keys (like arrows and tab) that raylib does not report as characters; call each frame."
 	for kcode in _extraKeys.indexes
 		if raylib.IsKeyPressed(kcode) then keyQueue.push char(_extraKeys[kcode])
 	end for
