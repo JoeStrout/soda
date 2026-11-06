@@ -221,8 +221,40 @@ end function
 TileDisplay.render = function
 	"Draw all non-empty cells to the screen."
 	if self.tileSet == null then return
-	for y in range(0, self._rows - 1, 1)
-		for x in range(0, self._cols - 1, 1)
+	// Only visit cells that could land on screen.  The window is padded
+	// generously (rotation, stagger offsets, non-square cells) so culling
+	// never drops a visible tile; it merely skips the vast off-screen bulk.
+	x0 = 0; x1 = self._cols - 1; y0 = 0; y1 = self._rows - 1
+	if self.cellSize isa list then
+		xsize = self.cellSize[0]; ysize = self.cellSize[1]
+	else
+		xsize = self.cellSize; ysize = xsize
+	end if
+	if self.overlap isa list then
+		xover = self.overlap[0]; yover = self.overlap[1]
+	else
+		xover = self.overlap; yover = xover
+	end if
+	xspacing = xsize - xover
+	yspacing = ysize - yover
+	if xspacing > 0 and yspacing > 0 then
+		pad = 2 * xsize
+		if ysize > xsize then pad = 2 * ysize
+		padX = pad + abs(self.oddRowOffset) * xsize
+		padY = pad + abs(self.oddColOffset) * ysize
+		// cell x occupies world X from x*xspacing - scrollX (plus offset); visible if in (-pad, W+pad)
+		v = floor((self.scrollX - padX) / xspacing)
+		if v > x0 then x0 = v
+		v = ceil((self.scrollX + Display.screenWidth + padX) / xspacing)
+		if v < x1 then x1 = v
+		// world Y runs bottom-up from the screen bottom
+		v = floor((self.scrollY - padY) / yspacing)
+		if v > y0 then y0 = v
+		v = ceil((self.scrollY + Display.screenHeight + padY) / yspacing)
+		if v < y1 then y1 = v
+	end if
+	for y in range(y0, y1, 1)
+		for x in range(x0, x1, 1)
 			idx = self._idx[y][x]
 			if idx == null then continue
 			g = self._tileGeometry(x, y, idx)
