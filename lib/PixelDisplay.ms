@@ -175,8 +175,14 @@ end function
 
 
 // Clear the display.  Optionally change the size and/or clear color.
-PixelDisplay.clear = function(color=null, width=960, height=640)
+PixelDisplay.clear = function(color=null, width=null, height=null)
 	"Clear the display to the given color, optionally resizing it."
+	// Default to the display's current size: clear should never resize it
+	// as a side effect of just changing the color, unlike the old hardcoded
+	// 960x640 default, which silently snapped any custom-sized display back
+	// to the Mini Micro screen's own size.
+	if width == null then width = self.width
+	if height == null then height = self.height
 	// Everything is about to be overwritten (or resized), so don't flush.
 	self._pixCache = null
 	self._pixDirty = false
