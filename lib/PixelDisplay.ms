@@ -417,9 +417,19 @@ _triangulate = function(pts)
 
 	// Corner convexity, maintained incrementally: clipping a vertex changes
 	// only its two neighbors, so we never rescan the whole polygon.
+	// reflexCount (also maintained incrementally alongside cross) tracks how
+	// many current corners are reflex: a convex polygon has none, and no
+	// reflex vertex anywhere means no candidate ear can possibly be blocked,
+	// so the O(n) "does any reflex vertex poke into this ear" scan below can
+	// be skipped outright. Without this, every candidate-ear check scanned
+	// all n current vertices even when none of them were reflex, making
+	// triangulation of an n-gon with few or no reflex corners (e.g. any
+	// convex polygon) cost O(n^2) instead of O(n).
 	cross = []
+	reflexCount = 0
 	for i in range(0, v.len - 1)
 		cross.push _cornerCross(v, i, sgn)
+		if cross[i] <= 0 then reflexCount = reflexCount + 1
 	end for
 
 	tris = []
@@ -438,22 +448,24 @@ _triangulate = function(pts)
 			a = v[i - 1]
 			b = v[i]
 			c = v[iNext]
-			minX = a[0]; maxX = a[0]; minY = a[1]; maxY = a[1]
-			for q in [b, c]
-				if q[0] < minX then minX = q[0] else if q[0] > maxX then maxX = q[0]
-				if q[1] < minY then minY = q[1] else if q[1] > maxY then maxY = q[1]
-			end for
 			isEar = true
 			// Only a reflex vertex can poke into a candidate ear.
-			for j in range(0, n - 1)
-				if cross[j] > 0 or j == i or j == iNext or j == (i + n - 1) % n then continue
-				q = v[j]
-				if q[0] < minX or q[0] > maxX or q[1] < minY or q[1] > maxY then continue
-				if _pointInTri(q, a, b, c) then
-					isEar = false
-					break
-				end if
-			end for
+			if reflexCount > 0 then
+				minX = a[0]; maxX = a[0]; minY = a[1]; maxY = a[1]
+				for q in [b, c]
+					if q[0] < minX then minX = q[0] else if q[0] > maxX then maxX = q[0]
+					if q[1] < minY then minY = q[1] else if q[1] > maxY then maxY = q[1]
+				end for
+				for j in range(0, n - 1)
+					if cross[j] > 0 or j == i or j == iNext or j == (i + n - 1) % n then continue
+					q = v[j]
+					if q[0] < minX or q[0] > maxX or q[1] < minY or q[1] > maxY then continue
+					if _pointInTri(q, a, b, c) then
+						isEar = false
+						break
+					end if
+				end for
+			end if
 			if isEar then
 				earIdx = i
 				break
@@ -467,8 +479,17 @@ _triangulate = function(pts)
 		cross.remove earIdx
 		if v.len > 2 then
 			k = earIdx % v.len
+			km1 = k - 1
+			wasReflexK = cross[k] <= 0
+			wasReflexKm1 = cross[km1] <= 0
 			cross[k] = _cornerCross(v, k, sgn)
-			cross[k - 1] = _cornerCross(v, k - 1, sgn)
+			cross[km1] = _cornerCross(v, km1, sgn)
+			if wasReflexK != (cross[k] <= 0) then
+				if wasReflexK then reflexCount = reflexCount - 1 else reflexCount = reflexCount + 1
+			end if
+			if wasReflexKm1 != (cross[km1] <= 0) then
+				if wasReflexKm1 then reflexCount = reflexCount - 1 else reflexCount = reflexCount + 1
+			end if
 		end if
 	end while
 	return tris
@@ -677,6 +698,38 @@ PixelDisplay.runUnitTests = function
 	  // emitted triangles covering four times the real area.
 	  [[[120,390], [120,330], [180,330], [180,390], [120,390], [80,590]],
 	    "2dVis fan with a zero-area spike"]]
+
+	// Convex n-gons: reflexCount (the S-P5 perf fix) stays 0 for every one
+	// of these, for the whole triangulation.
+	for n in [3, 7, 13]
+		pts = []
+		for i in range(0, n - 1)
+			a = 2 * pi * i / n
+			pts.push [50 * cos(a), 50 * sin(a)]
+		end for
+		cases.push [pts, "convex " + n + "-gon"]
+	end for
+
+	// Star-shaped polygons: half the corners are reflex, so reflexCount
+	// stays well above 0 for the whole triangulation -- exercises the
+	// non-fast-path branch the S-P5 fix leaves unchanged.
+	for n in [3, 5, 8]
+		pts = []
+		for i in range(0, 2 * n - 1)
+			a = pi * i / n
+			r = 50
+			if i % 2 == 1 then r = 20
+			pts.push [r * cos(a), r * sin(a)]
+		end for
+		cases.push [pts, "star with " + n + " points"]
+	end for
+
+	// Comb shape: several reflex corners (one per notch) that get resolved
+	// into convex ones over the course of clipping -- reflexCount drops
+	// from several down to 0 partway through, exercising the incremental
+	// bookkeeping across that transition.
+	cases.push [[[0,0], [10,0], [10,30], [20,30], [20,0], [30,0], [30,30],
+	  [40,30], [40,0], [50,0], [50,40], [0,40]], "comb shape"]
 
 	for c in cases
 		pts = c[0]
