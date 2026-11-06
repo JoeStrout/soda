@@ -242,9 +242,20 @@ ScreenFont.drawChar = function(unicode, x, y, foreColor, backColor)
 	src = self.srcRect(unicode)
 	dest = [x, y, self.charWidth, self.charHeight]
 
-	if _shader != null then
-		fore = color.toList(foreColor)
-		back = color.toList(backColor)
+	fore = color.toList(foreColor)
+	back = color.toList(backColor)
+
+	// The shader computes mix(back, fore, glyphMask) per pixel, but it has to
+	// be bound (a batch flush) around every glyph because its colors are
+	// uniforms.  When fore is opaque and back is either fully opaque or fully
+	// transparent, drawing the back rect and then the glyph tinted with fore
+	// gives exactly the same pixels, and raylib can batch all of those
+	// together (~13x faster for a full screen of text).  Only a translucent
+	// fore, or a partly transparent back, still needs the shader.
+	if _shader == null or (fore[3] == 255 and (back[3] == 0 or back[3] == 255)) then
+		if back[3] > 0 then rl.DrawRectangle x, y, self.charWidth, self.charHeight, back
+		rl.DrawTexturePro self.texture, src, dest, [0, 0], 0, fore
+	else
 		rl.BeginShaderMode _shader
 		if fore != _lastFore then
 			_setColorUniform _foreColorLoc, fore
@@ -256,12 +267,6 @@ ScreenFont.drawChar = function(unicode, x, y, foreColor, backColor)
 		end if
 		rl.DrawTexturePro self.texture, src, dest, [0, 0], 0, [255, 255, 255, 255]
 		rl.EndShaderMode
-	else
-		// Fallback: draw the background, then the glyph tinted with the
-		// fore color.
-		back = color.toList(backColor)
-		if back[3] > 0 then rl.DrawRectangle x, y, self.charWidth, self.charHeight, back
-		rl.DrawTexturePro self.texture, src, dest, [0, 0], 0, color.toList(foreColor)
 	end if
 end function
 
