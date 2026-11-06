@@ -34,45 +34,44 @@ Bounds.contains = function(x, y)
 	end if
 	dx = x - self.x
 	dy = y - self.y
+	hw = self.width / 2
+	hh = self.height / 2
+	if self.rotation == 0 then return abs(dx) <= hw and abs(dy) <= hh
 	cosR = cos(-self.rotation * pi / 180)
 	sinR = sin(-self.rotation * pi / 180)
 	localX = dx * cosR - dy * sinR
 	localY = dx * sinR + dy * cosR
-	hw = self.width / 2
-	hh = self.height / 2
 	return abs(localX) <= hw and abs(localY) <= hh
 end function
 
 Bounds.overlaps = function(b)
 	"Return whether these bounds overlap the given Bounds."
-	cornersA = self.corners
-	cornersB = b.corners
-	axes = []
-	for corners in [cornersA, cornersB]
-		for i in [0, 1]
-			j = i + 1
-			edgeX = corners[j][0] - corners[i][0]
-			edgeY = corners[j][1] - corners[i][1]
-			axes.push [-edgeY, edgeX]
-		end for
-	end for
-	for axis in axes
-		minA = axis[0] * cornersA[0][0] + axis[1] * cornersA[0][1]
-		maxA = minA
-		for i in range(1, 3)
-			proj = axis[0] * cornersA[i][0] + axis[1] * cornersA[i][1]
-			if proj < minA then minA = proj
-			if proj > maxA then maxA = proj
-		end for
-		minB = axis[0] * cornersB[0][0] + axis[1] * cornersB[0][1]
-		maxB = minB
-		for i in range(1, 3)
-			proj = axis[0] * cornersB[i][0] + axis[1] * cornersB[i][1]
-			if proj < minB then minB = proj
-			if proj > maxB then maxB = proj
-		end for
-		if maxA < minB or maxB < minA then return false
-	end for
+	// Separating-axis test for two rotated rectangles.  Each rectangle
+	// contributes two axes (its own edge normals); on each axis the boxes are
+	// separated if the distance between centers exceeds the sum of their
+	// projected half-extents.  Touching edges count as overlapping.
+	dx = b.x - self.x
+	dy = b.y - self.y
+	hwA = self.width / 2
+	hhA = self.height / 2
+	hwB = b.width / 2
+	hhB = b.height / 2
+	if self.rotation == 0 and b.rotation == 0 then
+		return abs(dx) <= hwA + hwB and abs(dy) <= hhA + hhB
+	end if
+	radA = self.rotation * pi / 180
+	radB = b.rotation * pi / 180
+	cosA = cos(radA); sinA = sin(radA)
+	cosB = cos(radB); sinB = sin(radB)
+	// |cos| and |sin| of the angle between the two boxes
+	c = abs(cosA * cosB + sinA * sinB)
+	s = abs(sinA * cosB - cosA * sinB)
+	// A's axes: x' = (cosA, sinA), y' = (-sinA, cosA)
+	if abs(dx * cosA + dy * sinA) > hwA + hwB * c + hhB * s then return false
+	if abs(dy * cosA - dx * sinA) > hhA + hwB * s + hhB * c then return false
+	// B's axes
+	if abs(dx * cosB + dy * sinB) > hwB + hwA * c + hhA * s then return false
+	if abs(dy * cosB - dx * sinB) > hhB + hwA * s + hhA * c then return false
 	return true
 end function
 
@@ -277,13 +276,21 @@ Sprite._solveHomography = function(pts, uvs)
 	return result
 end function
 
-// The warped quad is drawn with a fragment shader that does the
+// The warped quad is drawn with a small shader pair that does the
 // projective divide per pixel, since rlgl's vertex format has only a
-// vec2 texcoord and so cannot carry homogeneous UVs.  Built lazily, and
-// shared by every Sprite, so a program that never warps one never makes it.
+// vec2 texcoord and so cannot carry homogeneous UVs.  The homogeneous
+// texture coordinate (u*w, v*w, w) is computed per vertex on the CPU: u*w and
+// v*w travel in the texcoord, and w travels in the vertex position's (unused)
+// z.  All three are affine in screen space, so the rasterizer interpolates
+// them exactly and the fragment shader divides.  Because nothing varies per
+// sprite except vertex data, any number of consecutive warped sprites can
+// share one shader bracket (see Sprite._beginQuadBatch), instead of paying a
+// batch flush -- hundreds of microseconds -- for every sprite.
+// Built lazily, and shared by every Sprite, so a program that never warps
+// one never makes it.
 Sprite._shader = null
-Sprite._shaderLoc = -1
 Sprite._shaderFailed = false
+Sprite._batching = false	// true while a shader bracket is open around a run of warped sprites
 
 Sprite._ensureShader = function
 	"Return the shared warped-quad shader, building it if needed (null on failure)."
@@ -291,39 +298,84 @@ Sprite._ensureShader = function
 	if Sprite._shaderFailed then return null
 	ver = raylib.rlGetVersion
 	if ver == raylib.RL_OPENGL_ES_20 then
-		src = ["#version 100",
+		vs = ["#version 100",
+		"precision highp float;",
+		"attribute vec3 vertexPosition;",
+		"attribute vec2 vertexTexCoord;",
+		"attribute vec4 vertexColor;",
+		"uniform mat4 mvp;",
+		"varying vec2 fragTexCoord;",
+		"varying float fragW;",
+		"varying vec4 fragColor;",
+		"void main() {",
+		"    fragTexCoord = vertexTexCoord;",
+		"    fragW = vertexPosition.z;",
+		"    fragColor = vertexColor;",
+		"    gl_Position = mvp * vec4(vertexPosition.xy, 0.0, 1.0);",
+		"}"]
+		fs = ["#version 100",
 		"precision highp float;",	// screen-scale texcoords band badly at mediump
 		"varying vec2 fragTexCoord;",
+		"varying float fragW;",
 		"varying vec4 fragColor;",
 		"uniform sampler2D texture0;",
 		"uniform vec4 colDiffuse;",
-		"uniform mat4 uH;",
 		"void main() {",
-		"    vec3 h = (uH * vec4(fragTexCoord, 1.0, 0.0)).xyz;",
-		"    gl_FragColor = texture2D(texture0, h.xy / h.z) * colDiffuse * fragColor;",
+		"    gl_FragColor = texture2D(texture0, fragTexCoord / fragW) * colDiffuse * fragColor;",
 		"}"]
 	else
-		src = ["#version 330",
+		vs = ["#version 330",
+		"in vec3 vertexPosition;",
+		"in vec2 vertexTexCoord;",
+		"in vec4 vertexColor;",
+		"uniform mat4 mvp;",
+		"out vec2 fragTexCoord;",
+		"out float fragW;",
+		"out vec4 fragColor;",
+		"void main() {",
+		"    fragTexCoord = vertexTexCoord;",
+		"    fragW = vertexPosition.z;",
+		"    fragColor = vertexColor;",
+		"    gl_Position = mvp * vec4(vertexPosition.xy, 0.0, 1.0);",
+		"}"]
+		fs = ["#version 330",
 		"in vec2 fragTexCoord;",
+		"in float fragW;",
 		"in vec4 fragColor;",
 		"uniform sampler2D texture0;",
 		"uniform vec4 colDiffuse;",
-		"uniform mat4 uH;",
 		"out vec4 finalColor;",
 		"void main() {",
-		"    vec3 h = (uH * vec4(fragTexCoord, 1.0, 0.0)).xyz;",
-		"    finalColor = texture(texture0, h.xy / h.z) * colDiffuse * fragColor;",
+		"    finalColor = texture(texture0, fragTexCoord / fragW) * colDiffuse * fragColor;",
 		"}"]
 	end if
-	sh = raylib.LoadShaderFromMemory("", src.join(char(10)))
+	sh = raylib.LoadShaderFromMemory(vs.join(char(10)), fs.join(char(10)))
 	if sh == null then
 		Sprite._shaderFailed = true
 		print "Sprite: warped-quad shader failed to compile"
 		return null
 	end if
 	Sprite._shader = sh
-	Sprite._shaderLoc = raylib.GetShaderLocation(sh, "uH")
 	return sh
+end function
+
+// Open a shader bracket that stays open across consecutive warped sprites
+// (SpriteDisplay.render does this).  Returns false if the shader is unavailable.
+Sprite._beginQuadBatch = function
+	"Begin a shared shader bracket for a run of warped sprites."
+	if Sprite._batching then return true
+	shader = Sprite._ensureShader
+	if shader == null then return false
+	raylib.BeginShaderMode shader
+	Sprite._batching = true
+	return true
+end function
+
+Sprite._endQuadBatch = function
+	"End the shared shader bracket, if one is open."
+	if not Sprite._batching then return
+	raylib.EndShaderMode
+	Sprite._batching = false
 end function
 
 // Cache of the solved homography, keyed on what it was solved from.
@@ -365,53 +417,65 @@ Sprite._drawQuad = function(offsetX, offsetY)
 	m = self._homography
 	if m == null then return	// degenerate quad; nothing sensible to draw
 
-	shader = self._ensureShader
-	if shader == null then return
+	own = not Sprite._batching	// not inside a SpriteDisplay run: bracket just this sprite
+	if own then
+		shader = Sprite._ensureShader
+		if shader == null then return
+	end if
 	rgba = self._tintRGBA
-	raylib.BeginShaderMode shader
-	raylib.SetShaderValueMatrix shader, Sprite._shaderLoc,
-		[[m[0], m[1], m[2], 0],
-		 [m[3], m[4], m[5], 0],
-		 [m[6], m[7], 1,    0],
-		 [0,    0,    0,    1]]
+	// homogeneous texcoord at each vertex: H * [x, y, 1]
+	hu = []; hv = []; hw = []
+	for c in lc
+		x = c[0]; y = c[1]
+		hu.push m[0]*x + m[1]*y + m[2]
+		hv.push m[3]*x + m[4]*y + m[5]
+		hw.push m[6]*x + m[7]*y + 1
+	end for
+	if own then raylib.BeginShaderMode shader
 	raylib.rlSetTexture tex.id
 	raylib.rlBegin raylib.RL_QUADS
 	raylib.rlColor4ub rgba[0], rgba[1], rgba[2], rgba[3]
 	raylib.rlNormal3f 0, 0, 1
 	// wound as raylib does: top-left, bottom-left, bottom-right, top-right
 	for i in [3, 0, 1, 2]
-		raylib.rlTexCoord2f lc[i][0], lc[i][1]
-		raylib.rlVertex2f p[i][0], p[i][1]
+		raylib.rlTexCoord2f hu[i], hv[i]
+		raylib.rlVertex3f p[i][0], p[i][1], hw[i]
 	end for
 	raylib.rlEnd
 	raylib.rlSetTexture 0
-	raylib.EndShaderMode
+	if own then raylib.EndShaderMode
 end function
 
 Sprite.update = null	// define your own update method if needed
 
 Sprite.draw = function(offsetX=0, offsetY=0)
 	"Draw this sprite to the screen, shifted by the given offset."
-	if self.image == null then return
+	image = self.image
+	if image == null then return
 	if self.localCorners or self._uvs then
 		self._drawQuad offsetX, offsetY
 		return
 	end if
-	if self.srcRect then
-		srcRect = self.srcRect[:]
+	// (written without helper lists or copies: this runs once per sprite per frame)
+	sr = self.srcRect
+	if sr then
+		srcX = sr[0]; srcY = sr[1]; srcW = sr[2]; srcH = sr[3]
 	else
-		srcRect = [0, 0, self.image.width, self.image.height]
+		srcX = 0; srcY = 0; srcW = image.width; srcH = image.height
 	end if
-	s = self._scaleXY
-	destWidth = srcRect[2] * abs(s[0])
-	destHeight = srcRect[3] * abs(s[1])
-	if s[0] < 0 then srcRect[2] = -srcRect[2]
-	if s[1] < 0 then srcRect[3] = -srcRect[3]
-	h = Display.screenHeight
-	destRect = [self.x + offsetX, h - self.y - offsetY, destWidth, destHeight]
-	origin = [destWidth * 0.5, destHeight * 0.5]
-	raylib.DrawTexturePro self.image.texture, srcRect, destRect,
-		origin, -self.rotation, self.tint
+	sc = self.scale
+	if sc isa list then
+		scaleX = sc[0]; scaleY = sc[1]
+	else
+		scaleX = sc; scaleY = sc
+	end if
+	destWidth = srcW * abs(scaleX)
+	destHeight = srcH * abs(scaleY)
+	if scaleX < 0 then srcW = -srcW
+	if scaleY < 0 then srcH = -srcH
+	raylib.DrawTexturePro image.texture, [srcX, srcY, srcW, srcH],
+		[self.x + offsetX, Display.screenHeight - self.y - offsetY, destWidth, destHeight],
+		[destWidth * 0.5, destHeight * 0.5], -self.rotation, self.tint
 end function
 
 Sprite.worldBounds = function
@@ -469,13 +533,26 @@ end function
 SpriteDisplay._renderSprites = function(spriteList)
 	"Draw each sprite in the given list, recursing into any nested lists."
 	for sp in spriteList
-		if sp isa list then self._renderSprites sp else sp.draw -self.scrollX, -self.scrollY
+		if sp isa list then
+			self._renderSprites sp
+			continue
+		end if
+		// Consecutive warped sprites share one shader bracket; any other
+		// sprite closes it first, so draw order is unchanged.
+		if sp isa Sprite and sp.image != null and (sp.localCorners or sp._uvs) then
+			if not Sprite._batching then Sprite._beginQuadBatch
+		else if Sprite._batching then
+			Sprite._endQuadBatch
+		end if
+		sp.draw -self.scrollX, -self.scrollY
 	end for
 end function
 
 SpriteDisplay.render = function
 	"Draw all sprites in this display to the screen."
+	Sprite._endQuadBatch
 	self._renderSprites self.sprites
+	Sprite._endQuadBatch
 end function
 
 testBounds = function
