@@ -232,6 +232,28 @@ _setColorUniform = function(loc, rgba)
 	   [rgba[0]/255, rgba[1]/255, rgba[2]/255, rgba[3]/255], rl.SHADER_UNIFORM_VEC4
 end function
 
+// Parsing a color string costs several microseconds, and drawChar needs two
+// per glyph, so remember the parsed lists.  Keyed by the color value itself
+// (string or list-as-key is not hashable, so only strings are cached).
+// Cleared when it grows past a sane size, so a program animating through
+// millions of distinct colors can't leak.  The cached lists are shared and
+// must not be modified.
+_colorCache = {}
+_cacheColor = function(c)
+	"Parse color c to an [r,g,b,a] list, caching it if it is a string."
+	result = color.toList(c)
+	if c isa string then
+		if _colorCache.len > 4096 then outer._colorCache = {}
+		_colorCache[c] = result
+	end if
+	return result
+end function
+
+// Source rects by code point, for the font currently in use (the cache
+// entries are re-validated against charWidth/charHeight in drawChar, since
+// ScreenFont instances may differ in glyph size).
+_srcRects = {}
+
 // Draw one character.  x,y give the top-left corner of the character cell,
 // in raylib screen coordinates (y increasing downward).
 ScreenFont.drawChar = function(unicode, x, y, foreColor, backColor)
@@ -239,11 +261,15 @@ ScreenFont.drawChar = function(unicode, x, y, foreColor, backColor)
 	if self.texture == null then return
 	if not _shaderTried then self.loadShader
 
-	src = self.srcRect(unicode)
+	if _srcRects.hasIndex(unicode) then src = _srcRects[unicode] else src = null
+	if src == null or src[2] != self.charWidth or src[3] != self.charHeight then
+		src = self.srcRect(unicode)
+		_srcRects[unicode] = src
+	end if
 	dest = [x, y, self.charWidth, self.charHeight]
 
-	fore = color.toList(foreColor)
-	back = color.toList(backColor)
+	if _colorCache.hasIndex(foreColor) then fore = _colorCache[foreColor] else fore = _cacheColor(foreColor)
+	if _colorCache.hasIndex(backColor) then back = _colorCache[backColor] else back = _cacheColor(backColor)
 
 	// The shader computes mix(back, fore, glyphMask) per pixel, but it has to
 	// be bound (a batch flush) around every glyph because its colors are
