@@ -253,14 +253,50 @@ TileDisplay.render = function
 		v = ceil((self.scrollY + Display.screenHeight + padY) / yspacing)
 		if v < y1 then y1 = v
 	end if
+	// Everything below is loop-invariant; the per-cell work is then just
+	// arithmetic plus one draw call (this inlines _tileGeometry, which
+	// allocates a map and several lists per tile).
+	tex = self.tileSet.texture
+	if self.tileSetTileSize isa list then
+		tw = self.tileSetTileSize[0]; th = self.tileSetTileSize[1]
+	else
+		tw = self.tileSetTileSize; th = tw
+	end if
+	tilesPerRow = floor(self.tileSet.width / tw)
+	origin = [xsize * 0.5, ysize * 0.5]
+	rowOff = self.oddRowOffset * xsize
+	colOff = self.oddColOffset * ysize
+	halfX = xsize * 0.5
+	halfY = ysize * 0.5
+	screenH = Display.screenHeight
+	scrollX = self.scrollX
+	scrollY = self.scrollY
+	white = color.white
+	idxGrid = self._idx
+	tintGrid = self._tint
+	xformGrid = self._xform
+	DrawTexturePro = @raylib.DrawTexturePro
 	for y in range(y0, y1, 1)
+		idxRow = idxGrid[y]
+		tintRow = tintGrid[y]
+		xformRow = xformGrid[y]
+		rowX = rowOff * (y % 2) - scrollX
+		rowY = y * yspacing - scrollY
 		for x in range(x0, x1, 1)
-			idx = self._idx[y][x]
+			idx = idxRow[x]
 			if idx == null then continue
-			g = self._tileGeometry(x, y, idx)
-			tint = self._tint[y][x]
-			if tint == null then tint = color.white
-			raylib.DrawTexturePro self.tileSet.texture, g.srcRect, g.destRect, g.origin, g.rotation, tint
+			t = xformRow[x]
+			srcRow = floor(idx / tilesPerRow)
+			if t >= 4 then
+				src = [(idx - srcRow * tilesPerRow) * tw, srcRow * th, -tw, th]
+				rot = (t % 4) * 90
+			else
+				src = [(idx - srcRow * tilesPerRow) * tw, srcRow * th, tw, th]
+				rot = (t % 4) * 90
+			end if
+			tint = tintRow[x]
+			if tint == null then tint = white
+			DrawTexturePro tex, src, [x * xspacing + rowX + halfX, screenH - (rowY + colOff * (x % 2)) - halfY, xsize, ysize], origin, rot, tint
 		end for
 	end for
 end function
