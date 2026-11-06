@@ -72,7 +72,7 @@ fromList = function(rgbaList)
 	end if
 	s = ["#"]
 	for value in rgbaList
-		s.append hb[value]
+		s.push hb[value]
 	end for
 	return s.join("")
 end function
