@@ -23,6 +23,9 @@ PixelDisplay._clip = null  // [left, bottom, width, height] in display coords, o
 // setPixel writes only to it, and _flushPix uploads it when it's needed.
 PixelDisplay._pixCache = null  // RawData copy of _renderTex (RGBA, bottom row first), or null
 PixelDisplay._pixDirty = false  // true if _pixCache has writes the texture lacks
+PixelDisplay._batchDepth = 0  // > 0 while beginBatch/endBatch keep the GPU bracket open
+PixelDisplay._batchAlphaBlend = false  // the blend mode beginBatch set up, while batching
+PixelDisplay._batchBlendOverridden = false  // true if a mismatched call temporarily changed it
 
 PixelDisplay._ensureTex = function
 	"Create this display's render texture, if it does not already exist."
@@ -41,15 +44,9 @@ end function
 // texture, so its frame loop must check raylib.rlGetActiveFramebuffer and skip
 // the frame when a bracket is open.  (Mini Micro 2's main.ms does; Soda, which
 // runs the script to completion each frame, never sees the case.)
-PixelDisplay._beginDraw = function(alphaBlend = false)
-	"Begin drawing to the render texture, in replace mode or (optionally) alpha blend mode."
-	if self._pixCache != null then self._dropPixCache
-	if self._renderTex == null then self._ensureTex
-	rl.BeginTextureMode self._renderTex
-	if self._clip != null then
-		c = self._clip
-		rl.BeginScissorMode c[0], self.height - c[1] - c[3], c[2], c[3]
-	end if
+// Actually issue the blend-mode calls for one drawing call.
+PixelDisplay._setBlendMode = function(alphaBlend)
+	"Set up custom-blend (replace) or alpha-blend mode, per alphaBlend."
 	if alphaBlend then
 //		rl.BeginBlendMode 5				// BLEND_ALPHA_PREMULTIPLY
 		// Use normal color blending for RGB, but MAX mode for alpha,
@@ -60,6 +57,32 @@ PixelDisplay._beginDraw = function(alphaBlend = false)
 		rl.rlSetBlendFactors 1, 0, 32774    // GL_ONE, GL_ZERO, GL_FUNC_ADD
 		rl.BeginBlendMode 6                 // BLEND_CUSTOM
 	end if
+end function
+
+PixelDisplay._beginDraw = function(alphaBlend = false)
+	"Begin drawing to the render texture, in replace mode or (optionally) alpha blend mode."
+	if self._pixCache != null then self._dropPixCache
+	if self._renderTex == null then self._ensureTex
+	// Inside a beginBatch/endBatch bracket, the framebuffer is already bound
+	// and the blend mode already set (both stay in effect until endBatch):
+	// a draw call sandwiched between BeginTextureMode/EndTextureMode *or*
+	// BeginBlendMode/EndBlendMode forces an implicit render-batch flush, so
+	// either bracket closing between draws is expensive, not just the
+	// framebuffer rebind alone. Skip both per call while batching, as long
+	// as this call's alphaBlend matches what the batch set up; a mismatched
+	// call (mixing e.g. print's alpha blend into a non-alpha batch) falls
+	// back to setting blend mode just for itself, for correctness.
+	if self._batchDepth == 0 then
+		rl.BeginTextureMode self._renderTex
+	else if alphaBlend != self._batchAlphaBlend then
+		self._setBlendMode alphaBlend
+		self._batchBlendOverridden = true
+	end if
+	if self._clip != null then
+		c = self._clip
+		rl.BeginScissorMode c[0], self.height - c[1] - c[3], c[2], c[3]
+	end if
+	if self._batchDepth == 0 then self._setBlendMode alphaBlend
 end function
 
 // Anything that draws to _renderTex must call this (_beginDraw does).
@@ -84,9 +107,60 @@ end function
 
 PixelDisplay._endDraw = function
 	"End drawing to the render texture, restoring blend, scissor, and texture mode."
-	rl.EndBlendMode
+	if self._batchDepth == 0 then
+		rl.EndBlendMode
+	else if self._batchBlendOverridden then
+		// Restore the batch's own blend mode rather than ending it, so the
+		// next call in the batch finds it as beginBatch left it.
+		self._setBlendMode self._batchAlphaBlend
+		self._batchBlendOverridden = false
+	end if
 	if self._clip != null then rl.EndScissorMode
-	rl.EndTextureMode
+	if self._batchDepth == 0 then rl.EndTextureMode
+end function
+
+// Keep the render texture's GPU brackets (BeginTextureMode/EndTextureMode
+// *and* BeginBlendMode/EndBlendMode) open across multiple drawing calls.
+// Either bracket closing between two draw calls forces an implicit
+// render-batch flush -- measured as the dominant cost in a loop of many
+// small draws (e.g. setPixel): batching both turns a ~0.098 ms/call loop
+// into one that amortizes to a few µs/call for large N (see FINDINGS.md,
+// S-P1). Calls nest: only the outermost beginBatch/endBatch pair actually
+// opens and closes the brackets. Must be balanced with endBatch -- an
+// unclosed batch leaves the display's framebuffer bound, which breaks
+// rendering (its own and everything drawn afterward) until endBatch is
+// called.
+//
+// alphaBlend picks which blend mode the whole batch uses; a call inside the
+// batch whose own alphaBlend differs (e.g. mixing print's alpha blend into
+// a non-alpha batch) still works, just at that one call's normal per-call
+// cost (see _beginDraw/_endDraw).
+//
+// Widens the time-slicing hazard _beginDraw's own comment describes (a host
+// that can suspend the script between statements must skip a frame while a
+// bracket is open) to the whole batch, not just one call -- an explicit,
+// bounded-by-the-caller widening of a risk that already exists per call.
+PixelDisplay.beginBatch = function(alphaBlend = false)
+	"Open a GPU draw bracket that stays open across calls until endBatch. Nests."
+	if self._batchDepth == 0 then
+		if self._pixCache != null then self._dropPixCache
+		if self._renderTex == null then self._ensureTex
+		rl.BeginTextureMode self._renderTex
+		self._setBlendMode alphaBlend
+		self._batchAlphaBlend = alphaBlend
+		self._batchBlendOverridden = false
+	end if
+	self._batchDepth = self._batchDepth + 1
+end function
+
+PixelDisplay.endBatch = function
+	"Close a GPU draw bracket opened by beginBatch."
+	if self._batchDepth <= 0 then return
+	self._batchDepth = self._batchDepth - 1
+	if self._batchDepth == 0 then
+		rl.EndBlendMode
+		rl.EndTextureMode
+	end if
 end function
 
 // Create a new PixelDisplay with the given size.
