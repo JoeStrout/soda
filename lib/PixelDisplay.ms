@@ -600,21 +600,27 @@ end function
 // Draw an Image onto this PixelDisplay.
 PixelDisplay.drawImage = function(img, left, bottom, width=null, height=null, srcLeft=0, srcBottom=0, srcWidth=null, srcHeight=null, tint="#FFFFFF")
 	"Draw an Image (or part of one) into the given rectangle, optionally tinted."
-	tex = rl.LoadTextureFromImage(img._img)
+	// Reuse img's own cached GPU texture (Image.texture) rather than
+	// uploading and freeing a fresh one every call: LoadTextureFromImage/
+	// UnloadTexture are themselves costly (not just the draw call), so
+	// repeated drawImage calls on the same Image used to pay for a new
+	// upload each time even though the pixel data never changed.
+	tex = img.texture
 	rl.SetTextureFilter tex, rl.TEXTURE_FILTER_POINT
 	self._drawTexture tex, left, bottom, width, height, srcLeft, srcBottom, srcWidth, srcHeight, tint
-	rl.UnloadTexture tex
 end function
 
 // Use the image to tile the given destination rect, repeating as many
 // times as needed.  Useful for repeated patterns.
 PixelDisplay.patternFill = function(img, left, bottom, width=null, height=null, srcLeft=0, srcBottom=0)
 	"Fill the given rectangle by tiling the given Image repeatedly."
-	tex = rl.LoadTextureFromImage(img._img)
+	tex = img.texture
 	rl.SetTextureWrap tex, rl.TEXTURE_WRAP_REPEAT
 	rl.SetTextureFilter tex, rl.TEXTURE_FILTER_POINT
 	self._drawTexture tex, left, bottom, width, height, srcLeft, srcBottom, width, height
-	rl.UnloadTexture tex
+	// Restore the default wrap mode so a later drawImage call using this
+	// same cached texture doesn't inherit REPEAT.
+	rl.SetTextureWrap tex, rl.TEXTURE_WRAP_CLAMP
 end function
 
 // Limit drawing to a rectangular region.  Coordinates use the same
