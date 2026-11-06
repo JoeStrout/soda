@@ -139,7 +139,10 @@ end function
 
 Sound.StopAll = function
 	"Stop all sounds that are currently playing."
-	for snd in _playingSounds
+	// Iterate a snapshot: `snd.stop` removes its sound from `_playingSounds`
+	// as a side effect, so iterating the live list directly would skip
+	// every other entry.
+	for snd in _playingSounds[:]
 		snd.stop
 	end for
 	outer._playingSounds = []
