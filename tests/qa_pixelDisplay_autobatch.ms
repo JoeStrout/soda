@@ -2,6 +2,10 @@
 // bracket open; every other consumer of the GPU must close it first.
 import "soda"
 import "qa"
+qa.assertEqual PixelDisplay.autoBatch, false, "auto-batching must be opt-in"
+mode = true
+if shellArgs.len > 1 and shellArgs[1] == "off" then mode = false  // (run both ways)
+PixelDisplay.autoBatch = mode
 rl = raylib
 
 a = PixelDisplay.Make

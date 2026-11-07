@@ -25,7 +25,14 @@ PixelDisplay._pixCache = null  // RawData copy of _renderTex (RGBA, bottom row f
 PixelDisplay._pixDirty = false  // true if _pixCache has writes the texture lacks
 PixelDisplay._batchDepth = 0  // > 0 while beginBatch/endBatch keep the GPU bracket open
 PixelDisplay._batchAlphaBlend = false  // the blend mode beginBatch set up, while batching
-PixelDisplay._autoBatch = (version.hasIndex("hostName") and version.hostName == "Soda")  // keep brackets open between unbatched calls (Soda runs the script to completion each frame)
+// Opt-in: when true (and running on Soda), unbatched drawing calls leave their
+// GPU bracket open between calls instead of closing it each time, which makes
+// paint-style loops of many small draws up to ~18x faster.  Caveat: code that
+// uses raw raylib framebuffer/texture calls (BeginTextureMode, UnloadTexture of
+// a texture this display just drew, its own BeginDrawing) must call
+// PixelDisplay._closeOpen first.  Soda's own code does so.
+PixelDisplay.autoBatch = false
+PixelDisplay._isSoda = (version.hasIndex("hostName") and version.hostName == "Soda")
 PixelDisplay._st = {"open": null, "alpha": false}  // shared: the display whose bracket is left open, and its blend mode
 PixelDisplay._batchBlendOverridden = false  // true if a mismatched call temporarily changed it
 
@@ -87,7 +94,7 @@ PixelDisplay._beginDraw = function(alphaBlend = false)
 	// as this call's alphaBlend matches what the batch set up; a mismatched
 	// call (mixing e.g. print's alpha blend into a non-alpha batch) falls
 	// back to setting blend mode just for itself, for correctness.
-	if self._batchDepth == 0 and PixelDisplay._autoBatch then
+	if self._batchDepth == 0 and (PixelDisplay.autoBatch and PixelDisplay._isSoda) then
 		// Auto-batch: leave the bracket open after the call; reuse it if the
 		// next call is on this display with the same blend mode.
 		st = PixelDisplay._st
@@ -140,7 +147,7 @@ end function
 
 PixelDisplay._endDraw = function
 	"End drawing to the render texture, restoring blend, scissor, and texture mode."
-	if self._batchDepth == 0 and PixelDisplay._autoBatch then
+	if self._batchDepth == 0 and (PixelDisplay.autoBatch and PixelDisplay._isSoda) then
 		if self._clip != null then rl.EndScissorMode
 		return
 	end if
