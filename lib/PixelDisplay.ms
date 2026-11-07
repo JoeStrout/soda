@@ -25,10 +25,13 @@ PixelDisplay._pixCache = null  // RawData copy of _renderTex (RGBA, bottom row f
 PixelDisplay._pixDirty = false  // true if _pixCache has writes the texture lacks
 PixelDisplay._batchDepth = 0  // > 0 while beginBatch/endBatch keep the GPU bracket open
 PixelDisplay._batchAlphaBlend = false  // the blend mode beginBatch set up, while batching
+PixelDisplay._autoBatch = (version.hasIndex("hostName") and version.hostName == "Soda")  // keep brackets open between unbatched calls (Soda runs the script to completion each frame)
+PixelDisplay._st = {"open": null, "alpha": false}  // shared: the display whose bracket is left open, and its blend mode
 PixelDisplay._batchBlendOverridden = false  // true if a mismatched call temporarily changed it
 
 PixelDisplay._ensureTex = function
 	"Create this display's render texture, if it does not already exist."
+	PixelDisplay._closeOpen  // (creating a framebuffer would unbind the open one)
 	if self._renderTex == null then
 		self._renderTex = autoUnload(rl.LoadRenderTexture(self.width, self.height))
 	end if
@@ -59,6 +62,18 @@ PixelDisplay._setBlendMode = function(alphaBlend)
 	end if
 end function
 
+// Close the bracket (if any) that an unbatched drawing call left open.
+// Must run before anything else touches the GPU: other displays' drawing,
+// texture readbacks, and raylib.BeginDrawing (soda.update calls it).
+PixelDisplay._closeOpen = function
+	"Close any texture/blend bracket left open by auto-batching."
+	st = PixelDisplay._st
+	if st.open == null then return
+	st.open = null
+	rl.EndBlendMode
+	rl.EndTextureMode
+end function
+
 PixelDisplay._beginDraw = function(alphaBlend = false)
 	"Begin drawing to the render texture, in replace mode or (optionally) alpha blend mode."
 	if self._pixCache != null then self._dropPixCache
@@ -72,7 +87,25 @@ PixelDisplay._beginDraw = function(alphaBlend = false)
 	// as this call's alphaBlend matches what the batch set up; a mismatched
 	// call (mixing e.g. print's alpha blend into a non-alpha batch) falls
 	// back to setting blend mode just for itself, for correctness.
+	if self._batchDepth == 0 and PixelDisplay._autoBatch then
+		// Auto-batch: leave the bracket open after the call; reuse it if the
+		// next call is on this display with the same blend mode.
+		st = PixelDisplay._st
+		if st.open != self or st.alpha != alphaBlend then
+			PixelDisplay._closeOpen
+			rl.BeginTextureMode self._renderTex
+			self._setBlendMode alphaBlend
+			st.open = self
+			st.alpha = alphaBlend
+		end if
+		if self._clip != null then
+			c = self._clip
+			rl.BeginScissorMode c[0], self.height - c[1] - c[3], c[2], c[3]
+		end if
+		return
+	end if
 	if self._batchDepth == 0 then
+		PixelDisplay._closeOpen
 		rl.BeginTextureMode self._renderTex
 	else if alphaBlend != self._batchAlphaBlend then
 		self._setBlendMode alphaBlend
@@ -107,6 +140,10 @@ end function
 
 PixelDisplay._endDraw = function
 	"End drawing to the render texture, restoring blend, scissor, and texture mode."
+	if self._batchDepth == 0 and PixelDisplay._autoBatch then
+		if self._clip != null then rl.EndScissorMode
+		return
+	end if
 	if self._batchDepth == 0 then
 		rl.EndBlendMode
 	else if self._batchBlendOverridden then
@@ -143,6 +180,7 @@ end function
 PixelDisplay.beginBatch = function(alphaBlend = false)
 	"Open a GPU draw bracket that stays open across calls until endBatch. Nests."
 	if self._batchDepth == 0 then
+		PixelDisplay._closeOpen
 		if self._pixCache != null then self._dropPixCache
 		if self._renderTex == null then self._ensureTex
 		rl.BeginTextureMode self._renderTex
@@ -187,6 +225,7 @@ PixelDisplay.clear = function(color=null, width=null, height=null)
 	self._pixCache = null
 	self._pixDirty = false
 	if width != self.width or height != self.height then
+		PixelDisplay._closeOpen
 		if self._renderTex != null then rl.UnloadRenderTexture self._renderTex
 		self.width = width
 		self.height = height
@@ -238,6 +277,7 @@ PixelDisplay.pixel = function(x, y)
 	"Return the color of the pixel at x, y as a #RRGGBBAA string."
 	d = self._pixCache
 	if d == null then
+		PixelDisplay._closeOpen
 		self._ensureTex
 		t = self._renderTex.texture
 		// (Render texture rows are bottom-up, so cache row y is display row y.)
@@ -589,6 +629,7 @@ end function
 // Get a rectangular region of the display as an Image.
 PixelDisplay.getImage = function(left=0, bottom=0, width, height)
 	"Return a rectangular region of the display as a new Image."
+	PixelDisplay._closeOpen
 	if self._renderTex == null then self._ensureTex
 	self._flushPix
 	fullImg = rl.LoadImageFromTexture(self._renderTex.texture)
@@ -670,6 +711,7 @@ end function
 // this flip corrects it, giving us Mini Micro's bottom-up coordinate system.
 PixelDisplay.render = function
 	"Draw this display to the screen, applying scale and scroll."
+	PixelDisplay._closeOpen
 	if self._renderTex == null then return
 	if self._pixDirty then self._flushPix
 	src = [0, 0, self.width, -self.height]

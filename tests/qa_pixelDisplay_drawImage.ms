@@ -47,6 +47,7 @@ dRef = PixelDisplay.Make
 tex = rl.LoadTextureFromImage(refImg._img)
 rl.SetTextureFilter tex, rl.TEXTURE_FILTER_POINT
 dRef._drawTexture tex, 3, 3, null, null, 0, 0, null, null, "#FFFFFF"
+PixelDisplay._closeOpen  // (raw raylib texture free: flush auto-batched draws first)
 rl.UnloadTexture tex
 
 dNew = PixelDisplay.Make

@@ -10,6 +10,12 @@
 // glyph.  If the shader can't be compiled, we fall back to drawing a
 // background rectangle and then the glyph tinted with the fore color.
 
+// Auto-batched PixelDisplay drawing may still reference a texture we are
+// about to free: close its bracket (flushing the draws) first.
+_flushBatch = function
+	if globals.hasIndex("PixelDisplay") and PixelDisplay.hasIndex("_closeOpen") then PixelDisplay._closeOpen
+end function
+
 import "importUtil"
 ensureImport ["color"]
 
@@ -140,6 +146,7 @@ end function
 ScreenFont.load = function(texturePath)
 	"Load a font texture (a 16x16 grid of glyphs); return true on success."
 	if self.texture != null then
+		_flushBatch
 		rl.UnloadTexture self.texture
 		self.texture = null
 	end if
@@ -269,6 +276,7 @@ end function
 ScreenFont.unload = function
 	"Free this font's texture."
 	if self.texture == null then return
+	_flushBatch
 	rl.UnloadTexture self.texture
 	self.texture = null
 	self.charWidth = 0
