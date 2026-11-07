@@ -483,8 +483,8 @@ Font.print = function(s, x=20, y=320, scale=1, tint="#FFFFFF")
 	s = str(s)
 	// On Soda, hold the PixelDisplay's GPU bracket open across the whole string
 	// (one framebuffer bind and blend setup instead of one per glyph: ~8x faster).
-	// Mini Micro's gfx has no such thing.
-	batch = s.len > 1 and version.hasIndex("hostName") and version.hostName == "Soda"
+	// Mini Micro has no such thing, and older Soda lacks beginBatch.
+	batch = s.len > 1 and version.hasIndex("hostName") and version.hostName == "Soda" and PixelDisplay.hasIndex("beginBatch")
 	if batch then gfx.beginBatch true
 	lastc = ""
 	for c in s
