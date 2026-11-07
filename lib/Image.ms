@@ -55,8 +55,16 @@ Image.width = 0
 Image.height = 0
 
 // Create a new Image filled with the given color.
+Image.MAX_BYTES = 2^30  // (largest image Image.create will allocate: 1 GiB of RGBA)
 Image.create = function(width, height, color="#00000000")
 	"Create a new Image of the given size, filled with the given color."
+	// A size that cannot be allocated crashes the whole program (raylib's
+	// allocation failure is not reported), so reject it here instead.
+	if not (width isa number and height isa number) or width < 0 or height < 0 or
+	   width * height * 4 > Image.MAX_BYTES then
+		print "Image.create: invalid size " + width + " x " + height
+		return null
+	end if
 	result = new self
 	result._img = autoUnload(rl.GenImageColor(width, height, colorToRGBA(color)))
 	result.width = width
