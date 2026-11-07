@@ -82,7 +82,7 @@ Sprite.rotation = 0
 Sprite.scale = 1
 Sprite.image = null
 Sprite.srcRect = null    // optional: [left, top, width, height] in image
-Sprite.tint = raylib.WHITE
+Sprite.tint = [255, 255, 255, 255]  // (a list: raylib.WHITE is a map, which costs ~175 ns more per draw call to convert)
 Sprite.localBounds = null
 
 
