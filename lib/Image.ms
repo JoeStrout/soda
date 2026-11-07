@@ -4,6 +4,12 @@
 // Internally, pixel data is stored in raylib orientation (y=0 at top).
 // All public methods use Mini Micro orientation (y=0 at bottom).
 
+// Auto-batched PixelDisplay drawing may still reference a texture we are
+// about to free: close its bracket (flushing the draws) first.
+_flushBatch = function
+	if globals.hasIndex("PixelDisplay") and PixelDisplay.hasIndex("_closeOpen") then PixelDisplay._closeOpen
+end function
+
 rl = raylib
 
 // --- Color utility functions ---
@@ -82,6 +88,7 @@ Image.release = function
 		self._img = null
 	end if
 	if self._tex != null then
+		_flushBatch
 		rl.UnloadTexture(self._tex)
 		self._tex = null
 	end if
@@ -156,6 +163,7 @@ end function
 Image._invalidateTexture = function
 	"Release the cached texture so it is rebuilt from the pixel data on next use."
 	if self._tex then
+		_flushBatch
 		rl.UnloadTexture(self._tex)
 		self._tex = null
 	end if

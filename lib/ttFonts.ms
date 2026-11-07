@@ -87,6 +87,7 @@ end function
 TTFont.printChar = function(c, x=480, y=320, scale=1, tint="#FFFFFF")
 	"Draw one character (or emoji) to gfx; return how far to advance the cursor."
 	gfx._dropPixCache
+	PixelDisplay._closeOpen
 	rl.BeginTextureMode gfx._renderTex
 	// Use normal color blending for RGB, but MAX mode for alpha,
 	// so that our font rendering doesn't punch holes in the pixel layer.

@@ -23,9 +23,22 @@ PixelDisplay._clip = null  // [left, bottom, width, height] in display coords, o
 // setPixel writes only to it, and _flushPix uploads it when it's needed.
 PixelDisplay._pixCache = null  // RawData copy of _renderTex (RGBA, bottom row first), or null
 PixelDisplay._pixDirty = false  // true if _pixCache has writes the texture lacks
+PixelDisplay._batchDepth = 0  // > 0 while beginBatch/endBatch keep the GPU bracket open
+PixelDisplay._batchAlphaBlend = false  // the blend mode beginBatch set up, while batching
+// Opt-in: when true (and running on Soda), unbatched drawing calls leave their
+// GPU bracket open between calls instead of closing it each time, which makes
+// paint-style loops of many small draws up to ~18x faster.  Caveat: code that
+// uses raw raylib framebuffer/texture calls (BeginTextureMode, UnloadTexture of
+// a texture this display just drew, its own BeginDrawing) must call
+// PixelDisplay._closeOpen first.  Soda's own code does so.
+PixelDisplay.autoBatch = false
+PixelDisplay._isSoda = (version.hasIndex("hostName") and version.hostName == "Soda")
+PixelDisplay._st = {"open": null, "alpha": false}  // shared: the display whose bracket is left open, and its blend mode
+PixelDisplay._batchBlendOverridden = false  // true if a mismatched call temporarily changed it
 
 PixelDisplay._ensureTex = function
 	"Create this display's render texture, if it does not already exist."
+	PixelDisplay._closeOpen  // (creating a framebuffer would unbind the open one)
 	if self._renderTex == null then
 		self._renderTex = autoUnload(rl.LoadRenderTexture(self.width, self.height))
 	end if
@@ -41,15 +54,9 @@ end function
 // texture, so its frame loop must check raylib.rlGetActiveFramebuffer and skip
 // the frame when a bracket is open.  (Mini Micro 2's main.ms does; Soda, which
 // runs the script to completion each frame, never sees the case.)
-PixelDisplay._beginDraw = function(alphaBlend = false)
-	"Begin drawing to the render texture, in replace mode or (optionally) alpha blend mode."
-	if self._pixCache != null then self._dropPixCache
-	if self._renderTex == null then self._ensureTex
-	rl.BeginTextureMode self._renderTex
-	if self._clip != null then
-		c = self._clip
-		rl.BeginScissorMode c[0], self.height - c[1] - c[3], c[2], c[3]
-	end if
+// Actually issue the blend-mode calls for one drawing call.
+PixelDisplay._setBlendMode = function(alphaBlend)
+	"Set up custom-blend (replace) or alpha-blend mode, per alphaBlend."
 	if alphaBlend then
 //		rl.BeginBlendMode 5				// BLEND_ALPHA_PREMULTIPLY
 		// Use normal color blending for RGB, but MAX mode for alpha,
@@ -60,6 +67,62 @@ PixelDisplay._beginDraw = function(alphaBlend = false)
 		rl.rlSetBlendFactors 1, 0, 32774    // GL_ONE, GL_ZERO, GL_FUNC_ADD
 		rl.BeginBlendMode 6                 // BLEND_CUSTOM
 	end if
+end function
+
+// Close the bracket (if any) that an unbatched drawing call left open.
+// Must run before anything else touches the GPU: other displays' drawing,
+// texture readbacks, and raylib.BeginDrawing (soda.update calls it).
+PixelDisplay._closeOpen = function
+	"Close any texture/blend bracket left open by auto-batching."
+	st = PixelDisplay._st
+	if st.open == null then return
+	st.open = null
+	rl.EndBlendMode
+	rl.EndTextureMode
+end function
+
+PixelDisplay._beginDraw = function(alphaBlend = false)
+	"Begin drawing to the render texture, in replace mode or (optionally) alpha blend mode."
+	if self._pixCache != null then self._dropPixCache
+	if self._renderTex == null then self._ensureTex
+	// Inside a beginBatch/endBatch bracket, the framebuffer is already bound
+	// and the blend mode already set (both stay in effect until endBatch):
+	// a draw call sandwiched between BeginTextureMode/EndTextureMode *or*
+	// BeginBlendMode/EndBlendMode forces an implicit render-batch flush, so
+	// either bracket closing between draws is expensive, not just the
+	// framebuffer rebind alone. Skip both per call while batching, as long
+	// as this call's alphaBlend matches what the batch set up; a mismatched
+	// call (mixing e.g. print's alpha blend into a non-alpha batch) falls
+	// back to setting blend mode just for itself, for correctness.
+	if self._batchDepth == 0 and (PixelDisplay.autoBatch and PixelDisplay._isSoda) then
+		// Auto-batch: leave the bracket open after the call; reuse it if the
+		// next call is on this display with the same blend mode.
+		st = PixelDisplay._st
+		if st.open != self or st.alpha != alphaBlend then
+			PixelDisplay._closeOpen
+			rl.BeginTextureMode self._renderTex
+			self._setBlendMode alphaBlend
+			st.open = self
+			st.alpha = alphaBlend
+		end if
+		if self._clip != null then
+			c = self._clip
+			rl.BeginScissorMode c[0], self.height - c[1] - c[3], c[2], c[3]
+		end if
+		return
+	end if
+	if self._batchDepth == 0 then
+		PixelDisplay._closeOpen
+		rl.BeginTextureMode self._renderTex
+	else if alphaBlend != self._batchAlphaBlend then
+		self._setBlendMode alphaBlend
+		self._batchBlendOverridden = true
+	end if
+	if self._clip != null then
+		c = self._clip
+		rl.BeginScissorMode c[0], self.height - c[1] - c[3], c[2], c[3]
+	end if
+	if self._batchDepth == 0 then self._setBlendMode alphaBlend
 end function
 
 // Anything that draws to _renderTex must call this (_beginDraw does).
@@ -84,9 +147,65 @@ end function
 
 PixelDisplay._endDraw = function
 	"End drawing to the render texture, restoring blend, scissor, and texture mode."
-	rl.EndBlendMode
+	if self._batchDepth == 0 and (PixelDisplay.autoBatch and PixelDisplay._isSoda) then
+		if self._clip != null then rl.EndScissorMode
+		return
+	end if
+	if self._batchDepth == 0 then
+		rl.EndBlendMode
+	else if self._batchBlendOverridden then
+		// Restore the batch's own blend mode rather than ending it, so the
+		// next call in the batch finds it as beginBatch left it.
+		self._setBlendMode self._batchAlphaBlend
+		self._batchBlendOverridden = false
+	end if
 	if self._clip != null then rl.EndScissorMode
-	rl.EndTextureMode
+	if self._batchDepth == 0 then rl.EndTextureMode
+end function
+
+// Keep the render texture's GPU brackets (BeginTextureMode/EndTextureMode
+// *and* BeginBlendMode/EndBlendMode) open across multiple drawing calls.
+// Either bracket closing between two draw calls forces an implicit
+// render-batch flush -- measured as the dominant cost in a loop of many
+// small draws (e.g. setPixel): batching both turns a ~0.098 ms/call loop
+// into one that amortizes to a few µs/call for large N (see FINDINGS.md,
+// S-P1). Calls nest: only the outermost beginBatch/endBatch pair actually
+// opens and closes the brackets. Must be balanced with endBatch -- an
+// unclosed batch leaves the display's framebuffer bound, which breaks
+// rendering (its own and everything drawn afterward) until endBatch is
+// called.
+//
+// alphaBlend picks which blend mode the whole batch uses; a call inside the
+// batch whose own alphaBlend differs (e.g. mixing print's alpha blend into
+// a non-alpha batch) still works, just at that one call's normal per-call
+// cost (see _beginDraw/_endDraw).
+//
+// Widens the time-slicing hazard _beginDraw's own comment describes (a host
+// that can suspend the script between statements must skip a frame while a
+// bracket is open) to the whole batch, not just one call -- an explicit,
+// bounded-by-the-caller widening of a risk that already exists per call.
+PixelDisplay.beginBatch = function(alphaBlend = false)
+	"Open a GPU draw bracket that stays open across calls until endBatch. Nests."
+	if self._batchDepth == 0 then
+		PixelDisplay._closeOpen
+		if self._pixCache != null then self._dropPixCache
+		if self._renderTex == null then self._ensureTex
+		rl.BeginTextureMode self._renderTex
+		self._setBlendMode alphaBlend
+		self._batchAlphaBlend = alphaBlend
+		self._batchBlendOverridden = false
+	end if
+	self._batchDepth = self._batchDepth + 1
+end function
+
+PixelDisplay.endBatch = function
+	"Close a GPU draw bracket opened by beginBatch."
+	if self._batchDepth <= 0 then return
+	self._batchDepth = self._batchDepth - 1
+	if self._batchDepth == 0 then
+		rl.EndBlendMode
+		rl.EndTextureMode
+	end if
 end function
 
 // Create a new PixelDisplay with the given size.
@@ -101,12 +220,19 @@ end function
 
 
 // Clear the display.  Optionally change the size and/or clear color.
-PixelDisplay.clear = function(color=null, width=960, height=640)
+PixelDisplay.clear = function(color=null, width=null, height=null)
 	"Clear the display to the given color, optionally resizing it."
+	// Default to the display's current size: clear should never resize it
+	// as a side effect of just changing the color, unlike the old hardcoded
+	// 960x640 default, which silently snapped any custom-sized display back
+	// to the Mini Micro screen's own size.
+	if width == null then width = self.width
+	if height == null then height = self.height
 	// Everything is about to be overwritten (or resized), so don't flush.
 	self._pixCache = null
 	self._pixDirty = false
 	if width != self.width or height != self.height then
+		PixelDisplay._closeOpen
 		if self._renderTex != null then rl.UnloadRenderTexture self._renderTex
 		self.width = width
 		self.height = height
@@ -158,6 +284,7 @@ PixelDisplay.pixel = function(x, y)
 	"Return the color of the pixel at x, y as a #RRGGBBAA string."
 	d = self._pixCache
 	if d == null then
+		PixelDisplay._closeOpen
 		self._ensureTex
 		t = self._renderTex.texture
 		// (Render texture rows are bottom-up, so cache row y is display row y.)
@@ -343,9 +470,19 @@ _triangulate = function(pts)
 
 	// Corner convexity, maintained incrementally: clipping a vertex changes
 	// only its two neighbors, so we never rescan the whole polygon.
+	// reflexCount (also maintained incrementally alongside cross) tracks how
+	// many current corners are reflex: a convex polygon has none, and no
+	// reflex vertex anywhere means no candidate ear can possibly be blocked,
+	// so the O(n) "does any reflex vertex poke into this ear" scan below can
+	// be skipped outright. Without this, every candidate-ear check scanned
+	// all n current vertices even when none of them were reflex, making
+	// triangulation of an n-gon with few or no reflex corners (e.g. any
+	// convex polygon) cost O(n^2) instead of O(n).
 	cross = []
+	reflexCount = 0
 	for i in range(0, v.len - 1)
 		cross.push _cornerCross(v, i, sgn)
+		if cross[i] <= 0 then reflexCount = reflexCount + 1
 	end for
 
 	tris = []
@@ -364,22 +501,24 @@ _triangulate = function(pts)
 			a = v[i - 1]
 			b = v[i]
 			c = v[iNext]
-			minX = a[0]; maxX = a[0]; minY = a[1]; maxY = a[1]
-			for q in [b, c]
-				if q[0] < minX then minX = q[0] else if q[0] > maxX then maxX = q[0]
-				if q[1] < minY then minY = q[1] else if q[1] > maxY then maxY = q[1]
-			end for
 			isEar = true
 			// Only a reflex vertex can poke into a candidate ear.
-			for j in range(0, n - 1)
-				if cross[j] > 0 or j == i or j == iNext or j == (i + n - 1) % n then continue
-				q = v[j]
-				if q[0] < minX or q[0] > maxX or q[1] < minY or q[1] > maxY then continue
-				if _pointInTri(q, a, b, c) then
-					isEar = false
-					break
-				end if
-			end for
+			if reflexCount > 0 then
+				minX = a[0]; maxX = a[0]; minY = a[1]; maxY = a[1]
+				for q in [b, c]
+					if q[0] < minX then minX = q[0] else if q[0] > maxX then maxX = q[0]
+					if q[1] < minY then minY = q[1] else if q[1] > maxY then maxY = q[1]
+				end for
+				for j in range(0, n - 1)
+					if cross[j] > 0 or j == i or j == iNext or j == (i + n - 1) % n then continue
+					q = v[j]
+					if q[0] < minX or q[0] > maxX or q[1] < minY or q[1] > maxY then continue
+					if _pointInTri(q, a, b, c) then
+						isEar = false
+						break
+					end if
+				end for
+			end if
 			if isEar then
 				earIdx = i
 				break
@@ -393,8 +532,17 @@ _triangulate = function(pts)
 		cross.remove earIdx
 		if v.len > 2 then
 			k = earIdx % v.len
+			km1 = k - 1
+			wasReflexK = cross[k] <= 0
+			wasReflexKm1 = cross[km1] <= 0
 			cross[k] = _cornerCross(v, k, sgn)
-			cross[k - 1] = _cornerCross(v, k - 1, sgn)
+			cross[km1] = _cornerCross(v, km1, sgn)
+			if wasReflexK != (cross[k] <= 0) then
+				if wasReflexK then reflexCount = reflexCount - 1 else reflexCount = reflexCount + 1
+			end if
+			if wasReflexKm1 != (cross[km1] <= 0) then
+				if wasReflexKm1 then reflexCount = reflexCount - 1 else reflexCount = reflexCount + 1
+			end if
 		end if
 	end while
 	return tris
@@ -488,6 +636,7 @@ end function
 // Get a rectangular region of the display as an Image.
 PixelDisplay.getImage = function(left=0, bottom=0, width, height)
 	"Return a rectangular region of the display as a new Image."
+	PixelDisplay._closeOpen
 	if self._renderTex == null then self._ensureTex
 	self._flushPix
 	fullImg = rl.LoadImageFromTexture(self._renderTex.texture)
@@ -526,21 +675,27 @@ end function
 // Draw an Image onto this PixelDisplay.
 PixelDisplay.drawImage = function(img, left, bottom, width=null, height=null, srcLeft=0, srcBottom=0, srcWidth=null, srcHeight=null, tint="#FFFFFF")
 	"Draw an Image (or part of one) into the given rectangle, optionally tinted."
-	tex = rl.LoadTextureFromImage(img._img)
+	// Reuse img's own cached GPU texture (Image.texture) rather than
+	// uploading and freeing a fresh one every call: LoadTextureFromImage/
+	// UnloadTexture are themselves costly (not just the draw call), so
+	// repeated drawImage calls on the same Image used to pay for a new
+	// upload each time even though the pixel data never changed.
+	tex = img.texture
 	rl.SetTextureFilter tex, rl.TEXTURE_FILTER_POINT
 	self._drawTexture tex, left, bottom, width, height, srcLeft, srcBottom, srcWidth, srcHeight, tint
-	rl.UnloadTexture tex
 end function
 
 // Use the image to tile the given destination rect, repeating as many
 // times as needed.  Useful for repeated patterns.
 PixelDisplay.patternFill = function(img, left, bottom, width=null, height=null, srcLeft=0, srcBottom=0)
 	"Fill the given rectangle by tiling the given Image repeatedly."
-	tex = rl.LoadTextureFromImage(img._img)
+	tex = img.texture
 	rl.SetTextureWrap tex, rl.TEXTURE_WRAP_REPEAT
 	rl.SetTextureFilter tex, rl.TEXTURE_FILTER_POINT
 	self._drawTexture tex, left, bottom, width, height, srcLeft, srcBottom, width, height
-	rl.UnloadTexture tex
+	// Restore the default wrap mode so a later drawImage call using this
+	// same cached texture doesn't inherit REPEAT.
+	rl.SetTextureWrap tex, rl.TEXTURE_WRAP_CLAMP
 end function
 
 // Limit drawing to a rectangular region.  Coordinates use the same
@@ -563,6 +718,7 @@ end function
 // this flip corrects it, giving us Mini Micro's bottom-up coordinate system.
 PixelDisplay.render = function
 	"Draw this display to the screen, applying scale and scroll."
+	PixelDisplay._closeOpen
 	if self._renderTex == null then return
 	if self._pixDirty then self._flushPix
 	src = [0, 0, self.width, -self.height]
@@ -597,6 +753,38 @@ PixelDisplay.runUnitTests = function
 	  // emitted triangles covering four times the real area.
 	  [[[120,390], [120,330], [180,330], [180,390], [120,390], [80,590]],
 	    "2dVis fan with a zero-area spike"]]
+
+	// Convex n-gons: reflexCount (the S-P5 perf fix) stays 0 for every one
+	// of these, for the whole triangulation.
+	for n in [3, 7, 13]
+		pts = []
+		for i in range(0, n - 1)
+			a = 2 * pi * i / n
+			pts.push [50 * cos(a), 50 * sin(a)]
+		end for
+		cases.push [pts, "convex " + n + "-gon"]
+	end for
+
+	// Star-shaped polygons: half the corners are reflex, so reflexCount
+	// stays well above 0 for the whole triangulation -- exercises the
+	// non-fast-path branch the S-P5 fix leaves unchanged.
+	for n in [3, 5, 8]
+		pts = []
+		for i in range(0, 2 * n - 1)
+			a = pi * i / n
+			r = 50
+			if i % 2 == 1 then r = 20
+			pts.push [r * cos(a), r * sin(a)]
+		end for
+		cases.push [pts, "star with " + n + " points"]
+	end for
+
+	// Comb shape: several reflex corners (one per notch) that get resolved
+	// into convex ones over the course of clipping -- reflexCount drops
+	// from several down to 0 partway through, exercising the incremental
+	// bookkeeping across that transition.
+	cases.push [[[0,0], [10,0], [10,30], [20,30], [20,0], [30,0], [30,30],
+	  [40,30], [40,0], [50,0], [50,40], [0,40]], "comb shape"]
 
 	for c in cases
 		pts = c[0]
