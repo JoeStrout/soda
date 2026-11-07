@@ -62,29 +62,44 @@ end function
 _hexByte = _makeHexBytes
 freeze _hexByte
 
+// Clamp a channel value to 0-255, as Mini Micro does (an index into the hex
+// table would otherwise crash above 255 and silently wrap below 0).
+_clamp = function(v)
+	if v < 0 then return 0
+	if v > 255 then return 255
+	return v
+end function
+
 // Convert a numeric [r, g, b, a] list or map to a color string.
 fromList = function(rgbaList)
 	"Convert an [r, g, b, a] list (or r/g/b/a map) to a color string."
 	hb = _hexByte
 	if rgbaList isa map then
 		c = rgbaList
-		return "#" + hb[c.r] + hb[c.g] + hb[c.b] + hb[c.a]
+		return "#" + hb[_clamp(c.r)] + hb[_clamp(c.g)] + hb[_clamp(c.b)] + hb[_clamp(c.a)]
 	end if
 	s = ["#"]
 	for value in rgbaList
-		s.append hb[value]
+		if value < 0 or value > 255 then value = _clamp(value)
+		s.push hb[value]
 	end for
 	return s.join("")
 end function
 
 rgba = function(r, g, b, a=255)
 	"Return a #RRGGBBAA color string from the given red, green, blue, and alpha (0-255)."
+	if r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255 or a < 0 or a > 255 then
+		r = _clamp(r); g = _clamp(g); b = _clamp(b); a = _clamp(a)
+	end if
 	return "#" + _hexByte[r] + _hexByte[g] + _hexByte[b] + _hexByte[a]
 end function
 
 // rgb: same as rgba, but with alpha defaulting to fully opaque (255).
 rgb = function(r, g, b)
 	"Return a #RRGGBB color string from the given red, green, and blue (0-255)."
+	if r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255 then
+		r = _clamp(r); g = _clamp(g); b = _clamp(b)
+	end if
 	return "#" + _hexByte[r] + _hexByte[g] + _hexByte[b]
 end function
 

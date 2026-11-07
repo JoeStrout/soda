@@ -481,12 +481,18 @@ end function
 Font.print = function(s, x=20, y=320, scale=1, tint="#FFFFFF")
 	"Draw a string to gfx with its left end at x, y."
 	s = str(s)
+	// On Soda, hold the PixelDisplay's GPU bracket open across the whole string
+	// (one framebuffer bind and blend setup instead of one per glyph: ~8x faster).
+	// Mini Micro's gfx has no such thing.
+	batch = s.len > 1 and version.hasIndex("hostName") and version.hostName == "Soda"
+	if batch then gfx.beginBatch true
 	lastc = ""
 	for c in s
 		x = x + self.kern(lastc, c) * scale
 		x = x + self.printChar(c, x, y, scale, tint) + self.addSpace * scale
 		lastc = c
 	end for
+	if batch then gfx.endBatch
 end function
 
 // Print the given string to gfx, centered horizontally on the given x.
