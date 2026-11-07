@@ -106,8 +106,16 @@ end function
 
 // Resize the character grid.  Discards the current contents and homes
 // the cursor.
+TextDisplay.MAX_CELLS = 250000	// largest grid setSize will build (e.g. 500 x 500)
 TextDisplay.setSize = function(newCols, newRows)
 	"Resize the grid to the given columns and rows, clearing it and homing the cursor."
+	if not (newCols isa number and newRows isa number) or newCols < 1 or newRows < 1 or
+	   newCols * newRows > TextDisplay.MAX_CELLS then
+		print "TextDisplay.setSize: invalid size " + newCols + " x " + newRows
+		return
+	end if
+	newCols = floor(newCols)
+	newRows = floor(newRows)
 	self.columns = newCols
 	self.rows = newRows
 	self._cells = _list_init(newRows, null)
@@ -484,6 +492,9 @@ TextDisplay.render = function
 	if self.font == null or not self.font.isLoaded then return
 
 	clearColor = color.clear
+	font = self.font
+	offsetX = self.offsetX
+	colSpacing = self.colSpacing
 	for row in range(0, self.rows - 1, 1)
 		cellRow = self._cells[row]
 		// Row 0 is the bottom row, but raylib's y grows downward.
@@ -491,6 +502,15 @@ TextDisplay.render = function
 		for col in range(0, self.columns - 1, 1)
 			c = cellRow[col]
 			ch = c.character
+			// A blank glyph over a fully transparent background draws
+			// nothing at all, so skip it.  (Purely an optimization, but an
+			// important one: most cells on a typical screen are empty, so
+			// this test comes first, before any other work on the cell.)
+			if ch == " " or ch == "" then
+				if c.inverse then back = c.color else back = c.backColor
+				if back == clearColor then continue
+				ch = " "
+			end if
 			if c.inverse then
 				fore = c.backColor
 				back = c.color
@@ -498,12 +518,7 @@ TextDisplay.render = function
 				fore = c.color
 				back = c.backColor
 			end if
-			if ch == "" then ch = " "
-			// A blank glyph over a fully transparent background draws
-			// nothing at all, so skip it.  (Purely an optimization, but an
-			// important one: most cells on a typical screen are empty.)
-			if ch == " " and back == clearColor then continue
-			self.font.drawChar ch.code, self.offsetX + col * self.colSpacing, y, fore, back
+			font.drawChar ch.code, offsetX + col * colSpacing, y, fore, back
 		end for
 	end for
 end function
