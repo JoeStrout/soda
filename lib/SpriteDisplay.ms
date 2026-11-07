@@ -446,6 +446,7 @@ Sprite._drawQuad = function(offsetX, offsetY)
 	if own then raylib.EndShaderMode
 end function
 
+Sprite._frameHeight = null	// screen height, cached by SpriteDisplay.render for the duration of a render
 Sprite.update = null	// define your own update method if needed
 
 Sprite.draw = function(offsetX=0, offsetY=0)
@@ -473,8 +474,12 @@ Sprite.draw = function(offsetX=0, offsetY=0)
 	destHeight = srcH * abs(scaleY)
 	if scaleX < 0 then srcW = -srcW
 	if scaleY < 0 then srcH = -srcH
-	raylib.DrawTexturePro image.texture, [srcX, srcY, srcW, srcH],
-		[self.x + offsetX, Display.screenHeight - self.y - offsetY, destWidth, destHeight],
+	tex = image._tex
+	if tex == null then tex = image.texture
+	h = Sprite._frameHeight
+	if h == null then h = Display.screenHeight
+	raylib.DrawTexturePro tex, [srcX, srcY, srcW, srcH],
+		[self.x + offsetX, h - self.y - offsetY, destWidth, destHeight],
 		[destWidth * 0.5, destHeight * 0.5], -self.rotation, self.tint
 end function
 
@@ -551,7 +556,9 @@ end function
 SpriteDisplay.render = function
 	"Draw all sprites in this display to the screen."
 	Sprite._endQuadBatch
+	Sprite._frameHeight = Display.screenHeight
 	self._renderSprites self.sprites
+	Sprite._frameHeight = null
 	Sprite._endQuadBatch
 end function
 
