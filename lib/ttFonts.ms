@@ -86,12 +86,7 @@ end function
 // far to shift the cursor.
 TTFont.printChar = function(c, x=480, y=320, scale=1, tint="#FFFFFF")
 	"Draw one character (or emoji) to gfx; return how far to advance the cursor."
-	gfx._dropPixCache
-	rl.BeginTextureMode gfx._renderTex
-	// Use normal color blending for RGB, but MAX mode for alpha,
-	// so that our font rendering doesn't punch holes in the pixel layer.
-	rl.rlSetBlendFactorsSeparate 770, 771, 0, 1, 32774, 32776
-	rl.BeginBlendMode 7
+	gfx._beginDraw true  // (alpha blend, so glyph edges don't punch holes)
 	
 	if self.emoji.hasIndex(c) then
 		emoji = self.emoji[c]
@@ -105,9 +100,6 @@ TTFont.printChar = function(c, x=480, y=320, scale=1, tint="#FFFFFF")
 	else
 		rl.DrawTextCodepoint self._font, c.code, [x, gfx.height - y - self.ascent * scale], self._size * scale, tint
 	end if
-	
-	rl.EndBlendMode
-	rl.EndTextureMode
 	info = rl.GetGlyphInfo(self._font, c.code)
 	return info.advanceX
 end function
@@ -146,11 +138,7 @@ end function
 TTFont.print = function(s, x=20, y=320, scale=1, tint="#FFFFFF")
 	"Draw a string (which may include emoji) to gfx with its left end at x, y."
 	if not s then return
-	gfx._beginDraw
-	// Use normal color blending for RGB, but MAX mode for alpha,
-	// so that our font rendering doesn't punch holes in the pixel layer.
-	rl.rlSetBlendFactorsSeparate 770, 771, 0, 1, 32774, 32776
-	rl.BeginBlendMode 7
+	gfx._beginDraw true  // (alpha blend, so glyph edges don't punch holes)
 	size = self._size * scale
 	
 	for part in self._splitIntoParts(s)
@@ -168,9 +156,6 @@ TTFont.print = function(s, x=20, y=320, scale=1, tint="#FFFFFF")
 			x += rl.MeasureTextEx(self._font, part, size, 0).x		
 		end if
 	end for
-
-	rl.EndBlendMode
-	gfx._endDraw
 end function
 
 // Print the given string to gfx, centered horizontally on the given x.

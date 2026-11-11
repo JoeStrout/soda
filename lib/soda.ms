@@ -88,6 +88,7 @@ updateCallbacks = [
 
 update = function(beginEndRaylibDrawing = true)
 	"Render all displays, then call every function in updateCallbacks; call once per frame."
+	PixelDisplay._closeBracket	// (finish drawing to any PixelDisplay)
 	if beginEndRaylibDrawing then raylib.BeginDrawing
 	Display.RenderAll
 	if beginEndRaylibDrawing then raylib.EndDrawing

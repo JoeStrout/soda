@@ -27,29 +27,27 @@ PixelDisplay._pixDirty = false  // true if _pixCache has writes the texture lack
 PixelDisplay._ensureTex = function
 	"Create this display's render texture, if it does not already exist."
 	if self._renderTex == null then
+		PixelDisplay._closeBracket	// (loading a render texture unbinds the open one)
 		self._renderTex = autoUnload(rl.LoadRenderTexture(self.width, self.height))
 	end if
 end function
 
-// Begin drawing to the render texture in "replace" blend mode,
-// so that drawn colors fully overwrite the destination (matching
-// Mini Micro behavior, where alpha < 255 does not blend).
-//
-// Note that this binds a framebuffer, and a host that time-slices the script
-// can suspend it between any two statements -- including between here and
-// _endDraw.  Anything such a host draws in that window lands in this render
-// texture, so its frame loop must check raylib.rlGetActiveFramebuffer and skip
-// the frame when a bracket is open.  (Mini Micro 2's main.ms does; Soda, which
-// runs the script to completion each frame, never sees the case.)
-PixelDisplay._beginDraw = function(alphaBlend = false)
-	"Begin drawing to the render texture, in replace mode or (optionally) alpha blend mode."
-	if self._pixCache != null then self._dropPixCache
-	if self._renderTex == null then self._ensureTex
-	rl.BeginTextureMode self._renderTex
-	if self._clip != null then
-		c = self._clip
-		rl.BeginScissorMode c[0], self.height - c[1] - c[3], c[2], c[3]
-	end if
+// The drawing bracket (texture mode, scissor, blend mode) is opened lazily
+// and left open between draws, because closing it forces a GPU batch flush,
+// which is most of the cost of a small draw.  Only one framebuffer can be
+// bound at a time, so there is one bracket for the whole module, recording
+// which display has it open.  Anything that needs the queued draws finished
+// -- reading the texture, uploading to it, resizing it, changing the clip,
+// drawing another display, or rendering the screen -- calls _closeBracket.
+PixelDisplay._bracket = {
+	"disp": null,		// the display whose render texture is bound, or null
+	"alpha": false,		// whether its blend mode is alpha blend (vs. replace)
+	"scissor": false,	// whether we began a scissor (clip) mode
+	"texRefs": []}		// textures drawn while open (kept alive until flushed)
+
+// Set replace mode, so that drawn colors fully overwrite the destination
+// (matching Mini Micro, where alpha < 255 does not blend), or alpha blend.
+_setBlendMode = function(alphaBlend)
 	if alphaBlend then
 //		rl.BeginBlendMode 5				// BLEND_ALPHA_PREMULTIPLY
 		// Use normal color blending for RGB, but MAX mode for alpha,
@@ -62,6 +60,68 @@ PixelDisplay._beginDraw = function(alphaBlend = false)
 	end if
 end function
 
+// Make sure this display's drawing bracket is open, in replace mode or
+// (optionally) alpha blend mode.  Call this before any raylib draw call.
+//
+// Note that the bracket binds a framebuffer and stays open after the drawing
+// call returns.  A host that draws on its own between script slices must call
+// PixelDisplay._closeBracket first -- and must not do so while the script is
+// suspended in the middle of a drawing call.  (Soda's host draws only when the
+// script itself calls BeginDrawing, so it never sees the case.)
+PixelDisplay._beginDraw = function(alphaBlend = false)
+	"Ensure this display's drawing bracket is open, in replace or alpha blend mode."
+	b = PixelDisplay._bracket
+	if refEquals(b.disp, self) then
+		if b.alpha != alphaBlend then
+			_setBlendMode alphaBlend
+			b.alpha = alphaBlend
+		end if
+		return
+	end if
+	// (While our bracket is open we can have no pixel cache, since creating
+	// one closes the bracket; so this check is needed only when opening.)
+	if self._pixCache != null then self._dropPixCache
+	if self._renderTex == null then self._ensureTex
+	PixelDisplay._closeBracket
+	rl.BeginTextureMode self._renderTex
+	if self._clip != null then
+		c = self._clip
+		rl.BeginScissorMode c[0], self.height - c[1] - c[3], c[2], c[3]
+		b.scissor = true
+	end if
+	_setBlendMode alphaBlend
+	b.disp = self
+	b.alpha = alphaBlend
+end function
+
+// Close the drawing bracket, if any display has it open.  This flushes all
+// queued drawing to that display's render texture.
+//
+// Soda calls this wherever it's needed, including in soda.update (before
+// BeginDrawing) and Display.RenderAll.  But a script that draws with raylib
+// directly -- its own BeginDrawing/EndDrawing frame loop, or any raylib draw
+// call meant for the screen or another render texture -- must call
+// PixelDisplay._closeBracket first, after drawing to any PixelDisplay.
+// Otherwise those raylib calls (even ClearBackground) land in the
+// PixelDisplay's render texture, which is still bound.
+PixelDisplay._closeBracket = function
+	"Finish any queued drawing and close the open drawing bracket, if any."
+	b = PixelDisplay._bracket
+	if b.disp == null then return
+	if b.scissor then rl.EndScissorMode
+	rl.EndBlendMode
+	rl.EndTextureMode
+	b.disp = null
+	b.scissor = false
+	b.texRefs = []
+end function
+
+// Close the drawing bracket if this display has it open.
+PixelDisplay._closeOwnBracket = function
+	"Finish any queued drawing to this display."
+	if refEquals(PixelDisplay._bracket.disp, self) then PixelDisplay._closeBracket
+end function
+
 // Anything that draws to _renderTex must call this (_beginDraw does).
 PixelDisplay._dropPixCache = function
 	"Upload any pending pixel cache writes, then discard the cache."
@@ -72,6 +132,8 @@ end function
 
 // Upload the pixel cache's writes.  This is a texture upload, not a draw, so
 // it is safe mid-frame (render calls it) with no texture-mode bracket.
+// (It can't jump ahead of queued draws: a pixel cache exists only while
+// this display's bracket is closed.)
 // A time-sliced script may be suspended inside setPixel, but it marks the
 // cache dirty only after writing to it, so a write is never left unflagged.
 PixelDisplay._flushPix = function
@@ -80,13 +142,6 @@ PixelDisplay._flushPix = function
 	self._pixDirty = false
 	t = self._renderTex.texture
 	rl.rlUpdateTexture t.id, 0, 0, t.width, t.height, t.format, self._pixCache
-end function
-
-PixelDisplay._endDraw = function
-	"End drawing to the render texture, restoring blend, scissor, and texture mode."
-	rl.EndBlendMode
-	if self._clip != null then rl.EndScissorMode
-	rl.EndTextureMode
 end function
 
 // Create a new PixelDisplay with the given size.
@@ -107,6 +162,7 @@ PixelDisplay.clear = function(color=null, width=960, height=640)
 	self._pixCache = null
 	self._pixDirty = false
 	if width != self.width or height != self.height then
+		PixelDisplay._closeBracket	// (unloading/loading a render texture unbinds the open one)
 		if self._renderTex != null then rl.UnloadRenderTexture self._renderTex
 		self.width = width
 		self.height = height
@@ -133,7 +189,6 @@ PixelDisplay.setPixel = function(x, y, color=null)
 	end if
 	self._beginDraw
 	rl.DrawPixel x+0.5, self.height - 1 - y + 0.5, color
-	self._endDraw
 end function
 
 // Color strings by the signed 0xRRGGBBAA int that the cache holds; capped,
@@ -159,6 +214,7 @@ PixelDisplay.pixel = function(x, y)
 	d = self._pixCache
 	if d == null then
 		self._ensureTex
+		self._closeOwnBracket
 		t = self._renderTex.texture
 		// (Render texture rows are bottom-up, so cache row y is display row y.)
 		d = rl.rlReadTexturePixels(t.id, t.width, t.height, t.format)
@@ -178,7 +234,6 @@ PixelDisplay.line = function(x1=0, y1=0, x2=960, y2=640, color, penSize=1)
 	self._beginDraw
 	h = 0.5  // offset to properly address pixel coordinates
 	rl.DrawLineEx([x1+h, self.height-y1-h], [x2+h, self.height-y2-h], penSize, color)
-	self._endDraw
 end function
 
 // Draw a axis-aligned rectangle outline on the pixel display.
@@ -195,7 +250,6 @@ PixelDisplay.drawRect = function(left=0, bottom=0, width=100, height=100, color=
 		rec = [left - hw, self.height - bottom - height - hw, width + penSize, height + penSize]
 		rl.DrawRectangleLinesEx rec, penSize, color
 	end if
-	self._endDraw
 end function
 
 // Fill an axis-aligned rectangle on the pixel display.
@@ -204,7 +258,6 @@ PixelDisplay.fillRect = function(left=0, bottom=0, width=100, height=100, color=
 	if color == null then color = self.color
 	self._beginDraw
 	rl.DrawRectangle left, self.height - bottom - height, width, height, color
-	self._endDraw
 end function
 
 // Draw a axis-aligned ellipse outline on the pixel display.
@@ -241,7 +294,6 @@ PixelDisplay.drawEllipse = function(left=0, bottom=0, width=100, height=100, col
 		rl.rlDrawRenderBatchActive
 		rl.rlEnableBackfaceCulling
 	end if
-	self._endDraw
 end function
 
 // Fill an axis-aligned ellipse on the pixel display.
@@ -252,7 +304,6 @@ PixelDisplay.fillEllipse = function(left=0, bottom=0, width=100, height=100, col
 	wOver2 = floor(width/2)
 	rl.DrawEllipse floor(left) + wOver2, self.height - bottom - ceil(height/2),
 	   wOver2, floor(height/2), color
-	self._endDraw
 end function
 
 
@@ -429,7 +480,6 @@ PixelDisplay.drawPoly = function(points, color=null, penSize=1)
 		rl.DrawLineEx([prev[0]+h, prev[1]-h], [pt[0]+h, pt[1]-h], penSize, color)
 		prev = pt
 	end for
-	self._endDraw
 end function
 
 // Fill a polygon.  Points may be [x,y] lists or maps with x and y.
@@ -445,7 +495,6 @@ PixelDisplay.fillPoly = function(points, color=null)
 	end for
 	rl.rlDrawRenderBatchActive		// flush before restoring culling state
 	rl.rlEnableBackfaceCulling
-	self._endDraw
 end function
 
 // Print a string using the Mini Micro screen font.  Compatible with the
@@ -498,13 +547,13 @@ PixelDisplay.print = function(str="", x=0, y=0, color=null, fontName="normal")
 		if ch != " " then font.drawChar ch.code, x, destY, color, back
 		x = x + colSpacing
 	end for
-	self._endDraw
 end function
 
 // Get a rectangular region of the display as an Image.
 PixelDisplay.getImage = function(left=0, bottom=0, width, height)
 	"Return a rectangular region of the display as a new Image."
 	if self._renderTex == null then self._ensureTex
+	self._closeOwnBracket
 	self._flushPix
 	fullImg = rl.LoadImageFromTexture(self._renderTex.texture)
 	// Render texture data is vertically flipped; flip it so y=0 is at the
@@ -535,8 +584,8 @@ PixelDisplay._drawTexture = function(tex, left, bottom, width=null, height=null,
 	dest = [left, self.height - bottom - height, width, height]
 
 	self._beginDraw true  // (alpha blend)
+	PixelDisplay._bracket.texRefs.push tex	// (so it's not unloaded while queued)
 	rl.DrawTexturePro tex, src, dest, [0, 0], 0, tint
-	self._endDraw
 end function
 
 // Draw an Image onto this PixelDisplay.
@@ -558,7 +607,9 @@ PixelDisplay.patternFill = function(img, left, bottom, width=null, height=null, 
 	rl.SetTextureFilter tex, rl.TEXTURE_FILTER_POINT
 	self._drawTexture tex, left, bottom, width, height, srcLeft, srcBottom, width, height
 	// Set the shared texture back to CLAMP, so that sprites or drawImage
-	// calls using it don't bleed in pixels from the opposite edge.
+	// calls using it don't bleed in pixels from the opposite edge.  (Flush
+	// first: the wrap mode applies when the queued draw actually renders.)
+	rl.rlDrawRenderBatchActive
 	rl.SetTextureWrap tex, rl.TEXTURE_WRAP_CLAMP
 end function
 
@@ -566,12 +617,14 @@ end function
 // bottom-up system as other PixelDisplay methods.  Call clearClip to restore.
 PixelDisplay.setClip = function(left, bottom, width, height)
 	"Limit all subsequent drawing to the given rectangle."
+	self._closeOwnBracket	// (scissor is set when the bracket opens)
 	self._clip = [left, bottom, width, height]
 end function
 
 // Remove any clip region set by setClip.
 PixelDisplay.clearClip = function
 	"Remove any clip rectangle set by setClip."
+	self._closeOwnBracket
 	self._clip = null
 end function
 

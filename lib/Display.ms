@@ -160,6 +160,9 @@ globals.clear = @clear
 
 Display.RenderAll = function
 	"Render the active display in each slot, from back (7) to front (0)."
+	// Finish drawing to any PixelDisplay, so we render to the screen, not to it.
+	// (soda.update does this before BeginDrawing; this covers other callers.)
+	PixelDisplay._closeBracket
 	for slot in range(7, 0)
 		Display._installed[slot][0].render
 	end for

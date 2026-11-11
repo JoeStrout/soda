@@ -82,6 +82,7 @@ Image.release = function
 		self._img = null
 	end if
 	if self._tex != null then
+		rl.rlDrawRenderBatchActive	// (finish any queued draws that use it)
 		rl.UnloadTexture(self._tex)
 		self._tex = null
 	end if
@@ -156,6 +157,7 @@ end function
 Image._invalidateTexture = function
 	"Release the cached texture so it is rebuilt from the pixel data on next use."
 	if self._tex then
+		rl.rlDrawRenderBatchActive	// (finish any queued draws that use it)
 		rl.UnloadTexture(self._tex)
 		self._tex = null
 	end if
