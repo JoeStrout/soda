@@ -47,7 +47,10 @@ for cfg in [{"oddRowOffset":0.5}, {"oddColOffset":0.5}, {"cellSize":[64,16]}, {"
 	td = new TileDisplay
 	td.extent = [200, 200]; td.cellSize = 32; td.clear 1
 	for k in cfg.indexes; td[k] = cfg[k]; end for
-	for t in [0,1,2,3]; td.setCellTransform 5, 5, t; end for
+	// mix of all 8 transforms, so rotated tiles appear at every screen edge
+	for y in range(0, 199); for x in range(0, 199)
+		td.setCellTransform x, y, (x + y * 3) % 8
+	end for; end for
 	td.scrollX = 700; td.scrollY = 400
 	check "cfg " + cfg, td, false
 end for
@@ -55,6 +58,5 @@ end for
 td = new TileDisplay
 td.extent = [10, 10]; td.cellSize = 32; td.overlap = 32; td.clear 1
 check "overlap==size", td, false
-td.render
 print "ALL PASSED"
 exit

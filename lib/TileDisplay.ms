@@ -187,6 +187,8 @@ end function
 
 TileDisplay._tileGeometry = function(x, y, idx)
 	"Return the source rect, dest rect, origin, and rotation for drawing one cell."
+	// NOTE: render inlines this same math for speed.  Any change here must be
+	// mirrored there (tests/qa_tile_args.ms checks that the two agree).
 	if idx == null then return null
 	srcRect = self._srcRectFor(idx)
 	t = self._xform[y][x]
@@ -287,13 +289,10 @@ TileDisplay.render = function
 			if idx == null then continue
 			t = xformRow[x]
 			srcRow = floor(idx / tilesPerRow)
-			if t >= 4 then
-				src = [(idx - srcRow * tilesPerRow) * tw, srcRow * th, -tw, th]
-				rot = (t % 4) * 90
-			else
-				src = [(idx - srcRow * tilesPerRow) * tw, srcRow * th, tw, th]
-				rot = (t % 4) * 90
-			end if
+			srcW = tw
+			if t >= 4 then srcW = -tw
+			src = [(idx - srcRow * tilesPerRow) * tw, srcRow * th, srcW, th]
+			rot = (t % 4) * 90
 			tint = tintRow[x]
 			if tint == null then tint = white
 			DrawTexturePro tex, src, [x * xspacing + rowX + halfX, screenH - (rowY + colOff * (x % 2)) - halfY, xsize, ysize], origin, rot, tint
