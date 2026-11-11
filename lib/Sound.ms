@@ -180,9 +180,14 @@ freeze Sound.sawtoothWave
 
 // Sound.noiseWave: returns a list of random values, approximating white
 // noise.  Uses its own generator, so it does not disturb the sequence of
-// numbers produced by `rnd`.
+// numbers produced by `rnd`.  Returns an error if the arguments are not
+// numbers, or samples exceeds Sound.MAX_NOISE_SAMPLES.
+Sound.MAX_NOISE_SAMPLES = 4194304	// largest list noiseWave will build
 Sound.noiseWave = function(seed=42, samples=509)
-	"Return a waveform list of pseudo-random values, approximating white noise."
+	"Return a waveform list of pseudo-random values, approximating white noise; return an error if the arguments are invalid."
+	if not (seed isa number and samples isa number) or samples > Sound.MAX_NOISE_SAMPLES then
+		return err("Sound.noiseWave: invalid arguments")
+	end if
 	result = []
 	state = floor(abs(seed)) % 4294967296
 	for i in range(0, samples-1, 1)

@@ -67,7 +67,9 @@ end function
 
 // Assigning to .extent resizes the grid, discarding its contents.  As in
 // Mini Micro, the value may be [columns, rows], an {"x","y"} map, or a
-// single number for a square grid; anything else is ignored.
+// single number for a square grid; anything else (including a grid of
+// more than TileDisplay.MAX_CELLS cells) is ignored.
+TileDisplay.MAX_CELLS = 4000000	// largest grid .extent will allocate
 TileDisplay["extent="] = function(value)
 	"Resize the grid to [columns, rows] (or x/y map, or number), clearing it."
 	if value isa number then
@@ -85,7 +87,7 @@ TileDisplay["extent="] = function(value)
 	if not (columns isa number) or not (rows isa number) then return
 	columns = round(columns)
 	rows = round(rows)
-	if columns <= 0 or rows <= 0 then return
+	if columns <= 0 or rows <= 0 or columns * rows > TileDisplay.MAX_CELLS then return
 	if columns == self._cols and rows == self._rows then return
 	self._cols = columns
 	self._rows = rows
