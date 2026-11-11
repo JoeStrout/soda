@@ -140,6 +140,7 @@ end function
 ScreenFont.load = function(texturePath)
 	"Load a font texture (a 16x16 grid of glyphs); return true on success."
 	if self.texture != null then
+		rl.rlDrawRenderBatchActive	// (finish any queued draws that use it)
 		rl.UnloadTexture self.texture
 		self.texture = null
 	end if
@@ -313,6 +314,7 @@ end function
 ScreenFont.unload = function
 	"Free this font's texture."
 	if self.texture == null then return
+	rl.rlDrawRenderBatchActive	// (finish any queued draws that use it)
 	rl.UnloadTexture self.texture
 	self.texture = null
 	self.charWidth = 0
