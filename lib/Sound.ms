@@ -329,6 +329,19 @@ Sound._addSamples = function(result, rate, level)
 	fadeOut = self.fadeOut
 	fadeOutStart = dur - fadeOut
 
+	// This loop runs once per output sample (~10k per second of audio), so
+	// the waveform and envelope lookups (_lookupLUT) are inlined here and
+	// everything loop-invariant is hoisted.
+	if waveform isa number then
+		wConst = true; wN = 0
+	else
+		wConst = false; wN = waveform.len
+	end if
+	if envelope isa number then
+		eConst = true; eN = 0
+	else
+		eConst = false; eN = envelope.len
+	end if
 	waveStart = 0
 	waveLength = _waveLength(freq, 0, dur)
 	for i in range(0, sampleCount-1, 1)
@@ -341,7 +354,33 @@ Sound._addSamples = function(result, rate, level)
 			waveLength = _waveLength(freq, fracDone, dur)
 			wavet -= 1
 		end if
-		v = _lookupLUT(waveform, wavet) * _lookupLUT(envelope, fracDone) * level
+		if wConst then
+			v = waveform
+		else if wN == 1 or wavet <= 0 then
+			v = waveform[0]
+		else if wavet >= 1 then
+			v = waveform[-1]
+		else
+			pos = wavet * (wN - 1)
+			j = floor(pos)
+			if j >= wN - 1 then v = waveform[-1] else v = waveform[j] + (waveform[j+1] - waveform[j]) * (pos - j)
+		end if
+		if eConst then
+			v *= envelope
+		else if eN == 1 or fracDone <= 0 then
+			v *= envelope[0]
+		else if fracDone >= 1 then
+			v *= envelope[-1]
+		else
+			pos = fracDone * (eN - 1)
+			j = floor(pos)
+			if j >= eN - 1 then
+				v *= envelope[-1]
+			else
+				v *= envelope[j] + (envelope[j+1] - envelope[j]) * (pos - j)
+			end if
+		end if
+		v *= level
 		if t < fadeIn then v *= t / fadeIn
 		if t > fadeOutStart then v *= (dur - t) / fadeOut
 		result[i] = result[i] + v
