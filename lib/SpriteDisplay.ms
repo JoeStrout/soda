@@ -82,7 +82,7 @@ Sprite.rotation = 0
 Sprite.scale = 1
 Sprite.image = null
 Sprite.srcRect = null    // optional: [left, top, width, height] in image
-Sprite.tint = [255, 255, 255, 255]  // (a list: raylib.WHITE is a map, which costs ~175 ns more per draw call to convert)
+Sprite.tint = "#FFFFFF"
 Sprite.localBounds = null
 
 
@@ -538,8 +538,11 @@ SpriteDisplay._renderSprites = function(spriteList)
 			continue
 		end if
 		// Consecutive warped sprites share one shader bracket; any other
-		// sprite closes it first, so draw order is unchanged.
-		if sp isa Sprite and sp.image != null and (sp.localCorners or sp._uvs) then
+		// sprite closes it first, so draw order is unchanged.  Only sprites
+		// using the stock draw method qualify: an overridden draw may draw
+		// other things, which must not go through the warped-quad shader.
+		if sp isa Sprite and @sp.draw == @Sprite.draw and sp.image != null and
+		  (sp.localCorners or sp._uvs) then
 			if not Sprite._batching then Sprite._beginQuadBatch
 		else if Sprite._batching then
 			Sprite._endQuadBatch

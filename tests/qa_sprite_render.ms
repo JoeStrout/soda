@@ -8,6 +8,9 @@
 import "soda"
 import "qa"
 rl = raylib
+// This test draws with raylib directly, so first close any PixelDisplay
+// drawing bracket (left open in replace blend mode, e.g. by drawing to gfx).
+PixelDisplay._closeBracket
 
 W = Display.screenWidth; H = Display.screenHeight
 refPath = "qa_sprite_render_ref.png"
@@ -80,10 +83,20 @@ for by in range(0, H/8 - 1)
 			end for
 		end for
 		for k in range(0, 3)
-			if abs(sa[k] - sb[k]) / 64 > 6 then bad = bad + 1; break
+			if abs(sa[k] - sb[k]) / 64 > 6 then
+				bad = bad + 1
+				print "  block at (" + bx*8 + "," + by*8 + ") differs: got mean " +
+				  [round(sa[0]/64), round(sa[1]/64), round(sa[2]/64), round(sa[3]/64)] +
+				  ", ref " + [round(sb[0]/64), round(sb[1]/64), round(sb[2]/64), round(sb[3]/64)]
+				break
+			end if
 		end for
 	end for
 end for
+if bad then
+	rl.ExportImage got, "qa_sprite_render_got.png"
+	print "  (wrote qa_sprite_render_got.png for comparison)"
+end if
 qa.assertEqual bad, 0, "8x8 blocks differing from reference"
 print "ALL PASSED"
 exit

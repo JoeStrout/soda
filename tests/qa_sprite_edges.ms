@@ -3,6 +3,9 @@
 import "soda"
 import "qa"
 rl = raylib
+// This test draws with raylib directly, so first close any PixelDisplay
+// drawing bracket (left open in replace blend mode, e.g. by drawing to gfx).
+PixelDisplay._closeBracket
 img = Image.create(16, 16, color.red)
 W = Display.screenWidth; H = Display.screenHeight
 rt = rl.LoadRenderTexture(W, H)
