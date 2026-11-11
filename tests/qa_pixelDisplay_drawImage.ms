@@ -1,7 +1,5 @@
-// qa_pixelDisplay_drawImage.ms -- regression test for the S-P2 prototype fix:
-// PixelDisplay.drawImage/patternFill now reuse Image's own cached GPU
-// texture (Image.texture) instead of uploading and freeing a fresh one on
-// every call.
+// qa_pixelDisplay_drawImage.ms -- tests that PixelDisplay.drawImage and
+// patternFill work correctly using the Image's cached GPU texture.
 import "soda"
 import "qa"
 

@@ -343,14 +343,8 @@ _triangulate = function(pts)
 
 	// Corner convexity, maintained incrementally: clipping a vertex changes
 	// only its two neighbors, so we never rescan the whole polygon.
-	// reflexCount (also maintained incrementally alongside cross) tracks how
-	// many current corners are reflex: a convex polygon has none, and no
-	// reflex vertex anywhere means no candidate ear can possibly be blocked,
-	// so the O(n) "does any reflex vertex poke into this ear" scan below can
-	// be skipped outright. Without this, every candidate-ear check scanned
-	// all n current vertices even when none of them were reflex, making
-	// triangulation of an n-gon with few or no reflex corners (e.g. any
-	// convex polygon) cost O(n^2) instead of O(n).
+	// We also track reflexCount; when it's 0, no vertex can block an ear,
+	// so we skip that O(n) scan (making convex polygons O(n) overall).
 	cross = []
 	reflexCount = 0
 	for i in range(0, v.len - 1)
@@ -401,6 +395,7 @@ _triangulate = function(pts)
 		// sharpest corner anyway, so we always terminate having covered it.
 		if earIdx < 0 then earIdx = bestIdx
 		tris.push [v[earIdx - 1], v[earIdx], v[(earIdx + 1) % n]]
+		if cross[earIdx] <= 0 then reflexCount = reflexCount - 1	// (fallback clipped a reflex corner)
 		v.remove earIdx
 		cross.remove earIdx
 		if v.len > 2 then
@@ -547,11 +542,8 @@ end function
 // Draw an Image onto this PixelDisplay.
 PixelDisplay.drawImage = function(img, left, bottom, width=null, height=null, srcLeft=0, srcBottom=0, srcWidth=null, srcHeight=null, tint="#FFFFFF")
 	"Draw an Image (or part of one) into the given rectangle, optionally tinted."
-	// Reuse img's own cached GPU texture (Image.texture) rather than
-	// uploading and freeing a fresh one every call: LoadTextureFromImage/
-	// UnloadTexture are themselves costly (not just the draw call), so
-	// repeated drawImage calls on the same Image used to pay for a new
-	// upload each time even though the pixel data never changed.
+	// Use the image's cached texture; uploading a fresh one every call is slow.
+	// Note that this sets the filter mode on that shared texture.
 	tex = img.texture
 	rl.SetTextureFilter tex, rl.TEXTURE_FILTER_POINT
 	self._drawTexture tex, left, bottom, width, height, srcLeft, srcBottom, srcWidth, srcHeight, tint
@@ -565,8 +557,8 @@ PixelDisplay.patternFill = function(img, left, bottom, width=null, height=null, 
 	rl.SetTextureWrap tex, rl.TEXTURE_WRAP_REPEAT
 	rl.SetTextureFilter tex, rl.TEXTURE_FILTER_POINT
 	self._drawTexture tex, left, bottom, width, height, srcLeft, srcBottom, width, height
-	// Restore the default wrap mode so a later drawImage call using this
-	// same cached texture doesn't inherit REPEAT.
+	// Set the shared texture back to CLAMP, so that sprites or drawImage
+	// calls using it don't bleed in pixels from the opposite edge.
 	rl.SetTextureWrap tex, rl.TEXTURE_WRAP_CLAMP
 end function
 
@@ -625,8 +617,7 @@ PixelDisplay.runUnitTests = function
 	  [[[120,390], [120,330], [180,330], [180,390], [120,390], [80,590]],
 	    "2dVis fan with a zero-area spike"]]
 
-	// Convex n-gons: reflexCount (the S-P5 perf fix) stays 0 for every one
-	// of these, for the whole triangulation.
+	// Convex n-gons: reflexCount stays 0 throughout (the fast path).
 	for n in [3, 7, 13]
 		pts = []
 		for i in range(0, n - 1)
@@ -636,9 +627,8 @@ PixelDisplay.runUnitTests = function
 		cases.push [pts, "convex " + n + "-gon"]
 	end for
 
-	// Star-shaped polygons: half the corners are reflex, so reflexCount
-	// stays well above 0 for the whole triangulation -- exercises the
-	// non-fast-path branch the S-P5 fix leaves unchanged.
+	// Star-shaped polygons: half the corners are reflex, so these
+	// exercise the full reflex-vertex scan.
 	for n in [3, 5, 8]
 		pts = []
 		for i in range(0, 2 * n - 1)
