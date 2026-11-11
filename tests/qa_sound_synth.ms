@@ -64,5 +64,15 @@ b = new Sound; b.init 0.3, 550, 1, Sound.squareWave
 a.mix b, 0.5
 got = a._buildSamples
 qa.assert got.len == round(a.sampleRate * 0.3), "mixed length"
+// levels are normalized: a at 1/1.5, b at 0.5/1.5
+expA = reference(a, a.sampleRate, 1/1.5)
+expB = reference(b, a.sampleRate, 0.5/1.5)
+bad = 0
+for i in range(0, got.len - 1)
+	e = expB[i]
+	if i < expA.len then e += expA[i]
+	if abs(got[i] - e) > 1e-9 then bad += 1
+end for
+qa.assert bad == 0, bad + " mixed samples differ from reference"
 print "ALL PASSED"
 exit

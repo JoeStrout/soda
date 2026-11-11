@@ -198,6 +198,7 @@ end function
 // (rather than a list) is treated as a constant.
 _lookupLUT = function(samples, t)
 	"Return the value at t (0-1) in an evenly spaced look-up table, interpolating linearly."
+	// Note: this logic is also inlined in Sound._addSamples; keep them in sync.
 	if samples isa number then return samples
 	if samples.len == 1 or t <= 0 then return samples[0]
 	if t >= 1 then return samples[-1]
@@ -331,22 +332,20 @@ Sound._addSamples = function(result, rate, level)
 
 	// This loop runs once per output sample (~10k per second of audio), so
 	// the waveform and envelope lookups (_lookupLUT) are inlined here and
-	// everything loop-invariant is hoisted.
-	if waveform isa number then
-		wConst = true; wN = 0
-	else
-		wConst = false; wN = waveform.len
-	end if
-	if envelope isa number then
-		eConst = true; eN = 0
-	else
-		eConst = false; eN = envelope.len
-	end if
+	// everything loop-invariant is hoisted.  (A one-entry table is treated as
+	// a constant.)
+	if waveform isa list and waveform.len == 1 then waveform = waveform[0]
+	wConst = waveform isa number
+	if not wConst then wN = waveform.len
+	if envelope isa list and envelope.len == 1 then envelope = envelope[0]
+	eConst = envelope isa number
+	if not eConst then eN = envelope.len
+	invDur = 1 / dur
 	waveStart = 0
 	waveLength = _waveLength(freq, 0, dur)
 	for i in range(0, sampleCount-1, 1)
-		t = i / rate
-		fracDone = t / dur
+		t = i / rate	// (not i * (1/rate): rounding could shift where waves start)
+		fracDone = t * invDur
 		wavet = (t - waveStart) / waveLength
 		if wavet >= 1 then
 			// Start a new wave!
@@ -356,18 +355,22 @@ Sound._addSamples = function(result, rate, level)
 		end if
 		if wConst then
 			v = waveform
-		else if wN == 1 or wavet <= 0 then
+		else if wavet <= 0 then
 			v = waveform[0]
 		else if wavet >= 1 then
 			v = waveform[-1]
 		else
 			pos = wavet * (wN - 1)
 			j = floor(pos)
-			if j >= wN - 1 then v = waveform[-1] else v = waveform[j] + (waveform[j+1] - waveform[j]) * (pos - j)
+			if j >= wN - 1 then
+				v = waveform[-1]
+			else
+				v = waveform[j] + (waveform[j+1] - waveform[j]) * (pos - j)
+			end if
 		end if
 		if eConst then
 			v *= envelope
-		else if eN == 1 or fracDone <= 0 then
+		else if fracDone <= 0 then
 			v *= envelope[0]
 		else if fracDone >= 1 then
 			v *= envelope[-1]
