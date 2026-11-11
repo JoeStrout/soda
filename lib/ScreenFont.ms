@@ -233,19 +233,18 @@ _setColorUniform = function(loc, rgba)
 end function
 
 // Parsing a color string costs several microseconds, and drawChar needs two
-// per glyph, so remember the parsed lists.  Keyed by the color value itself
-// (string or list-as-key is not hashable, so only strings are cached).
+// per glyph, so remember the parsed lists, keyed by the color string.  (A
+// color that's already a list needs no parsing, so drawChar checks for that
+// first -- an isa test is much cheaper than the hash a cache lookup needs.)
 // Cleared when it grows past a sane size, so a program animating through
 // millions of distinct colors can't leak.  The cached lists are shared and
 // must not be modified.
 _colorCache = {}
-_cacheColor = function(c)
-	"Parse color c to an [r,g,b,a] list, caching it if it is a string."
+_colorList = function(c)
+	"Parse color string c to an [r,g,b,a] list and cache it (call on a cache miss)."
 	result = color.toList(c)
-	if c isa string then
-		if _colorCache.len > 4096 then outer._colorCache = {}
-		_colorCache[c] = result
-	end if
+	if _colorCache.len > 4096 then outer._colorCache = {}
+	_colorCache[c] = result
 	return result
 end function
 
@@ -268,8 +267,22 @@ ScreenFont.drawChar = function(unicode, x, y, foreColor, backColor)
 	end if
 	dest = [x, y, self.charWidth, self.charHeight]
 
-	if _colorCache.hasIndex(foreColor) then fore = _colorCache[foreColor] else fore = _cacheColor(foreColor)
-	if _colorCache.hasIndex(backColor) then back = _colorCache[backColor] else back = _cacheColor(backColor)
+	if foreColor isa list then
+		fore = foreColor
+		if fore.len < 4 then fore = fore + [255]	// (no alpha means opaque)
+	else if _colorCache.hasIndex(foreColor) then
+		fore = _colorCache[foreColor]
+	else
+		fore = _colorList(foreColor)
+	end if
+	if backColor isa list then
+		back = backColor
+		if back.len < 4 then back = back + [255]	// (no alpha means opaque)
+	else if _colorCache.hasIndex(backColor) then
+		back = _colorCache[backColor]
+	else
+		back = _colorList(backColor)
+	end if
 
 	// The shader computes mix(back, fore, glyphMask) per pixel, but it has to
 	// be bound (a batch flush) around every glyph because its colors are
