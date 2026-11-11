@@ -473,7 +473,9 @@ Sprite.draw = function(offsetX=0, offsetY=0)
 	destHeight = srcH * abs(scaleY)
 	if scaleX < 0 then srcW = -srcW
 	if scaleY < 0 then srcH = -srcH
-	raylib.DrawTexturePro image.texture, [srcX, srcY, srcW, srcH],
+	tex = image._tex	// (skip the Image.texture call when already built)
+	if tex == null then tex = image.texture
+	raylib.DrawTexturePro tex, [srcX, srcY, srcW, srcH],
 		[self.x + offsetX, Display.screenHeight - self.y - offsetY, destWidth, destHeight],
 		[destWidth * 0.5, destHeight * 0.5], -self.rotation, self.tint
 end function

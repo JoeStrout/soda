@@ -96,7 +96,9 @@ Image.release = function
 	end if
 end function
 
-// Get a Raylib Texture (and cache for future use)
+// Get a Raylib Texture (and cache for future use).
+// Note: Sprite.draw reads _tex directly for speed, calling this only when it's
+// null; so this must stay a pure lazy cache of _tex.
 Image.texture = function
 	"Return a raylib Texture for this image, creating and caching it if needed."
 	if self._tex == null then

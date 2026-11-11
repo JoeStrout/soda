@@ -28,20 +28,21 @@ Display.render = null
 // they will disagree about where the screen is: some are anchored to the bottom
 // and some are centered, and a bezel's insets are not symmetrical.
 //
-// screenLeft/screenTop are in raylib window coordinates (y down from the top);
-// width and height are functions here so they track a resized window, but a
-// host with a fixed screen size can just as well overwrite them with numbers.
+// screenLeft/screenTop are in raylib window coordinates (y down from the top).
+// All four are plain numbers, since displays read them for every item drawn
+// (a function call per sprite adds up).  Soda keeps width and height in step
+// with the window by calling Display.UpdateScreenSize every frame (in
+// soda.update) and whenever it resizes the window; a host with a fixed screen
+// size just assigns its own numbers and never calls that.
 Display.screenLeft = 0
 Display.screenTop = 0
+Display.screenWidth = raylib.GetScreenWidth
+Display.screenHeight = raylib.GetScreenHeight
 
-Display.screenWidth = function
-	"Return the width of the screen area that displays draw into, in pixels."
-	return raylib.GetScreenWidth
-end function
-
-Display.screenHeight = function
-	"Return the height of the screen area that displays draw into, in pixels."
-	return raylib.GetScreenHeight
+Display.UpdateScreenSize = function
+	"Set Display.screenWidth and screenHeight to the current window size."
+	Display.screenWidth = raylib.GetScreenWidth
+	Display.screenHeight = raylib.GetScreenHeight
 end function
 
 // _installed: an internal list of the displays currently associated

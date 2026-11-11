@@ -57,11 +57,13 @@ end function
 window["width="] = function(value)
 	"Set the width of the application window, in pixels."
 	raylib.SetWindowSize value, raylib.GetScreenHeight
+	Display.UpdateScreenSize
 end function
 
 window["height="] = function(value)
 	"Set the height of the application window, in pixels."
 	raylib.SetWindowSize raylib.GetScreenWidth, value
+	Display.UpdateScreenSize
 end function
 
 // Raylib only offers a toggle, so compare with the current state first.
@@ -69,6 +71,7 @@ window["fullScreen="] = function(value)
 	"Enter or leave full-screen mode."
 	if (value != 0) == (raylib.IsWindowFullscreen != 0) then return
 	raylib.ToggleFullscreen
+	Display.UpdateScreenSize
 end function
 
 window["title="] = function(value)
@@ -89,6 +92,7 @@ updateCallbacks = [
 update = function(beginEndRaylibDrawing = true)
 	"Render all displays, then call every function in updateCallbacks; call once per frame."
 	PixelDisplay._closeBracket	// (finish drawing to any PixelDisplay)
+	Display.UpdateScreenSize	// (pick up any window resize since last frame)
 	if beginEndRaylibDrawing then raylib.BeginDrawing
 	Display.RenderAll
 	if beginEndRaylibDrawing then raylib.EndDrawing
