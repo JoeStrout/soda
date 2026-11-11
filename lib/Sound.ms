@@ -139,10 +139,13 @@ end function
 
 Sound.StopAll = function
 	"Stop all sounds that are currently playing."
-	for snd in _playingSounds
+	// Swap the list out first: snd.stop removes itself from _playingSounds,
+	// which would otherwise skip entries as we iterate.
+	sounds = _playingSounds
+	outer._playingSounds = []
+	for snd in sounds
 		snd.stop
 	end for
-	outer._playingSounds = []
 end function
 Sound.stopAll = @Sound.StopAll // (for backwards compatibility)
 
