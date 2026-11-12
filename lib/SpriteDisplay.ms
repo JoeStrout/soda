@@ -84,10 +84,17 @@ Sprite.image = null
 Sprite.srcRect = null    // optional: [left, top, width, height] in image
 Sprite.tint = "#FFFFFF"
 Sprite.localBounds = null
+// Pivot point, as a fraction of the image (or srcRect) width and height,
+// from [0,0] (bottom-left) to [1,1] (top-right).  This point of the image
+// is drawn at the sprite's x,y, and rotation and scaling happen around it.
+// It is the origin of the sprite's local space: localBounds and localCorners
+// are both relative to it.
+Sprite.pivot = [0.5, 0.5]
+freeze Sprite.pivot	// (shared by every sprite that hasn't set its own)
 
 
-// Auto-create a localBounds from our image or srcRect,
-// optionally inset.  Inset may be given as separate X and Y
+// Auto-create a localBounds from our image or srcRect (relative to the
+// current pivot, so set the pivot first), optionally inset.  Inset may be given as separate X and Y
 // values, or as a single number to apply to both, or as an
 // [x,y] list, or an {"x":x, "y":y} map.
 Sprite.addBounds = function(insetX=0, insetY=null)
@@ -106,6 +113,9 @@ Sprite.addBounds = function(insetX=0, insetY=null)
 		insetY = insetX
 	end if
 	self.localBounds = new Bounds
+	c = self._imageCenter
+	self.localBounds.x = c[0]
+	self.localBounds.y = c[1]
 	if self.srcRect then
 		self.localBounds.width = self.srcRect[2] - insetX*2
 		self.localBounds.height = self.srcRect[3] - insetY*2
@@ -121,7 +131,7 @@ end function
 // Corner order is [bottom-left, bottom-right, top-right, top-left],
 // matching Mini Micro 1; uv (0,0) is the bottom-left of the image.
 
-Sprite.localCorners = null	// if set, 4 [x,y] points in local (unscaled, unrotated) space
+Sprite.localCorners = null	// if set, 4 [x,y] points in local (unscaled, unrotated) space, relative to pivot
 Sprite._uvs = null			// if set, 4 [u,v] points
 Sprite._hexDigits = "0123456789ABCDEF"
 
@@ -129,6 +139,22 @@ Sprite._scaleXY = function
 	"Return this sprite's scale as an [x, y] list."
 	if self.scale isa list then return [self.scale[0], self.scale[1]]
 	return [self.scale, self.scale]
+end function
+
+// Local space has its origin at the pivot; this returns the center of the
+// image (or srcRect) in that space.
+Sprite._imageCenter = function
+	"Return the center of this sprite's image in local (unscaled, unrotated) coordinates."
+	pv = self.pivot
+	if pv == null or (pv[0] == 0.5 and pv[1] == 0.5) then return [0, 0]
+	if self.srcRect then
+		w = self.srcRect[2]; h = self.srcRect[3]
+	else if self.image != null then
+		w = self.image.width; h = self.image.height
+	else
+		return [0, 0]
+	end if
+	return [(0.5 - pv[0]) * w, (0.5 - pv[1]) * h]
 end function
 
 Sprite._localCorners = function
@@ -142,7 +168,10 @@ Sprite._localCorners = function
 		hw = self.image.width / 2
 		hh = self.image.height / 2
 	end if
-	return [[-hw,-hh], [hw,-hh], [hw,hh], [-hw,hh]]
+	c = self._imageCenter
+	l = c[0] - hw; r = c[0] + hw
+	b = c[1] - hh; t = c[1] + hh
+	return [[l,b], [r,b], [r,t], [l,t]]
 end function
 
 // Corners in world (display) coordinates, i.e. with scale, rotation,
@@ -471,13 +500,23 @@ Sprite.draw = function(offsetX=0, offsetY=0)
 	end if
 	destWidth = srcW * abs(scaleX)
 	destHeight = srcH * abs(scaleY)
-	if scaleX < 0 then srcW = -srcW
-	if scaleY < 0 then srcH = -srcH
+	// origin is the pivot, measured from the dest rect's top-left (y down);
+	// a negative scale mirrors the image, and so the pivot, within that rect
+	pv = self.pivot
+	pivX = pv[0]; pivY = 1 - pv[1]
+	if scaleX < 0 then
+		srcW = -srcW
+		pivX = 1 - pivX
+	end if
+	if scaleY < 0 then
+		srcH = -srcH
+		pivY = 1 - pivY
+	end if
 	tex = image._tex	// (skip the Image.texture call when already built)
 	if tex == null then tex = image.texture
 	raylib.DrawTexturePro tex, [srcX, srcY, srcW, srcH],
 		[self.x + offsetX, Display.screenHeight - self.y - offsetY, destWidth, destHeight],
-		[destWidth * 0.5, destHeight * 0.5], -self.rotation, self.tint
+		[destWidth * pivX, destHeight * pivY], -self.rotation, self.tint
 end function
 
 Sprite.worldBounds = function
@@ -492,10 +531,20 @@ Sprite.worldBounds = function
 		sx = self.scale
 		sy = sx
 	end if
-	b.x = self.x + lb.x * sx
-	b.y = self.y + lb.y * sy
-	b.width = lb.width * sx
-	b.height = lb.height * sy
+	// bounds center (relative to the pivot), scaled and then rotated
+	dx = lb.x * sx
+	dy = lb.y * sy
+	if dx == 0 and dy == 0 then
+		b.x = self.x
+		b.y = self.y
+	else
+		radians = self.rotation * pi / 180
+		cosR = cos(radians); sinR = sin(radians)
+		b.x = self.x + dx * cosR - dy * sinR
+		b.y = self.y + dy * cosR + dx * sinR
+	end if
+	b.width = lb.width * abs(sx)
+	b.height = lb.height * abs(sy)
 	b.rotation = self.rotation + lb.rotation
 	return b
 end function
