@@ -439,7 +439,7 @@ FileDialog.make = function(title="Select file", width=null)
 	dlog.height = 18
 	dlog.cancelBtn.visible = true
 	dir = file.curdir
-	if file.children(file.curdir) == null then dir = "/sys"
+	if file.children(file.curdir) isa error then dir = "/sys"
 	dlog.directory = dir - "/"
 	files = file.children(dir)
 	if files then dlog.selection = file.child(dir, files[0])
@@ -483,7 +483,7 @@ end function
 FileDialog.getFileInfoForDir = function(dir)
 	"Return a list of file info maps for the given directory, sorted by name."
 	files = file.children(dir)
-	if not files then return []
+	if files isa error or not files then return []
 	for i in range(files.len - 1)
 		files[i] = file.info(file.child(dir, files[i]))
 		if files[i] == null then

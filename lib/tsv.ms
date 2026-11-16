@@ -92,7 +92,7 @@ end function
 parseFile = function(path, asRowList=true)
 	"Read and parse the TSV file at the given path (see parseLines)."
 	lines = file.readLines(path)
-	if lines == null then
+	if lines isa error then
 		print "tsv.parseFile: unable to read " + path
 		return null
 	end if
